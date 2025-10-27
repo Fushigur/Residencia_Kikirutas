@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Rutas Kikibá — Inicio</title>
+</head>
+<body>
+  <header>
+    <h1>Rutas Kikibá</h1>
+    <nav>
+      <a href="#" id="btnReset">Reiniciar vista</a>
+      <a href="#" id="btnLimpiarTodo">Limpiar todo</a>
+    </nav>
+  </header>
+
+  <div class="wrap">
+    <aside>
+      <!-- Buscar lugar (Autocomplete) -->
+      <div class="card">
+        <label for="searchBox">Buscar dirección o lugar</label>
+        <input id="searchBox" placeholder="Ej. 'Bodega de José María Morelos'">
+        <div class="row" style="margin-top:8px">
+          <button id="btnUbicarme" class="tiny">Ubicarme</button>
+          <button id="btnIrDesdeAqui" class="tiny accent">Ir desde aquí</button>
+        </div>
+      </div>
+
+      <!-- Optimizar ruta + cálculo de costos -->
+      <div class="card">
+        <div class="row">
+          <div>
+            <label>Origen</label>
+            <select id="selOrigen"></select>
+          </div>
+          <div>
+            <label>Destino</label>
+            <select id="selDestino"></select>
+          </div>
+        </div>
+
+        <!-- Acordeón de Paradas -->
+        <div style="margin-top:10px">
+          <button class="accordion" id="btnAccordion">
+            <span>Paradas</span>
+            <span class="right">
+              <span id="stopsCount" class="pill">0 seleccionadas</span>
+              <i class="chev"></i>
+            </span>
+          </button>
+          <div class="panel" id="stopsPanel">
+            <div class="mini-actions">
+              <button id="btnAll">Seleccionar todo</button>
+              <button id="btnNone">Ninguna</button>
+            </div>
+            <div id="stopsGrid" class="stops-grid"></div>
+            <div class="mini-info">
+              Sugerencia: marca solo las paradas que realmente visitarás; el orden se optimiza automáticamente.
+            </div>
+          </div>
+        </div>
+
+        <!-- Botones de ruta -->
+        <div class="row" style="margin-top:12px">
+          <button id="btnRuta" class="accent">Trazar ruta optimizada</button>
+          <button id="btnLimpiarRuta" class="alt">Limpiar ruta</button>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <button id="btnRutaRegreso" class="alt">Trazar ruta de regreso</button>
+        </div>
+
+        <!-- Distancias + costo (tipo de combustible) -->
+        <div class="row" style="margin-top:16px">
+          <div>
+            <label>Tipo de combustible</label>
+            <select id="selCombustible">
+              <option value="regular">Gasolina Regular</option>
+              <option value="premium">Gasolina Premium</option>
+              <option value="diesel">Diésel</option>
+            </select>
+          </div>
+          <div>
+            <label>Rendimiento (km/L)</label>
+            <input id="inpRendimiento" type="number" step="0.1" value="12">
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px">
+          <button id="btnTabla" class="accent">Calcular distancias y costo</button>
+        </div>
+
+        <div id="tablaWrap"
+            style="margin-top:12px;max-height:320px;overflow:auto;
+                   border:1px solid var(--border);border-radius:12px">
+        </div>
+      </div>
+    </aside>
+
+    <main>
+      <div id="map"></div>
+
+      <!-- Toggle + Panel flotante mejorado -->
+      <div id="tableMenuWrap">
+        <button id="fpToggle" class="fp-toggle" aria-haspopup="true" aria-expanded="false" title="Vista de tabla">⚙️</button>
+
+        <div id="tableMenu" class="floating-panel" role="dialog" aria-label="Opciones de tabla">
+          <div class="fp-header">
+            <div class="fp-title">Vista de tabla</div>
+            <button id="fpClose" class="fp-x" aria-label="Cerrar">✕</button>
+          </div>
+
+          <div class="fp-section">
+            <div class="fp-sub">Secciones</div>
+
+            <label class="switch">
+              <span>Resumen de recorrido</span>
+              <input id="chkVerLegs" type="checkbox" checked>
+              <span class="slider"></span>
+            </label>
+
+            <label class="switch">
+              <span>Tabla de costos</span>
+              <input id="chkVerCostos" type="checkbox" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <hr class="fp-div" />
+
+          <div class="fp-section">
+            <div class="fp-sub">Columnas</div>
+
+            <label class="switch">
+              <span>Distancia</span>
+              <input class="chk-col" data-col="dist" type="checkbox" checked>
+              <span class="slider"></span>
+            </label>
+
+            <label class="switch">
+              <span>Tiempo</span>
+              <input class="chk-col" data-col="time" type="checkbox" checked>
+              <span class="slider"></span>
+            </label>
+
+            <label class="switch">
+              <span>Acumulados</span>
+              <input class="chk-col" data-col="acum" type="checkbox" checked>
+              <span class="slider"></span>
+            </label>
+
+            <label class="switch">
+              <span>Costo</span>
+              <input class="chk-col" data-col="cost" type="checkbox" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="fp-actions">
+            <button id="fpReset" class="tiny alt">Restablecer</button>
+          </div>
+        </div>
+      </div>
+
+      <footer><span id="status" class="muted">Listo.</span></footer>
+      <div id="legsWrap" style="padding:12px 16px"></div>
+    </main>
+  </div>
+
+  <script src="script.js" defer></script>
+  
+<!--   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBYXB_gIntmbGQczrRY37FrHmlsUXd2l-o&libraries=places,geometry&callback=initApp&v=weekly" defer></script>
+ -->
+</body>
+</html>
