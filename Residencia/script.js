@@ -241,34 +241,32 @@ function buildEntrepreneursTable() {
     const pct = totalEmp ? Math.round((emp / totalEmp) * 100) : 0;
     return `
       <tr>
-        <td>${i + 1}</td>
+        <td class="t-center">${i + 1}</td>
         <td>${st.nombre}</td>
-        <td class="col-emp">${emp}</td>
-        <td class="col-emp">${acc}</td>
-        <td class="col-emp">${pct}%</td>
+        <td class="t-num">${emp}</td>
+        <td class="t-num">${acc}</td>
+        <td class="t-num">${pct}%</td>
       </tr>`;
   }).join('');
 
   empWrap.innerHTML = `
-    <div class="card">
-      <div style="font-weight:600;margin-bottom:6px">Emprendedoras (ruta actual)</div>
-      <table>
+    <div class="card table-card">
+      <div class="card-title">Emprendedoras (ruta actual)</div>
+      <div class="card-sub">Total emprendedoras en esta ruta: <b>${totalEmp}</b></div>
+      <table class="data-table data-table--emp">
+        <colgroup>
+          <col class="col-idx"><col class="col-loc"><col class="col-emp"><col class="col-acc"><col class="col-pct">
+        </colgroup>
         <thead>
           <tr>
-            <th>#</th>
-            <th>Localidad</th>
-            <th class="col-emp">Emprendedoras</th>
-            <th class="col-emp">Acumulado</th>
-            <th class="col-emp">% del total</th>
+            <th>#</th><th>Localidad</th><th>Emprendedoras</th><th>Acumulado</th><th>% del total</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
-      <div class="mini-info" style="margin-top:8px">
-        Total emprendedoras en esta ruta: <b>${totalEmp}</b>
-      </div>
     </div>`;
 }
+
 
 // ===== Distribución de alimentos =====
 const DEFAULT_CAPACIDAD = 80;        // sacos
@@ -309,10 +307,9 @@ function buildDistributionTable() {
   const modo = getModoReparto();
   const entregarEnDestino = getEntregarEnDestino();
 
-  const demandas = stops.map((st) => Math.max(0, META[st.id]?.demanda || 0));
-  const pesosEmp = stops.map((st) => Math.max(0, META[st.id]?.emprendedoras || 0));
+  const demandas = stops.map(st => Math.max(0, META[st.id]?.demanda || 0));
+  const pesosEmp = stops.map(st => Math.max(0, META[st.id]?.emprendedoras || 0));
 
-  // Objetivo de entrega por parada (antes de simular)
   let objetivo = [];
   if (modo === 'proporcional') {
     const cuotas = largestRemainder(pesosEmp, capacidad);
@@ -321,33 +318,27 @@ function buildDistributionTable() {
     objetivo = [...demandas];
   }
 
-  // 1) Simulación base
-  let restante = capacidad;
-  let totalEntregado = 0;
+  let restante = capacidad, totalEntregado = 0;
   let sim = stops.map((st, i) => {
     const demanda = demandas[i];
     const entregaDeseada = objetivo[i];
     let entregaReal = Math.min(entregaDeseada, restante);
-    restante -= entregaReal;
-    totalEntregado += entregaReal;
+    restante -= entregaReal; totalEntregado += entregaReal;
     const falt = Math.max(0, demanda - entregaReal);
     const cobertura = demanda ? Math.round((entregaReal / demanda) * 100) : (entregaReal ? 100 : 0);
     return { nombre: st.nombre, demanda, entregaReal, falt, restante, cobertura };
   });
 
-  // 2) Extra en destino (si aplica)
   if (entregarEnDestino && restante > 0 && sim.length) {
     const i = sim.length - 1;
-    const demanda = demandas[i];
-    const espacio = Math.max(0, demanda - sim[i].entregaReal);
+    const espacio = Math.max(0, demandas[i] - sim[i].entregaReal);
     const extra = Math.min(restante, espacio);
     if (extra > 0) {
       sim[i].entregaReal += extra;
-      sim[i].falt = Math.max(0, demanda - sim[i].entregaReal);
-      sim[i].cobertura = demanda ? Math.round((sim[i].entregaReal / demanda) * 100) : sim[i].cobertura;
+      sim[i].falt = Math.max(0, demandas[i] - sim[i].entregaReal);
+      sim[i].cobertura = demandas[i] ? Math.round((sim[i].entregaReal / demandas[i]) * 100) : sim[i].cobertura;
       sim[i].restante -= extra;
-      restante -= extra;
-      totalEntregado += extra;
+      restante -= extra; totalEntregado += extra;
     }
   }
 
@@ -356,39 +347,38 @@ function buildDistributionTable() {
 
   const rows = sim.map((r, i) => `
     <tr>
-      <td>${i + 1}</td>
+      <td class="t-center">${i + 1}</td>
       <td>${r.nombre}</td>
-      <td class="col-dem">${r.demanda}</td>
-      <td class="col-ent">${r.entregaReal}</td>
-      <td class="col-rest">${r.restante}</td>
-      <td class="col-dem" style="color:${r.falt > 0 ? '#f87171' : '#a7f3d0'}">${r.falt}</td>
-      <td>${r.cobertura}%</td>
+      <td class="t-num">${r.demanda}</td>
+      <td class="t-num">${r.entregaReal}</td>
+      <td class="t-num">${r.restante}</td>
+      <td class="t-num" style="color:${r.falt>0 ? '#f87171' : '#a7f3d0'}">${r.falt}</td>
+      <td class="t-num">${r.cobertura}%</td>
     </tr>`).join('');
 
   distWrap.innerHTML = `
-    <div class="card">
-      <div style="font-weight:600;margin-bottom:6px">Distribución de alimentos</div>
-      <div class="mini-info" style="margin-bottom:8px">
-        Capacidad inicial: <b>${capacidad}</b> • Entregado: <b>${totalEntregado}</b> (${utilizado}%)
-        • Restante al final: <b>${restante}</b> • Localidades con faltante: <b>${faltantes}</b>
-        <br>Modo: <b>${modo}</b>${entregarEnDestino ? ' • Entregar en destino final: <b>Sí</b>' : ''}
+    <div class="card table-card">
+      <div class="card-title">Distribución de alimentos</div>
+      <div class="card-sub">
+        Capacidad inicial: <b>${capacidad}</b> • Entregado: <b>${totalEntregado}</b> (${utilizado}%) • Restante al final: <b>${restante}</b> • Localidades con faltante: <b>${faltantes}</b><br>
+        Modo: <b>${modo}</b>${entregarEnDestino ? ' • Entregar en destino final: <b>Sí</b>' : ''}
       </div>
-      <table>
+      <table class="data-table data-table--food">
+        <colgroup>
+          <col class="col-idx"><col class="col-loc"><col class="col-dem">
+          <col class="col-ent"><col class="col-rest"><col class="col-falt"><col class="col-cov">
+        </colgroup>
         <thead>
           <tr>
-            <th>#</th>
-            <th>Localidad</th>
-            <th class="col-dem">Demanda</th>
-            <th class="col-ent">Entrega (sacos)</th>
-            <th class="col-rest">Restante en camión</th>
-            <th class="col-dem">Faltante</th>
-            <th>% cubierto</th>
+            <th>#</th><th>Localidad</th>
+            <th>Demanda</th><th>Entrega (sacos)</th><th>Restante en camión</th><th>Faltante</th><th>% cubierto</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
 }
+
 
 // ======== Inicialización principal ========
 function initApp() {
@@ -781,63 +771,59 @@ function renderLegsTable(legs, orderedNames) {
   const lw = document.getElementById('legsWrap');
   if (!Array.isArray(legs) || legs.length === 0) { if (lw) lw.innerHTML = ''; return; }
 
-  const fmtKm = m => (m/1000).toFixed(1) + ' km';
-  const fmtMin = s => {
-    const min = Math.round(s/60);
-    if (min < 60) return `${min} min`;
-    const h = Math.floor(min/60), r = min % 60;
-    return r ? `${h} h ${r} min` : `${h} h`;
-  };
+  const fmtKm  = m => (m/1000).toFixed(1) + ' km';
+  const fmtMin = s => { const min = Math.round(s/60); if (min < 60) return `${min} min`; const h = Math.floor(min/60), r = min % 60; return r ? `${h} h ${r} min` : `${h} h`; };
 
   let accM = 0, accS = 0;
   const rowsHtml = legs.map((leg, i) => {
-    const from = orderedNames?.[i] ?? leg.start_address ?? `Punto ${i+1}`;
-    const to   = orderedNames?.[i+1] ?? leg.end_address ?? `Punto ${i+2}`;
+    const from = orderedNames?.[i]   ?? leg.start_address ?? `Punto ${i+1}`;
+    const to   = orderedNames?.[i+1] ?? leg.end_address   ?? `Punto ${i+2}`;
     const m = leg.distance?.value ?? 0;
     const s = leg.duration?.value ?? 0;
     accM += m; accS += s;
-
     return `
       <tr>
-        <td>${i+1}</td>
+        <td class="t-center">${i+1}</td>
         <td>${from}</td>
         <td>${to}</td>
-        <td class="col-dist">${leg.distance?.text || '—'}</td>
-        <td class="col-time">${leg.duration?.text || '—'}</td>
-        <td class="col-acum">${fmtKm(accM)}</td>
-        <td class="col-acum">${fmtMin(accS)}</td>
+        <td class="t-num col-dist">${leg.distance?.text || '—'}</td>
+        <td class="t-num col-time">${leg.duration?.text || '—'}</td>
+        <td class="t-num col-acum">${fmtKm(accM)}</td>
+        <td class="t-num col-acum">${fmtMin(accS)}</td>
       </tr>`;
   }).join('');
 
   const totalHtml = `
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+    <div class="table-metrics">
       <span class="pill">Total: ${fmtKm(accM)}</span>
       <span class="pill">Tiempo total: ${fmtMin(accS)}</span>
       <span class="pill">${orderedNames?.[0] || 'Inicio'} → ${orderedNames?.[orderedNames.length-1] || 'Fin'}</span>
     </div>`;
 
   lw.innerHTML = `
-    <div class="card">
-      <div style="font-weight:600;margin-bottom:6px">Resumen del recorrido</div>
+    <div class="card table-card">
+      <div class="card-title">Resumen del recorrido</div>
       ${totalHtml}
-      <table>
+      <table class="data-table data-table--legs">
+        <colgroup>
+          <col class="col-idx"><col class="col-from"><col class="col-to">
+          <col class="col-dist"><col class="col-time"><col class="col-adist"><col class="col-atime">
+        </colgroup>
         <thead>
           <tr>
-            <th>#</th>
-            <th>De</th>
-            <th>Hacia</th>
+            <th>#</th><th>De</th><th>Hacia</th>
             <th class="col-dist">Distancia tramo</th>
             <th class="col-time">Tiempo tramo</th>
-            <th class="col-acum">Acum. distancia</th>
-            <th class="col-acum">Acum. tiempo</th>
+            <th class="col-adist">Acum. distancia</th>
+            <th class="col-atime">Acum. tiempo</th>
           </tr>
         </thead>
         <tbody>${rowsHtml}</tbody>
       </table>
     </div>`;
-
   applyTableMenu();
 }
+
 
 // ======== Directions con waypoints ========
 function routeWithStops(scene, destinoObj, stops, extraNote='') {
@@ -894,6 +880,7 @@ function routeWithStops(scene, destinoObj, stops, extraNote='') {
     // Tablas auxiliares
     buildEntrepreneursTable();
     buildDistributionTable();
+    applyViewFilters();
   });
 }
 
@@ -930,39 +917,41 @@ function buildDistanceCostTable(){
     totalKm += km; totalCosto += costo;
     return `
       <tr>
-        <td>${i + 1}</td>
+        <td class="t-center">${i + 1}</td>
         <td>${namesOrdered[i + 1] || leg.end_address || '—'}</td>
-        <td class="col-dist">${km.toFixed(1)} km</td>
-        <td class="col-cost">${fmtMXN(costo)}</td>
+        <td class="t-num">${km.toFixed(1)} km</td>
+        <td class="t-num">${fmtMXN(costo)}</td>
       </tr>`;
   }).join('');
 
   const html = `
-    <div class="card">
-      <div style="font-weight:600;margin-bottom:6px">Tabla de costos</div>
-      <table>
+    <div class="card table-card">
+      <div class="card-title">Tabla de costos</div>
+      <div class="card-sub">
+        <b>Combustible:</b> ${tipo.toUpperCase()} ($${precio}/L) &nbsp; • &nbsp;
+        <b>Rendimiento:</b> ${rendimiento} km/L
+      </div>
+      <table class="data-table data-table--cost">
+        <colgroup>
+          <col class="col-idx"><col class="col-loc"><col class="col-dist"><col class="col-money">
+        </colgroup>
         <thead>
           <tr>
-            <th>#</th>
-            <th>Comunidad</th>
-            <th class="col-dist">Distancia del tramo</th>
-            <th class="col-cost">Costo estimado</th>
+            <th>#</th><th>Comunidad</th><th>Distancia del tramo</th><th>Costo estimado</th>
           </tr>
         </thead>
         <tbody>${rowsHtml}</tbody>
       </table>
-      <div style="margin-top:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:#0e1522;font-size:13px">
-        <b>Combustible:</b> ${tipo.toUpperCase()} ($${precio}/L) &nbsp; • &nbsp;
-        <b>Rendimiento:</b> ${rendimiento} km/L<br>
-        <b>Total distancia:</b> ${totalKm.toFixed(1)} km &nbsp; • &nbsp;
-        <b>Total costo:</b> ${fmtMXN(totalCosto)}
+      <div class="table-metrics" style="margin-top:8px">
+        <span class="pill">Total distancia: ${totalKm.toFixed(1)} km</span>
+        <span class="pill">Total costo: ${fmtMXN(totalCosto)}</span>
       </div>
     </div>`;
-
   const tw = document.getElementById('tablaWrap'); if (tw) tw.innerHTML = html;
   applyTableMenu();
   setStatus(`Tabla de costos actualizada. Total: ${fmtMXN(totalCosto)}.`);
 }
+
 
 // ======== Ruta de regreso (ida y vuelta) ========
 function drawReturnRoute() {

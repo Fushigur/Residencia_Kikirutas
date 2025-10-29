@@ -188,3 +188,84 @@ main { position: relative; }
   box-shadow:0 0 0 1px rgba(255,255,255,.08) inset, 0 1px 0 rgba(0,0,0,.25);
 }
 .seg-btn:focus-visible{ outline:2px solid #4e86ff; outline-offset:2px; }
+
+/* ======= TABLAS v2 (parejas + atractivas) ======= */
+.table-card{
+  border:1px solid var(--border);
+  border-radius:14px;
+  overflow:hidden;                /* redondeo real en tabla */
+  background:var(--card);
+}
+
+.data-table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  table-layout:fixed;             /* hace respetar colgroup */
+  font-size:14px;
+}
+.data-table th,
+.data-table td{
+  padding:10px 12px;
+  border-bottom:1px solid var(--border);
+  vertical-align:middle;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.data-table thead th{
+  position:sticky; top:0; z-index:1;
+  background:linear-gradient(180deg,#111a2a,#0f1622);
+  font-weight:700;
+}
+.data-table tbody tr:nth-child(odd) td{ background:#0d1421; }
+.data-table tbody tr:hover td{ background:#0f1b2e; }
+
+/* Utilidades de alineación */
+.t-right{ text-align:right; }
+.t-center{ text-align:center; }
+.t-num{ text-align:right; font-variant-numeric: tabular-nums; }
+
+/* Chips de resumen encima de cada tabla */
+.table-metrics{
+  display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;
+}
+.table-metrics .pill{ background:#111d33; color:#cfe0ff; }
+
+/* Títulos dentro de las cards */
+.card-title{
+  font-weight:700; margin-bottom:6px;
+}
+
+/* Pequeña etiqueta bajo el título (descripción) */
+.card-sub{
+  color:var(--muted); font-size:12px; margin-bottom:10px;
+}
+
+/* Anchos sugeridos por tipo de tabla */
+.data-table--legs col.col-idx      { width:56px; }
+.data-table--legs col.col-from     { width:26%;  }
+.data-table--legs col.col-to       { width:26%;  }
+.data-table--legs col.col-dist     { width:110px;}
+.data-table--legs col.col-time     { width:110px;}
+.data-table--legs col.col-adist    { width:130px;}
+.data-table--legs col.col-atime    { width:130px;}
+
+.data-table--food col.col-idx      { width:56px; }
+.data-table--food col.col-loc      { width:auto; }
+.data-table--food col.col-dem      { width:110px;}
+.data-table--food col.col-ent      { width:140px;}
+.data-table--food col.col-rest     { width:150px;}
+.data-table--food col.col-falt     { width:110px;}
+.data-table--food col.col-cov      { width:110px;}
+
+.data-table--emp col.col-idx       { width:56px; }
+.data-table--emp col.col-loc       { width:auto; }
+.data-table--emp col.col-emp       { width:150px;}
+.data-table--emp col.col-acc       { width:130px;}
+.data-table--emp col.col-pct       { width:110px;}
+
+.data-table--cost col.col-idx      { width:56px; }
+.data-table--cost col.col-loc      { width:auto; }
+.data-table--cost col.col-dist     { width:150px;}
+.data-table--cost col.col-money    { width:160px;}
