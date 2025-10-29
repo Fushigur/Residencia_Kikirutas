@@ -225,10 +225,11 @@ function applyViewFilters(){
 }
 
 function applyTableMenu() {
-  const legsWrap  = document.getElementById('legsWrap');
-  const tablaWrap = document.getElementById('tablaWrap');
-  if (legsWrap)  legsWrap.style.display  = tablePrefs.showLegs ? '' : 'none';
-  if (tablaWrap) tablaWrap.style.display = tablePrefs.showCost ? '' : 'none';
+  const legsWrap = document.getElementById('legsWrap');
+  const costWrap = document.getElementById('costWrap') || document.getElementById('tablaWrap'); // compat
+
+  if (legsWrap) legsWrap.style.display = tablePrefs.showLegs ? '' : 'none';
+  if (costWrap) costWrap.style.display = tablePrefs.showCost ? '' : 'none';
 
   const pairs = [
     ['table-hide-dist', !tablePrefs.colDist],
@@ -236,11 +237,12 @@ function applyTableMenu() {
     ['table-hide-acum', !tablePrefs.colAcum],
     ['table-hide-cost', !tablePrefs.colCost],
   ];
-  [legsWrap, tablaWrap].forEach((w) => {
-    if (!w) return;
-    pairs.forEach(([cls, cond]) => w.classList.toggle(cls, cond));
-  });
+
+  [legsWrap, costWrap, document.getElementById('empWrap'), document.getElementById('distWrap')]
+    .filter(Boolean)
+    .forEach((w) => pairs.forEach(([cls, cond]) => w.classList.toggle(cls, cond)));
 }
+
 
 // ===== Emprendedoras por parada =====
 function buildEntrepreneursTable() {
@@ -894,6 +896,7 @@ function routeWithStops(scene, destinoObj, stops, extraNote='') {
     buildEntrepreneursTable();
     buildDistributionTable();
     applyViewFilters();
+    buildDistanceCostTable(); 
   });
 }
 
@@ -909,7 +912,7 @@ function clearRoute(){
 }
 
 // ======== Tabla: distancias/costo (por tramo) ========
-function buildDistanceCostTable(){
+function buildDistanceCostTable() {
   const tipo = document.getElementById('selCombustible')?.value || 'regular';
   const rendimiento = Math.max(0.0001, Number(document.getElementById('inpRendimiento')?.value || 1));
   const precio = PRECIOS_COMBUSTIBLE[tipo] ?? PRECIOS_COMBUSTIBLE.regular;
@@ -917,11 +920,19 @@ function buildDistanceCostTable(){
   const dir = directionsRenderer.getDirections?.();
   const route = dir?.routes?.[0];
   const legs = route?.legs || [];
-  if (!legs.length) { alert('Primero traza una ruta antes de calcular el costo.'); setStatus('No hay ruta trazada para calcular.'); return; }
+  if (!legs.length) {
+    alert('Primero traza una ruta antes de calcular el costo.');
+    setStatus('No hay ruta trazada para calcular.');
+    return;
+  }
 
   const scene = getEscenario();
   const order = route.waypoint_order || [];
-  const namesOrdered = [ scene.origen.nombre, ...order.map(i => lastRouteStops[i]?.nombre ?? `Parada ${i+1}`), lastRouteDestino?.nombre || 'Destino' ];
+  const namesOrdered = [
+    scene.origen.nombre,
+    ...order.map((i) => lastRouteStops[i]?.nombre ?? `Parada ${i + 1}`),
+    lastRouteDestino?.nombre || 'Destino'
+  ];
 
   let totalKm = 0, totalCosto = 0;
   const rowsHtml = legs.map((leg, i) => {
@@ -932,38 +943,49 @@ function buildDistanceCostTable(){
       <tr>
         <td class="t-center">${i + 1}</td>
         <td>${namesOrdered[i + 1] || leg.end_address || '—'}</td>
-        <td class="t-num">${km.toFixed(1)} km</td>
-        <td class="t-num">${fmtMXN(costo)}</td>
+        <td class="t-num col-dist">${km.toFixed(1)} km</td>
+        <td class="t-num col-cost">${fmtMXN(costo)}</td>
       </tr>`;
   }).join('');
 
   const html = `
     <div class="card table-card">
       <div class="card-title">Tabla de costos</div>
-      <div class="card-sub">
-        <b>Combustible:</b> ${tipo.toUpperCase()} ($${precio}/L) &nbsp; • &nbsp;
-        <b>Rendimiento:</b> ${rendimiento} km/L
-      </div>
       <table class="data-table data-table--cost">
         <colgroup>
           <col class="col-idx"><col class="col-loc"><col class="col-dist"><col class="col-money">
         </colgroup>
         <thead>
           <tr>
-            <th>#</th><th>Comunidad</th><th>Distancia del tramo</th><th>Costo estimado</th>
+            <th>#</th>
+            <th>Comunidad</th>
+            <th class="col-dist">Distancia del tramo</th>
+            <th class="col-cost">Costo estimado</th>
           </tr>
         </thead>
         <tbody>${rowsHtml}</tbody>
       </table>
-      <div class="table-metrics" style="margin-top:8px">
-        <span class="pill">Total distancia: ${totalKm.toFixed(1)} km</span>
-        <span class="pill">Total costo: ${fmtMXN(totalCosto)}</span>
+
+      <div class="summary-box">
+        <div><b>Combustible:</b> ${tipo.toUpperCase()} ($${precio}/L)</div>
+        <div><b>Rendimiento:</b> ${rendimiento} km/L</div>
+        <div><b>Total distancia:</b> ${totalKm.toFixed(1)} km</div>
+        <div><b>Total costo:</b> ${fmtMXN(totalCosto)}</div>
       </div>
     </div>`;
-  const tw = document.getElementById('tablaWrap'); if (tw) tw.innerHTML = html;
+
+  // Nuevo contenedor en el área principal (se crea si no existe)
+  const cw = ensureWrap('costWrap');
+  cw.innerHTML = html;
+
+  // (Opcional) si quieres también seguir viéndola en el panel lateral:
+  const tw = document.getElementById('tablaWrap');
+  if (tw) tw.innerHTML = html;
+
   applyTableMenu();
   setStatus(`Tabla de costos actualizada. Total: ${fmtMXN(totalCosto)}.`);
 }
+
 
 
 // ======== Ruta de regreso (ida y vuelta) ========
