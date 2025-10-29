@@ -166,6 +166,21 @@ function getStopsInOrder() {
   return orderedStops; // [{id,nombre,pos}, ...] (sin origen)
 }
 
+// Pon esto junto a tus helpers (cerca de getStopsInOrder):
+function getStopsForTables(includeBaseRow = true) {
+  const ordered = getStopsInOrder();      // paradas + destino (sin origen)
+  if (!includeBaseRow) return ordered;
+
+  const scene = getEscenario();
+  const baseKey = scene.origen.id === 'jmm' ? 'base-jmm' : 'base-fcp';
+
+  // Fila "sintética" para la base (usada solo en tablas)
+  const baseRow = { id: baseKey, nombre: scene.origen.nombre, pos: scene.origen.pos };
+
+  return [baseRow, ...ordered];
+}
+
+
 // ===== Botón "Calcular distancias y costo" =====
 function setCostBtnEnabled(on) {
   const btn = document.getElementById('btnTabla');
@@ -230,7 +245,7 @@ function applyTableMenu() {
 // ===== Emprendedoras por parada =====
 function buildEntrepreneursTable() {
   const empWrap = ensureWrap('empWrap');
-  const stops = getStopsInOrder();
+  const stops = getStopsForTables(true);         // << antes usábamos getStopsInOrder()
   if (!stops.length) { empWrap.innerHTML = ''; return; }
 
   const totalEmp = stops.reduce((s, st) => s + (META[st.id]?.emprendedoras || 0), 0) || 0;
@@ -258,9 +273,7 @@ function buildEntrepreneursTable() {
           <col class="col-idx"><col class="col-loc"><col class="col-emp"><col class="col-acc"><col class="col-pct">
         </colgroup>
         <thead>
-          <tr>
-            <th>#</th><th>Localidad</th><th>Emprendedoras</th><th>Acumulado</th><th>% del total</th>
-          </tr>
+          <tr><th>#</th><th>Localidad</th><th>Emprendedoras</th><th>Acumulado</th><th>% del total</th></tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
@@ -300,15 +313,15 @@ function largestRemainder(weights, total) {
 
 function buildDistributionTable() {
   const distWrap = ensureWrap('distWrap');
-  const stops = getStopsInOrder();
+  const stops = getStopsForTables(true);         // << antes: getStopsInOrder()
   if (!stops.length) { distWrap.innerHTML = ''; return; }
 
   const capacidad = getCapacidad();
   const modo = getModoReparto();
   const entregarEnDestino = getEntregarEnDestino();
 
-  const demandas = stops.map(st => Math.max(0, META[st.id]?.demanda || 0));
-  const pesosEmp = stops.map(st => Math.max(0, META[st.id]?.emprendedoras || 0));
+  const demandas = stops.map((st) => Math.max(0, META[st.id]?.demanda || 0));
+  const pesosEmp = stops.map((st) => Math.max(0, META[st.id]?.emprendedoras || 0));
 
   let objetivo = [];
   if (modo === 'proporcional') {
@@ -1006,27 +1019,29 @@ function drawReturnRoute() {
    Edita estos números cuando quieras; si falta una localidad, se asume 0. */
 const META = {
   // --- JMM ---
-  'candelaria':       { emprendedoras: 12, demanda: 18 },
-  'dziuche':          { emprendedoras: 8,  demanda: 10 },
-  'la-presumida':     { emprendedoras: 5,  demanda: 6  },
-  'santa-gertrudis':  { emprendedoras: 5,  demanda: 6  },
-  'kancabchen':       { emprendedoras: 7,  demanda: 8  },
+  'candelaria':       { emprendedoras: 3, demanda: 18 },
+  'dziuche':          { emprendedoras: 7,  demanda: 10 },
+  'la-presumida':     { emprendedoras: 6,  demanda: 6  },
+  'santa-gertrudis':  { emprendedoras: 4,  demanda: 6  },
+  'kancabchen':       { emprendedoras: 11,  demanda: 8  },
   'cafetalito':       { emprendedoras: 6,  demanda: 7  },
-  'cafetal-grande':   { emprendedoras: 6,  demanda: 8  },
-  'benito-juarez':    { emprendedoras: 9,  demanda: 12 },
-  'pozo-pirata':      { emprendedoras: 4,  demanda: 5  },
-  'san-carlos':       { emprendedoras: 4,  demanda: 6  },
-  'chunhuhub':        { emprendedoras: 20, demanda: 25 },
-  'polyuc':           { emprendedoras: 15, demanda: 18 },
-  'dos-aguadas':      { emprendedoras: 3,  demanda: 4  },
-  'el-naranjal':      { emprendedoras: 6,  demanda: 7  },
-  'othon-p-blanco':   { emprendedoras: 10, demanda: 12 },
-  'puerto-arturo':    { emprendedoras: 3,  demanda: 4  },
+  'cafetal-grande':   { emprendedoras: 1,  demanda: 8  },
+  'benito-juarez':    { emprendedoras: 4,  demanda: 12 },
+  'pozo-pirata':      { emprendedoras: 9,  demanda: 5  },
+  'san-carlos':       { emprendedoras: 13,  demanda: 6  },
+  'chunhuhub':        { emprendedoras: 7, demanda: 25 },
+  'polyuc':           { emprendedoras: 3, demanda: 18 },
+  'dos-aguadas':      { emprendedoras: 5,  demanda: 4  },
+  'el-naranjal':      { emprendedoras: 5,  demanda: 7  },
+  'othon-p-blanco':   { emprendedoras: 6, demanda: 12 },
+  'puerto-arturo':    { emprendedoras: 13,  demanda: 4  },
+  'base-jmm':          { emprendedoras: 5,  demanda: 4  },
   // --- FCP ---
-  'dzula':            { emprendedoras: 6,  demanda: 7  },
-  'X-Yatil':          { emprendedoras: 5,  demanda: 6  },
-  'el-senor':         { emprendedoras: 8,  demanda: 10 },
-  'tihosuco':         { emprendedoras: 14, demanda: 18 },
+  'dzula':            { emprendedoras: 4,  demanda: 7  },
+  'X-Yatil':          { emprendedoras: 6,  demanda: 6  },
+  'el-senor':         { emprendedoras: 9,  demanda: 10 },
+  'tihosuco':         { emprendedoras: 6, demanda: 18 },
+  'base-fcp':         { emprendedoras: 10, demanda: 18 },
 };
 
 // Exponer initApp al global
