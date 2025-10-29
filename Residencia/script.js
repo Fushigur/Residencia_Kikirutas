@@ -183,9 +183,31 @@ const tablePrefs = {
   colTime: true,
   colAcum: true,
   colCost: true,
+  // NUEVOS – qué mostrar
+  viewKms: true,
+  viewEmp: true,
+  viewFood: true,
 };
 function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(tablePrefs)); } catch {} }
 function loadPrefs() { try { const j = JSON.parse(localStorage.getItem(PREFS_KEY)); if (j) Object.assign(tablePrefs, j); } catch {} }
+
+function applyViewFilters(){
+  // Kilometrajes (usa también showLegs para respetar ese toggle)
+  const legsWrap  = document.getElementById('legsWrap');
+  if (legsWrap) legsWrap.style.display = (tablePrefs.viewKms && tablePrefs.showLegs) ? '' : 'none';
+
+  // Productoras
+  const empWrap   = document.getElementById('empWrap');
+  if (empWrap) empWrap.style.display = tablePrefs.viewEmp ? '' : 'none';
+
+  // Alimentos
+  const distWrap  = document.getElementById('distWrap');
+  if (distWrap) distWrap.style.display = tablePrefs.viewFood ? '' : 'none';
+
+  // Costos (ya lo manejas con showCost)
+  const tablaWrap = document.getElementById('tablaWrap');
+  if (tablaWrap) tablaWrap.style.display = tablePrefs.showCost ? '' : 'none';
+}
 
 function applyTableMenu() {
   const legsWrap  = document.getElementById('legsWrap');
@@ -485,13 +507,57 @@ function initApp() {
   const closeBtn = document.getElementById('fpClose');
 
   loadPrefs();
+  // Establecer estado inicial desde prefs
+  document.getElementById('viewKms')?.setAttribute('checked', tablePrefs.viewKms ? 'checked' : null);
+  document.getElementById('viewEmp')?.setAttribute('checked', tablePrefs.viewEmp ? 'checked' : null);
+  document.getElementById('viewFood')?.setAttribute('checked', tablePrefs.viewFood ? 'checked' : null);
+
+  // Listeners NUEVOS
+  const vK = document.getElementById('viewKms');
+  const vE = document.getElementById('viewEmp');
+  const vF = document.getElementById('viewFood');
+
+  vK?.addEventListener('change', e => {
+    tablePrefs.viewKms = e.target.checked;
+    // Sincroniza con “Resumen de recorrido”
+    const legChk = document.getElementById('chkVerLegs');
+    if (legChk) { legChk.checked = e.target.checked; tablePrefs.showLegs = legChk.checked; }
+    applyTableMenu();  // por si ocultas columnas/legendas
+    applyViewFilters();
+    savePrefs();
+  });
+
+  vE?.addEventListener('change', e => {
+    tablePrefs.viewEmp = e.target.checked;
+    applyViewFilters(); savePrefs();
+  });
+
+  vF?.addEventListener('change', e => {
+    tablePrefs.viewFood = e.target.checked;
+    applyViewFilters(); savePrefs();
+  });
+
+  // Si el usuario toca “Resumen de recorrido”, sincroniza con Kilometrajes
+  document.getElementById('chkVerLegs')?.addEventListener('change', e => {
+    tablePrefs.showLegs = e.target.checked;
+    const vK = document.getElementById('viewKms');
+    if (vK) vK.checked = e.target.checked;
+    applyTableMenu();
+    applyViewFilters();
+    savePrefs();
+  });
+
+  // Al arrancar, aplica estados
+  applyTableMenu();
+  applyViewFilters();
+
+  // ---- Switches individuales ----
   if (document.getElementById('chkVerLegs'))    document.getElementById('chkVerLegs').checked = tablePrefs.showLegs;
   if (document.getElementById('chkVerCostos'))  document.getElementById('chkVerCostos').checked = tablePrefs.showCost;
   document.querySelectorAll('.chk-col').forEach((inp) => {
     const k = 'col' + inp.dataset.col.charAt(0).toUpperCase() + inp.dataset.col.slice(1);
     if (k in tablePrefs) inp.checked = tablePrefs[k];
   });
-  applyTableMenu();
 
   function closePanel(){ panel?.classList.remove('is-open'); toggleBtn?.setAttribute('aria-expanded', 'false'); }
   toggleBtn?.addEventListener('click', (e) => {
