@@ -269,3 +269,27 @@ main { position: relative; }
 .data-table--cost col.col-loc      { width:auto; }
 .data-table--cost col.col-dist     { width:150px;}
 .data-table--cost col.col-money    { width:160px;}
+
+/* ======== MAP CARD (contenedor compacto del mapa) ======== */
+main{ padding:16px; }
+.map-card{
+  border:1px solid var(--border);
+  border-radius:16px;
+  background:var(--card);
+  overflow:hidden;
+  /* altura responsiva: no muy chica en laptops ni gigantes en monitores grandes */
+  height: clamp(360px, 58vh, 620px);
+  box-shadow: 0 12px 32px rgba(0,0,0,.35);
+  position: relative;
+  margin-bottom: 12px;
+}
+#map{
+  height:100%;
+  width:100%;
+  /* esquinas suaves del mapa */
+  border-radius:16px;
+}
+/* Limita el ancho del carril derecho para que todo se sienta más “contenido” */
+.wrap{
+  grid-template-columns:360px minmax(0, 1fr);
+}
