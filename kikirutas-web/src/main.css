@@ -1,0 +1,18 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* tus estilos opcionales debajo */
+
+@import "tailwindcss";
+
+:root { color-scheme: light dark; }
+
+body {
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #e5e7eb;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+a { text-decoration: underline; }
