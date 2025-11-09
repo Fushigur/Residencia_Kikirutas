@@ -1,25 +1,20 @@
-<!-- src/App.vue -->
 <template>
-  <RouterView />
+  <div class="min-h-screen bg-kikiba">
+    <AppHeader v-if="!hideGlobalHeader" />
+    <main class="max-w-6xl mx-auto px-4 py-10">
+      <RouterView />
+    </main>
+  </div>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { computed } from 'vue';
+import { useRoute } from 'vue-router';
+import AppHeader from '@/components/AppHeader.vue';
 
-
-
-<!-- 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
-</style>
- -->
+const route = useRoute();
+// Si alguna ruta indica noGlobalHeader (paneles), ocultamos el header global
+const hideGlobalHeader = computed(() =>
+  route.matched.some(r => r.meta?.noGlobalHeader)
+);
+</script>

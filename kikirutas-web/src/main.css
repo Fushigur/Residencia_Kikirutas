@@ -2,17 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
-/* tus estilos opcionales debajo */
-
-@import "tailwindcss";
-
+/* Fondo general */
 :root { color-scheme: light dark; }
-
 body {
   min-height: 100vh;
-  background: #0a0a0a;
-  color: #e5e7eb;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  background: #1A1217; /* humo */
+  color: #F8F5F0;      /* crema */
+  font-family: Montserrat, ui-sans-serif, system-ui;
 }
 
-a { text-decoration: underline; }
+/* Botones de marca */
+.btn-brand   { @apply inline-flex items-center px-4 py-2 rounded-md bg-brand text-crema hover:opacity-90 transition; }
+.btn-maiz    { @apply inline-flex items-center px-4 py-2 rounded-md bg-maiz  text-humo  hover:opacity-90 transition; }
+.btn-chile   { @apply inline-flex items-center px-4 py-2 rounded-md bg-chile text-crema hover:opacity-90 transition; }
+.link-brand  { @apply text-maiz hover:text-crema underline underline-offset-4; }
+.card        { @apply bg-humo/60 border border-brand/40 backdrop-blur rounded-xl shadow-card; }
+
+/* “Chevrones” sutiles como patrón superior (inspirado en el empaque) */
+.bg-kikiba {
+  background-image:
+    linear-gradient(135deg, rgba(210,161,22,0.08) 25%, transparent 25%),
+    linear-gradient(225deg, rgba(226,58,43,0.08) 25%, transparent 25%),
+    linear-gradient(45deg,  rgba(210,161,22,0.08) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(226,58,43,0.08) 25%, transparent 25%);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 0, 12px -12px, 0 12px;
+}
