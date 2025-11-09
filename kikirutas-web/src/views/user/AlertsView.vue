@@ -82,13 +82,16 @@
           </button>
 
           <!-- Botón eliminar sin confirmación -->
-          <button
+            <button
             type="button"
             class="btn-danger"
-            @click="removeAlert(a.id)"
-          >
+            :disabled="!a.leida"
+            :title="a.leida ? 'Eliminar alerta' : 'Marca como leída para habilitar eliminar'"
+            @click.stop.prevent="removeAlert(a.id)"
+            >
             Eliminar
-          </button>
+            </button>
+
         </div>
       </article>
     </div>
@@ -137,8 +140,13 @@ const markRead = (id: string, value: boolean) => alertas.markRead(id, value);
 
 // Función simplificada para eliminar sin confirmación
 const removeAlert = (id: string) => {
-  alertas.remove(id);
+  const ok = alertas.remove(id);     // devuelve false si la alerta no está leída
+  if (!ok) {
+    // opcional: feedback mínimo
+    console.warn('Para eliminar, primero marca la alerta como leída.');
+  }
 };
+
 
 // Helpers UI
 function formatTime(ts: number): string {

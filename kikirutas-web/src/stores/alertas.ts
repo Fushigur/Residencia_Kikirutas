@@ -105,11 +105,19 @@ export const useAlertasStore = defineStore('alertas', {
     },
 
     // Eliminar usando splice para reactividad garantizada
-    remove(id: string) {
+    // Eliminar usando splice, y solo si está leída (a menos que force=true)
+    remove(id: string, { force = false }: { force?: boolean } = {}) {
     const idx = this.items.findIndex(a => a.id === id);
-    if (idx === -1) return;
+    if (idx === -1) return false;
+
+    if (!force && !this.items[idx].leida) {
+        // seguridad extra: no eliminar si no está leída
+        return false;
+    }
+
     this.items.splice(idx, 1);
     this.persist();
+    return true;
     },
 
     markRead(id: string, value = true) {
