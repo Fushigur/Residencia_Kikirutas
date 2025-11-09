@@ -6,10 +6,7 @@
       <div class="grid md:grid-cols-2 gap-4">
         <div>
           <label class="block text-sm mb-1">Producto</label>
-          <select
-            v-model="producto"
-            class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2"
-          >
+          <select v-model="producto" class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2">
             <option value="Alimento ponedoras 40kg">Alimento ponedoras 40kg</option>
             <option value="Alimento iniciador 40kg">Alimento iniciador 40kg</option>
           </select>
@@ -34,19 +31,14 @@
             </button>
           </div>
           <p class="text-xs text-white/60 mt-1">
-            Cobertura actual: {{ inv.diasCobertura }} días. Consumo diario aprox:
-            {{ inv.consumoDiarioKg.toFixed(2) }} kg.
+            Cobertura actual: {{ inv.diasCobertura }} días. Consumo diario aprox: {{ inv.consumoDiarioKg.toFixed(2) }} kg.
           </p>
         </div>
       </div>
 
       <div>
         <label class="block text-sm mb-1">Observaciones</label>
-        <textarea
-          v-model="observaciones"
-          rows="3"
-          class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2"
-        ></textarea>
+        <textarea v-model="observaciones" rows="3" class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2"></textarea>
       </div>
 
       <div class="flex items-center gap-3">
@@ -68,16 +60,18 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useInventarioStore } from '@/stores/inventario';
+import { useAlertasStore } from '@/stores/alertas'; // <-- IMPORTANTE
 
 const inv = useInventarioStore();
 inv.load();
+
+const alertas = useAlertasStore(); // <-- INSTANCIA DEL STORE
 
 const producto = ref<string>('Alimento ponedoras 40kg');
 const cantidad = ref<number | null>(null);
 const observaciones = ref<string>('');
 
 const sugerencia = computed(() => inv.sugerirSacos);
-
 function aplicarSugerencia() {
   const s = sugerencia.value;
   cantidad.value = s > 0 ? s : 1;
@@ -94,9 +88,23 @@ async function onSubmit() {
     observaciones: observaciones.value.trim(),
   };
 
-  // Integración pendiente con tu API:
-  // await api.post('/pedidos', payload)
-  console.log('Pedido a guardar:', payload);
-  alert('Pedido preparado. Integra la llamada a la API para guardarlo.');
+  // TODO: integra tu llamada real a la API aquí
+  // const { data } = await api.post('/pedidos', payload);
+
+  // Disparar alerta (después de confirmar que la API respondió OK)
+  alertas.add({
+    titulo: 'Pedido creado',
+    mensaje: `Tu pedido de ${payload.cantidad} sacos fue registrado.`,
+    tipo: 'pedido',
+    severidad: 'info',
+    ctaPrimaria: { label: 'Ver historial', routeName: 'u.historial' },
+  });
+
+  // Limpieza simple del formulario (opcional)
+  // cantidad.value = null;
+  // observaciones.value = '';
+  // producto.value = 'Alimento ponedoras 40kg';
+  // o redirige al historial si quieres:
+  // router.push({ name: 'u.historial' });
 }
 </script>
