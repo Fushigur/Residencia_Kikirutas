@@ -1,38 +1,31 @@
 <template>
-  <div class="max-w-5xl">
-    <h2 class="text-2xl font-semibold mb-4">Nuevo pedido</h2>
+  <div class="rounded-xl bg-white/5 border border-white/10 p-4 max-w-4xl">
+    <header class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-semibold">Nuevo pedido</h2>
+
+      <div v-if="sugerencia > 0" class="flex items-center gap-2 text-sm">
+        <span class="text-white/70">Sugerencia: <b>{{ sugerencia }}</b> saco(s)</span>
+        <button type="button" class="rounded bg-emerald-600 px-3 py-1 hover:bg-emerald-500" @click="aplicarSugerencia">
+          Usar sugerencia
+        </button>
+      </div>
+    </header>
 
     <form class="space-y-4" @submit.prevent="onSubmit">
       <div class="grid md:grid-cols-2 gap-4">
         <div>
           <label class="block text-sm mb-1">Producto</label>
           <select v-model="producto" class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2">
-            <option value="Alimento ponedoras 40kg">Alimento ponedoras 40kg</option>
-            <option value="Alimento iniciador 40kg">Alimento iniciador 40kg</option>
+            <option disabled value="">Selecciona un producto…</option>
+            <option v-for="p in productos" :key="p" :value="p">{{ p }}</option>
           </select>
+          <p v-if="errors.producto" class="text-rose-300 text-xs mt-1">{{ errors.producto }}</p>
         </div>
 
         <div>
           <label class="block text-sm mb-1">Cantidad (sacos)</label>
-          <div class="flex gap-2">
-            <input
-              v-model.number="cantidad"
-              type="number"
-              min="1"
-              step="1"
-              class="flex-1 rounded bg-neutral-900 border border-white/10 px-3 py-2"
-            />
-            <button
-              type="button"
-              class="rounded bg-emerald-800/40 border border-emerald-600/40 px-3 py-2 hover:bg-emerald-700/50 text-sm"
-              @click="aplicarSugerencia"
-            >
-              Sugerir ({{ sugerencia }})
-            </button>
-          </div>
-          <p class="text-xs text-white/60 mt-1">
-            Cobertura actual: {{ inv.diasCobertura }} días. Consumo diario aprox: {{ inv.consumoDiarioKg.toFixed(2) }} kg.
-          </p>
+          <input v-model.number="cantidad" type="number" min="1" class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2" />
+          <p v-if="errors.cantidad" class="text-rose-300 text-xs mt-1">{{ errors.cantidad }}</p>
         </div>
       </div>
 
@@ -41,17 +34,11 @@
         <textarea v-model="observaciones" rows="3" class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2"></textarea>
       </div>
 
-      <div class="flex items-center gap-3">
-        <button
-          :disabled="!puedeGuardar"
-          class="rounded bg-emerald-600 px-4 py-2 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          type="submit"
-        >
-          Guardar pedido
+      <div class="flex items-center gap-3 pt-2">
+        <button class="rounded bg-emerald-600 px-4 py-2 hover:bg-emerald-500 disabled:opacity-60" type="submit" :disabled="isSaving">
+          {{ isSaving ? 'Guardando…' : 'Guardar pedido' }}
         </button>
-        <span class="text-xs text-white/60">
-          La sugerencia busca cubrir 14 días + {{ inv.diasSeguridad }} de seguridad.
-        </span>
+        <p v-if="formMsg" class="text-sm text-white/70">{{ formMsg }}</p>
       </div>
     </form>
   </div>
@@ -60,51 +47,66 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useInventarioStore } from '@/stores/inventario';
-import { useAlertasStore } from '@/stores/alertas'; // <-- IMPORTANTE
+import { useAlertasStore } from '@/stores/alertas';
+import { usePedidosStore } from '@/stores/pedidos';
 
-const inv = useInventarioStore();
-inv.load();
+const inv = useInventarioStore(); inv.load();
+const alertas = useAlertasStore();
+const pedidos = usePedidosStore(); pedidos.load();
 
-const alertas = useAlertasStore(); // <-- INSTANCIA DEL STORE
+const productos = ref<string[]>([
+  'Alimento ponedoras 40kg',
+  'Alimento iniciador 40kg',
+]);
 
-const producto = ref<string>('Alimento ponedoras 40kg');
+const producto = ref<string>('');
 const cantidad = ref<number | null>(null);
 const observaciones = ref<string>('');
+const isSaving = ref(false);
+const formMsg = ref<string>('');
+const errors = ref<{ producto?: string; cantidad?: string }>({});
 
-const sugerencia = computed(() => inv.sugerirSacos);
-function aplicarSugerencia() {
-  const s = sugerencia.value;
-  cantidad.value = s > 0 ? s : 1;
+function validate(): boolean {
+  errors.value = {};
+  if (!producto.value) errors.value.producto = 'Selecciona un producto';
+  if (!cantidad.value || cantidad.value < 1) errors.value.cantidad = 'Ingresa una cantidad válida (mínimo 1)';
+  return Object.keys(errors.value).length === 0;
 }
 
-const puedeGuardar = computed(
-  () => !!producto.value && cantidad.value !== null && cantidad.value >= 1
-);
+const sugerencia = computed(() => inv.sugerirSacos ?? 0);
+function aplicarSugerencia() { if (sugerencia.value > 0) cantidad.value = sugerencia.value; }
 
 async function onSubmit() {
-  const payload = {
-    producto: producto.value,
-    cantidad: cantidad.value ?? 1,
-    observaciones: observaciones.value.trim(),
-  };
+  if (!validate()) return;
+  isSaving.value = true;
 
-  // TODO: integra tu llamada real a la API aquí
-  // const { data } = await api.post('/pedidos', payload);
+  try {
+    const payload = {
+      producto: producto.value,
+      cantidad: cantidad.value ?? 1,
+      observaciones: (observaciones.value || '').trim(),
+    };
 
-  // Disparar alerta (después de confirmar que la API respondió OK)
-  alertas.add({
-    titulo: 'Pedido creado',
-    mensaje: `Tu pedido de ${payload.cantidad} sacos fue registrado.`,
-    tipo: 'pedido',
-    severidad: 'info',
-    ctaPrimaria: { label: 'Ver historial', routeName: 'u.historial' },
-  });
+    // TODO: POST real a tu API -> await api.post('/pedidos', payload)
 
-  // Limpieza simple del formulario (opcional)
-  // cantidad.value = null;
-  // observaciones.value = '';
-  // producto.value = 'Alimento ponedoras 40kg';
-  // o redirige al historial si quieres:
-  // router.push({ name: 'u.historial' });
+    // 1) Guardar en historial local con estado "pendiente"
+    pedidos.addFromNewOrder(payload);
+
+    // 2) Alerta de confirmación
+    alertas.add({
+      titulo: 'Pedido creado',
+      mensaje: `Tu pedido de ${payload.cantidad} sacos fue registrado.`,
+      tipo: 'pedido',
+      severidad: 'info',
+      ctaPrimaria: { label: 'Ver historial', routeName: 'u.historial' },
+    });
+
+    formMsg.value = 'Pedido registrado. Puedes revisarlo en Historial.';
+  } catch (e) {
+    formMsg.value = 'No se pudo registrar el pedido. Inténtalo de nuevo.';
+    console.error(e);
+  } finally {
+    isSaving.value = false;
+  }
 }
 </script>
