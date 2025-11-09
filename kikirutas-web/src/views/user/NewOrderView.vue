@@ -1,3 +1,4 @@
+
 <template>
   <div class="rounded-xl bg-white/5 border border-white/10 p-4 max-w-4xl">
     <header class="flex items-center justify-between mb-4">
@@ -49,15 +50,20 @@ import { ref, computed } from 'vue';
 import { useInventarioStore } from '@/stores/inventario';
 import { useAlertasStore } from '@/stores/alertas';
 import { usePedidosStore } from '@/stores/pedidos';
+// imports arriba
+import { useProductosStore } from '@/stores/productos';
 
 const inv = useInventarioStore(); inv.load();
 const alertas = useAlertasStore();
 const pedidos = usePedidosStore(); pedidos.load();
 
-const productos = ref<string[]>([
-  'Alimento ponedoras 40kg',
-  'Alimento iniciador 40kg',
-]);
+const productos = computed<string[]>(() =>
+  productosStore.activos.map(p => p.nombre)
+);
+
+const productosStore = useProductosStore();
+productosStore.load();
+productosStore.seedDefaults();
 
 const producto = ref<string>('');
 const cantidad = ref<number | null>(null);
