@@ -1,4 +1,6 @@
 import { defineStore } from 'pinia';
+import type { AlertaSeveridad } from './alertas';
+import { useAlertasStore } from './alertas';
 
 export type PedidoEstado = 'pendiente' | 'en_ruta' | 'entregado' | 'cancelado';
 
@@ -10,6 +12,7 @@ export interface Pedido {
   fechaISO: string;   // yyyy-mm-dd
   estado: PedidoEstado;
   observaciones?: string;
+  routeId?: string;   // ← ruta asignada (opcional)
 }
 
 type State = { items: Pedido[] };
@@ -32,19 +35,18 @@ export const usePedidosStore = defineStore('pedidos', {
       b.fechaISO.localeCompare(a.fechaISO)
     ),
     nextFolio: (s) => `KIK-${String(s.items.length + 1).padStart(3, '0')}`,
+    pendientes: (s) => s.items.filter(p => p.estado === 'pendiente'),
+    byId: (s) => (id: string) => s.items.find(p => p.id === id),
   },
 
   actions: {
-    persist() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.items));
-    },
+    persist() { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.items)); },
     load() {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
       try { this.items = JSON.parse(raw) ?? []; } catch {}
     },
 
-    // Llamar tras éxito del POST a tu API
     addFromNewOrder(payload: { producto: string; cantidad: number; observaciones?: string; folio?: string }) {
       const pedido: Pedido = {
         id: newId(),
@@ -60,18 +62,47 @@ export const usePedidosStore = defineStore('pedidos', {
       return pedido.id;
     },
 
-    setEstado(id: string, estado: PedidoEstado) {
+    setEstado(id: string, estado: PedidoEstado, opts?: { routeId?: string }) {
       const p = this.items.find(i => i.id === id);
       if (!p) return;
+
+      // routeId (puede ser undefined para limpiar)
+      if (opts && 'routeId' in opts) p.routeId = opts.routeId;
+
       p.estado = estado;
       this.persist();
+
+      // Notificación local (demo)
+      try {
+        const alertas = useAlertasStore();
+        const push = (titulo: string, mensaje: string, severidad: AlertaSeveridad = 'info') =>
+          alertas.add({
+            titulo, mensaje, tipo: 'pedido', severidad,
+            ctaPrimaria: { label: 'Ver historial', routeName: 'u.historial' },
+          });
+
+        if (estado === 'en_ruta') {
+          push('Tu pedido va en ruta', `Tu pedido ${p.folio} fue asignado a ruta y va en camino.`);
+        } else if (estado === 'entregado') {
+          push('Pedido entregado', `Tu pedido ${p.folio} fue marcado como entregado. ¡Gracias!`);
+        } else if (estado === 'cancelado') {
+          push('Pedido cancelado', `Tu pedido ${p.folio} fue cancelado.`, 'warning');
+        }
+      } catch { /* noop en contexto admin separado */ }
     },
 
-    update(id: string, partial: Partial<Pedido>) {
-      const p = this.items.find(i => i.id === id);
-      if (!p) return;
-      Object.assign(p, partial);
-      this.persist();
+    // Helpers para rutas
+    assignToRoute(routeId: string, pedidoId: string) {
+      const p = this.items.find(i => i.id === pedidoId);
+      if (!p || p.estado !== 'pendiente') return false;
+      this.setEstado(pedidoId, 'en_ruta', { routeId });
+      return true;
+    },
+    removeFromRoute(pedidoId: string) {
+      const p = this.items.find(i => i.id === pedidoId);
+      if (!p) return false;
+      this.setEstado(pedidoId, 'pendiente', { routeId: undefined });
+      return true;
     },
   },
 });
