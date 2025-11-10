@@ -45,8 +45,8 @@
       <!-- Resumen de precio/total -->
       <div class="text-sm text-white/80">
         <div class="flex flex-wrap items-center gap-4">
-          <span>Precio unitario: <b>\${{ precioSeleccionado.toFixed(2) }}</b></span>
-          <span v-if="cantidad">Total: <b>\${{ total.toFixed(2) }}</b></span>
+          <span>Precio unitario: <b>${{ precioSeleccionado.toFixed(2) }}</b></span>
+          <span v-if="cantidad">Total: <b>${{ total.toFixed(2) }}</b></span>
         </div>
       </div>
 
@@ -75,87 +75,113 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { useInventarioStore } from '@/stores/inventario';
-import { useAlertasStore } from '@/stores/alertas';
-import { usePedidosStore } from '@/stores/pedidos';
-import { useProductosStore } from '@/stores/productos';
+import { ref, computed } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { useInventarioStore } from '@/stores/inventario'
+import { useAlertasStore } from '@/stores/alertas'
+import { usePedidosStore } from '@/stores/pedidos'
+import { useProductosStore } from '@/stores/productos'
 
 // Stores
-const inv = useInventarioStore(); inv.load();
-const alertas = useAlertasStore();
-const pedidos = usePedidosStore(); pedidos.load();
-const productosStore = useProductosStore();
-productosStore.load();
-productosStore.seedDefaults();
+const auth = useAuthStore()
+const inv = useInventarioStore(); inv.load()
+const alertas = useAlertasStore()
+const pedidos = usePedidosStore(); pedidos.load()
+const productosStore = useProductosStore(); productosStore.load(); productosStore.seedDefaults()
 
 // Opciones del select (solo productos activos)
 const productos = computed<string[]>(() =>
   productosStore.activos.map(p => p.nombre)
-);
+)
 
 // Form state
-const producto = ref<string>('');
-const cantidad = ref<number | null>(null);
-const observaciones = ref<string>('');
-const isSaving = ref(false);
-const formMsg = ref<string>('');
-const errors = ref<{ producto?: string; cantidad?: string }>({});
+const producto = ref<string>('')
+const cantidad = ref<number | null>(null)
+const observaciones = ref<string>('')
+const isSaving = ref(false)
+const formMsg = ref<string>('')
+const errors = ref<{ producto?: string; cantidad?: string }>({})
 
 // Validación mínima
 function validate(): boolean {
-  errors.value = {};
-  if (!producto.value) errors.value.producto = 'Selecciona un producto';
-  if (!cantidad.value || cantidad.value < 1) errors.value.cantidad = 'Ingresa una cantidad válida (mínimo 1)';
-  return Object.keys(errors.value).length === 0;
+  errors.value = {}
+  if (!producto.value) errors.value.producto = 'Selecciona un producto'
+  if (!cantidad.value || cantidad.value < 1) errors.value.cantidad = 'Ingresa una cantidad válida (mínimo 1)'
+  return Object.keys(errors.value).length === 0
 }
 
-// Sugerencia desde inventario (p. ej., cubrir 14 días)
-const sugerencia = computed(() => inv.sugerirSacos ?? 0);
-function aplicarSugerencia() { if (sugerencia.value > 0) cantidad.value = sugerencia.value; }
+// Sugerencia desde inventario
+const sugerencia = computed(() => inv.sugerirSacos ?? 0)
+function aplicarSugerencia() {
+  if (sugerencia.value > 0) cantidad.value = sugerencia.value
+}
 
 // Precio y total
 const precioSeleccionado = computed<number>(() => {
-  const p = productosStore.items.find(i => i.nombre === producto.value);
-  return p ? p.precio : 0;
-});
-const total = computed<number>(() => (precioSeleccionado.value || 0) * (cantidad.value || 0));
+  const p = productosStore.items.find(i => i.nombre === producto.value)
+  return p ? p.precio : 0
+})
+const total = computed<number>(() => (precioSeleccionado.value || 0) * (cantidad.value || 0))
+
+// Snapshot del solicitante (nombre y comunidad) con tolerancia a distintas formas del store auth
+function getSolicitante() {
+  const a: any = auth
+  const nombre =
+    a.displayName ??
+    a.name ??
+    a.user?.name ??
+    'Usuaria'
+
+  const comunidad =
+    a.communityName ??
+    a.profile?.comunidad ??
+    a.user?.comunidad?.nombre ??
+    a.comunidad ??
+    '—'
+
+  return { nombre, comunidad }
+}
 
 async function onSubmit() {
-  if (!validate()) return;
-  isSaving.value = true;
+  if (!validate()) return
+  isSaving.value = true
 
   try {
     const payload = {
       producto: producto.value,
       cantidad: cantidad.value ?? 1,
       observaciones: (observaciones.value || '').trim(),
-      // opcionalmente podrías guardar precio y total si tu API lo requiere
+      // Si tu API lo requiere, también puedes enviar:
       // precio: precioSeleccionado.value,
       // total: total.value,
-    };
+    }
 
     // TODO: POST real a tu API
     // await api.post('/pedidos', payload)
 
-    // 1) Guardar en historial local con estado "pendiente"
-    pedidos.addFromNewOrder(payload);
+    // Guardar en historial local con estado "pendiente" + snapshot de usuaria
+    pedidos.addFromNewOrder(payload, getSolicitante())
 
-    // 2) Alerta de confirmación
+    // Alerta de confirmación
     alertas.add({
       titulo: 'Pedido creado',
-      mensaje: `Tu pedido de ${payload.cantidad} sacos fue registrado.`,
+      mensaje: `Tu pedido de ${payload.cantidad} saco(s) fue registrado.`,
       tipo: 'pedido',
       severidad: 'info',
       ctaPrimaria: { label: 'Ver historial', routeName: 'u.historial' },
-    });
+    })
 
-    formMsg.value = 'Pedido registrado. Puedes revisarlo en Historial.';
+    formMsg.value = 'Pedido registrado. Puedes revisarlo en Historial.'
+    // Opcional: reset del formulario
+    // producto.value = ''
+    // cantidad.value = null
+    // observaciones.value = ''
   } catch (e) {
-    formMsg.value = 'No se pudo registrar el pedido. Inténtalo de nuevo.';
-    console.error(e);
+    formMsg.value = 'No se pudo registrar el pedido. Inténtalo de nuevo.'
+    console.error(e)
   } finally {
-    isSaving.value = false;
+    isSaving.value = false
   }
 }
 </script>
+

@@ -10,7 +10,7 @@
         <div class="relative z-10">
           <!-- Marca -->
           <div class="flex items-center gap-3 p-4 border-b border-white/10">
-            <img :src="logoUrl" class="h-10 w-10" alt="KikiRutas" />
+            <img :src="logoUrl" alt="KikiRutas" class="h-12 w-12 rounded-full bg-white/10 p-1" />
             <div class="leading-tight">
               <p class="font-semibold">KikiRutas</p>
               <p class="text-xs text-white/60">Plataforma</p>
@@ -35,8 +35,8 @@
             </RouterLink>
 
             <RouterLink :to="{name:'u.inventario'}" class="link" :class="{active:isActive('/usuario/granja')}">
-            <svg viewBox="0 0 24 24" class="icon"><path d="M3 12l9-7 9 7v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
-            Mi granja
+              <svg viewBox="0 0 24 24" class="icon"><path d="M3 12l9-7 9 7v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+              Mi granja
             </RouterLink>
 
             <RouterLink :to="{name:'u.alertas'}" class="link" :class="{active:isActive('/usuario/alertas')}">
@@ -63,7 +63,7 @@
       <header class="md:hidden sticky top-0 z-10 bg-panel/95 backdrop-blur border-b border-white/10">
         <div class="px-4 py-3 flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <img :src="logoUrl" class="h-8 w-8" alt="KikiRutas" />
+            <img :src="logoUrl" alt="KikiRutas" class="h-12 w-12 rounded-full bg-white/10 p-1" />
             <span class="font-semibold">KikiRutas</span>
           </div>
           <button class="btn-danger" @click="onLogout">Salir</button>
@@ -79,6 +79,7 @@
     </div>
   </div>
 </template>
+
 
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router';

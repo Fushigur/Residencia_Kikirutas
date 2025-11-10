@@ -1,79 +1,136 @@
-import { createRouter, createWebHistory } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
+// src/router/index.ts
+import { createRouter, createWebHistory, type RouteRecordRaw, type RouteLocationNormalized } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
+const routes: RouteRecordRaw[] = [
+  { path: '/', redirect: { name: 'login' } },
+
+  // Públicas
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('@/views/user/LoginView.vue'),
+    meta: { public: true, hideAuthLinks: true },
+  },
+  {
+    path: '/registro',
+    name: 'register',
+    component: () => import('@/views/user/RegisterView.vue'),
+    meta: { public: true, hideAuthLinks: true },
+  },
+  // Salir: limpia auth y redirige
+  {
+    path: '/salir',
+    name: 'logout',
+    meta: { public: true },
+    redirect: () => {
+      const auth = useAuthStore()
+      auth.logout?.()
+      return { name: 'login' }
+    },
+  },
+
+  // Panel Usuaria
+  {
+    path: '/usuario',
+    component: () => import('@/layouts/UserLayout.vue'),
+    meta: { requiresAuth: true, role: 'user', noGlobalHeader: true },
+    children: [
+      { path: '', redirect: { name: 'u.inicio' } },
+      { path: 'inicio',        name: 'u.inicio',        component: () => import('@/views/user/UserHome.vue') },
+      { path: 'pedido/nuevo',  name: 'u.pedido.nuevo',  component: () => import('@/views/user/NewOrderView.vue') },
+      { path: 'historial',     name: 'u.historial',     component: () => import('@/views/user/OrderHistoryView.vue') },
+      { path: 'alertas',       name: 'u.alertas',       component: () => import('@/views/user/AlertsView.vue') },
+      { path: 'perfil',        name: 'u.perfil',        component: () => import('@/views/user/ProfileView.vue') },
+      { path: 'granja',        name: 'u.inventario',    component: () => import('@/views/user/InventarioView.vue') },
+    ],
+  },
+
+  // Panel Admin
+  {
+    path: '/admin',
+    component: () => import('@/layouts/AdminLayout.vue'),
+    meta: { requiresAuth: true, role: 'admin', noGlobalHeader: true },
+    children: [
+      { path: '',          redirect: { name: 'a.resumen' } },
+      { path: 'resumen',   name: 'a.resumen',   component: () => import('@/views/admin/AdminHome.vue') },
+      { path: 'pedidos',   name: 'a.pedidos',   component: () => import('@/views/admin/OrdersBoard.vue') },
+      { path: 'rutas',     name: 'a.rutas',     component: () => import('@/views/admin/RoutesView.vue') },
+      { path: 'usuarios',  name: 'a.usuarios',  component: () => import('@/views/admin/UsersView.vue') },
+      { path: 'productos', name: 'a.productos', component: () => import('@/views/admin/ProductsView.vue') },
+      { path: 'reportes',  name: 'a.reportes',  component: () => import('@/views/admin/ReportsView.vue') },
+    ],
+  },
+
+  // Panel Operador (CORRECTO: hoy -> RoutesTodayView)
+  {
+    path: '/operador',
+    component: () => import('@/layouts/OperatorLayout.vue'),
+    meta: { requiresAuth: true, role: ['operator', 'admin'], noGlobalHeader: true },
+    children: [
+      { path: '',              redirect: { name: 'op.hoy' } },
+      { path: 'hoy',           name: 'op.hoy',        component: () => import('@/views/operator/RoutesTodayView.vue') },
+      { path: 'ruta',          redirect: { name: 'op.hoy' } },
+      { path: 'ruta/:id',      name: 'op.ruta',       component: () => import('@/views/operator/RouteRunView.vue'),  props: true },
+      { path: 'ruta/:id/mapa', name: 'op.ruta.mapa',  component: () => import('@/views/operator/RouteMapView.vue'), props: true },
+    ],
+  },
+
+  // Alias público /chofer (deeplinks)
+  {
+    path: '/chofer',
+    component: () => import('@/layouts/OperatorLayout.vue'),
+    meta: { public: true, hideAuthLinks: true, noGlobalHeader: true },
+    children: [
+      { path: 'ruta/:id',      name: 'd.ruta',      component: () => import('@/views/operator/RouteRunView.vue'), props: true },
+      { path: 'ruta/:id/mapa', name: 'd.ruta.mapa', component: () => import('@/views/operator/RouteMapView.vue'), props: true },
+    ],
+  },
+
+  // 404
+  {
+    path: '/:pathMatch(.*)*',
+    name: '404',
+    component: () => import('@/views/NotFound.vue'),
+    meta: { public: true },
+  },
+]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes: [
-    { path: '/', redirect: { name: 'login' } },
+  routes,
+})
 
-    // Páginas públicas (ocultan links del header)
-    { path: '/login',    name: 'login',    component: () => import('@/views/user/LoginView.vue'),    meta: { public: true, hideAuthLinks: true } },
-    { path: '/registro', name: 'register', component: () => import('@/views/user/RegisterView.vue'), meta: { public: true, hideAuthLinks: true } },
+/* ---------- Guard global ---------- */
+router.beforeEach((to: RouteLocationNormalized) => {
+  const auth = useAuthStore()
+  auth.loadFromStorage?.()
 
-    // Panel usuaria (oculta header global)
-    {
-      path: '/usuario',
-      component: () => import('@/layouts/UserLayout.vue'),
-      meta: { requiresAuth: true, role: 'user', noGlobalHeader: true },
-      children: [
-        { path: '', redirect: { name: 'u.inicio' } },
-        { path: 'inicio',         name: 'u.inicio',         component: () => import('@/views/user/UserHome.vue') },
-        { path: 'pedido/nuevo',   name: 'u.pedido.nuevo',   component: () => import('@/views/user/NewOrderView.vue') },
-        { path: 'historial',      name: 'u.historial',      component: () => import('@/views/user/OrderHistoryView.vue') },
-        { path: 'alertas',        name: 'u.alertas',        component: () => import('@/views/user/AlertsView.vue') },
-        { path: 'perfil',         name: 'u.perfil',         component: () => import('@/views/user/ProfileView.vue') },
-        { path: 'granja', name: 'u.inventario', component: () => import('@/views/user/InventarioView.vue') },
-      ],
-    },
-
-    // Panel administrador (oculta header global)
-    {
-      path: '/admin',
-      component: () => import('@/layouts/AdminLayout.vue'),
-      meta: { requiresAuth: true, role: 'admin', noGlobalHeader: true },
-      children: [
-        { path: '',           redirect: { name: 'a.resumen' } },
-        { path: 'resumen',    name: 'a.resumen',    component: () => import('@/views/admin/ReportsView.vue') },
-        { path: 'pedidos',    name: 'a.pedidos',    component: () => import('@/views/admin/OrdersBoard.vue') },
-        { path: 'rutas',      name: 'a.rutas',      component: () => import('@/views/admin/RoutesView.vue') },
-        { path: 'usuarios',   name: 'a.usuarios',   component: () => import('@/views/admin/UsersView.vue') },
-        { path: 'productos',  name: 'a.productos',  component: () => import('@/views/admin/ProductsView.vue') },
-        { path: 'reportes',   name: 'a.reportes',   component: () => import('@/views/admin/ReportsView.vue') },
-
-      ],
-    },
-
-    { path: '/:pathMatch(.*)*', name: '404', component: () => import('@/views/NotFound.vue'), meta: { public: true } },
-  ],
-});
-
-// Guard global
-router.beforeEach((to) => {
-  const auth = useAuthStore();
-
-  // Si ya hay sesión y trata de ir a login/registro, lo mando a su panel
+  // Si tiene sesión e intenta login/registro → llevar a su panel
   if ((to.name === 'login' || to.name === 'register') && auth.isAuth) {
-    return auth.role === 'admin' ? { name: 'a.resumen' } : { name: 'u.inicio' };
+    if (auth.role === 'admin')    return { name: 'a.resumen' }
+    if (auth.role === 'user')     return { name: 'u.inicio' }
   }
 
-  // Rutas públicas
-  if (to.meta.public) return true;
+  // Públicas
+  if (to.meta?.public) return true
 
   // Requiere sesión
-  if (to.meta.requiresAuth && !auth.isAuth) {
-    return { name: 'login', query: { redirect: to.fullPath } };
+  if (to.meta?.requiresAuth && !auth.isAuth) {
+    return { name: 'login', query: { redirect: to.fullPath } }
   }
 
-  // Requiere rol específico
-  if (to.meta.role && auth.role !== to.meta.role) {
-    return auth.role === 'admin'
-      ? { name: 'a.resumen' }
-      : auth.role === 'user'
-      ? { name: 'u.inicio' }
-      : { name: 'login' };
+  // Rol
+  if (to.meta?.role) {
+    const required = Array.isArray(to.meta.role) ? (to.meta.role as string[]) : [to.meta.role as string]
+    if (auth.role === 'admin') return true
+    if (!required.includes(String(auth.role))) {
+      if (auth.role === 'user')     return { name: 'u.inicio' }
+      return { name: 'login' }
+    }
   }
 
-  return true;
-});
+  return true
+})
 
-export default router;
+export default router
