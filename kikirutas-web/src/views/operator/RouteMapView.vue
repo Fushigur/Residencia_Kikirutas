@@ -436,7 +436,7 @@ watch([()=>rutaSel.value?.id], ()=>{
         <button
           class="rounded-xl bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
           @click="router.push({ name:'op.ruta', params:{ id: route.params.id } })">
-          ← Volver a la ruta
+          Volver a la ruta
         </button>
         <button class="rounded-xl bg-white/10 px-3 py-2 text-sm hover:bg-white/20" @click="resetView">Reiniciar vista</button>
         <button class="rounded-xl bg-white/10 px-3 py-2 text-sm hover:bg-white/20" @click="limpiarRuta">Limpiar todo</button>
