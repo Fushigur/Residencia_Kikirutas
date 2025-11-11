@@ -242,253 +242,311 @@ function eliminarRutaForzada() {
 </script>
 
 <template>
-  <section class="space-y-4">
-    <h1 class="text-2xl font-semibold">Rutas</h1>
+  <!-- Marco igual al de AdminLayout -->
+  <div class="min-h-screen overflow-x-hidden bg-neutral-950 text-gray-100">
+    <div class="max-w-7xl mx-auto px-4 py-6 md:py-8 pb-24 md:pb-10">
 
-    <!-- Grid: nueva ruta + pendientes -->
-    <div class="grid lg:grid-cols-3 gap-4">
-      <!-- Nueva ruta -->
-      <div class="rounded-xl bg-white/5 border border-white/10 p-4">
-        <h3 class="font-semibold mb-3">Ingrese la nueva ruta</h3>
+      <section class="space-y-4">
+        <h1 class="text-2xl font-semibold">Rutas</h1>
 
-        <label class="block text-sm mb-1">Operador / Localidad</label>
-        <input v-model="nuevaRuta.nombre" class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2"
-               placeholder="Ej. Pedro - Norte" />
+        <!-- Grid: nueva ruta + pendientes -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <!-- Nueva ruta -->
+          <div class="rounded-xl bg-white/5 border border-white/10 p-4">
+            <h3 class="font-semibold mb-3">Ingrese la nueva ruta</h3>
 
-        <label class="block text-sm mt-3 mb-1">Fecha de entrega</label>
-        <input v-model="nuevaRuta.fechaISO" type="date"
-               class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2" />
+            <label class="block text-sm mb-1">Operador / Localidad</label>
+            <input v-model="nuevaRuta.nombre"
+                   class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2"
+                   placeholder="Ej. Pedro - Norte" />
 
-        <!-- Plantilla -->
-        <div class="mt-3 space-y-2">
-          <button
-            class="rounded bg-blue-600 px-3 py-2 hover:bg-blue-500 disabled:opacity-60"
-            :disabled="!plantillaId"
-            @click="crearDesdePlantilla"
-          >
-            Crear desde plantilla
-          </button>
-        </div>
+            <label class="block text-sm mt-3 mb-1">Fecha de entrega</label>
+            <input v-model="nuevaRuta.fechaISO" type="date"
+                   class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2" />
 
-        <button class="mt-3 rounded bg-emerald-600 px-4 py-2 hover:bg-emerald-500"
-                @click="crearRuta">
-          Crear ruta
-        </button>
-      </div>
+            <div class="mt-3 space-y-2">
+              <button
+                class="rounded bg-blue-600 px-3 py-2 hover:bg-blue-500 disabled:opacity-60"
+                @click="crearDesdePlantilla"
+              >
+                Crear desde plantilla
+              </button>
+            </div>
 
-      <!-- Pendientes -->
-      <div ref="pendientesRef" class="lg:col-span-2 rounded-xl bg-white/5 border border-white/10 p-4">
-        <header class="flex items-center justify-between mb-3">
-          <h3 class="font-semibold">Pedidos pendientes</h3>
-          <div class="flex items-center gap-2">
-            <select v-model="rutaDestinoId" class="rounded bg-neutral-900 border border-white/10 px-3 py-2 text-sm">
-              <option disabled value="">Selecciona ruta destino…</option>
-              <option v-for="r in rutas.ordenadas" :key="r.id" :value="r.id">
-                {{ r.nombre }} — {{ r.fechaISO }}
-              </option>
-            </select>
-            <button class="rounded bg-emerald-600 px-3 py-2 text-sm hover:bg-emerald-500"
-                    :disabled="!rutaDestinoId || seleccion.size===0"
-                    @click="asignarSeleccion">
-              Asignar a ruta seleccionada
+            <button class="mt-3 rounded bg-emerald-600 px-4 py-2 hover:bg-emerald-500"
+                    @click="crearRuta">
+              Crear ruta
             </button>
           </div>
-        </header>
 
-        <!-- Tabla: pendientes -->
-        <div class="table-wrap">
-          <div class="table-scroll">
-            <table class="data-table min-w-[1050px]">
-              <thead>
-                <tr>
-                  <th class="w-10"></th>
-                  <th class="w-24 text-left">Folio</th>
-                  <th class="w-56 text-left">Producto</th>
-                  <th class="w-24 text-right">Cantidad</th>
-                  <th class="w-48 text-left">Solicitante</th>
-                  <th class="w-48 text-left">Comunidad</th>
-                  <th class="w-36 text-left">Fecha</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="p in pendientes" :key="p.id">
-                  <td>
-                    <input
-                      type="checkbox"
-                      :checked="seleccion.has(p.id)"
-                      @change="toggleSeleccion(p.id, ($event.target as HTMLInputElement).checked)" />
-                  </td>
-                  <td class="font-medium whitespace-nowrap">{{ p.folio }}</td>
-                  <td class="truncate">{{ p.producto }}</td>
-                  <td class="text-right">{{ p.cantidad }}</td>
-                  <td class="truncate">{{ p.solicitanteNombre || '—' }}</td>
-                  <td class="truncate">{{ p.solicitanteComunidad || '—' }}</td>
-                  <td class="whitespace-nowrap">{{ p.fechaISO }}</td>
-                </tr>
-                <tr v-if="pendientes.length === 0">
-                  <td class="py-6 text-center text-white/60" colspan="7">Sin pedidos pendientes.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
+          <!-- Pendientes -->
+          <div ref="pendientesRef" class="lg:col-span-2 rounded-xl bg-white/5 border border-white/10 p-4">
+            <!-- Header responsive -->
+            <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
+              <h3 class="font-semibold">Pedidos pendientes</h3>
 
-    <!-- Grid: lista de rutas + detalle -->
-    <div class="grid lg:grid-cols-3 gap-4">
-      <!-- Lista de rutas -->
-      <div class="rounded-xl bg-white/5 border border-white/10 p-4">
-        <h3 class="font-semibold mb-3">Transportista</h3>
+              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+                <select v-model="rutaDestinoId"
+                        class="w-full sm:w-auto rounded bg-neutral-900 border border-white/10 px-3 py-2 text-sm">
+                  <option disabled value="">Selecciona Transportista</option>
+                  <option v-for="r in rutas.ordenadas" :key="r.id" :value="r.id">
+                    {{ r.nombre }} — {{ r.fechaISO }}
+                  </option>
+                </select>
 
-        <!-- cerca del título “Rutas” -->
-        <div v-for="r in listaRutas" :key="r.id"
-             class="mb-2 rounded-lg border border-white/10 bg-white/5 p-3 cursor-pointer hover:bg-white/10"
-             :class="{'ring-2 ring-emerald-500': selectedRutaId === r.id}"
-             @click="selectedRutaId = r.id">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="font-medium truncate max-w-[15rem]">{{ r.nombre }}</div>
-              <div class="text-xs text-white/60">{{ r.fechaISO }}</div>
-            </div>
-            <span class="px-2 py-1 rounded text-xs border border-white/15 bg-white/10 whitespace-nowrap">
-              {{ r.estado === 'planificada' ? 'Planificada' : r.estado === 'en_ruta' ? 'En ruta' : 'Finalizada' }}
-            </span>
-          </div>
-          <div class="text-xs text-white/60 mt-1">Pedidos: {{ r.pedidos.length }}</div>
-        </div>
-
-        <div v-if="rutaSel" class="mt-4 space-y-2">
-          <button class="w-full rounded bg-rose-700 px-3 py-2 hover:bg-rose-600 disabled:opacity-50"
-                  :disabled="!canDeleteRuta"
-                  @click="eliminarRuta">
-            Eliminar ruta (vacía)
-          </button>
-          <button class="w-full rounded bg-rose-800 px-3 py-2 hover:bg-rose-700"
-                  @click="eliminarRutaForzada">
-            Eliminar ruta (forzado)
-          </button>
-        </div>
-      </div>
-
-      <!-- Detalle de ruta -->
-      <div class="lg:col-span-2 rounded-xl bg-white/5 border border-white/10 p-4">
-        <template v-if="rutaSel">
-          <div class="flex items-center justify-between mb-3">
-            <div>
-              <h3 class="font-semibold">Pedidos en {{ rutaSel.nombre }}</h3>
-              <div class="text-sm text-white/70">
-                Pedidos: {{ totalPedidos }} · Sacos: {{ totalSacos }} · Estimado: ${{ totalEstimado.toFixed(2) }}
+                <button class="w-full sm:w-auto rounded bg-emerald-600 px-3 py-2 text-sm hover:bg-emerald-500"
+                        :disabled="!rutaDestinoId || seleccion.size===0"
+                        @click="asignarSeleccion">
+                  Asignar a ruta seleccionada
+                </button>
               </div>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <button class="btn-ghost" @click="exportCsv">Exportar CSV</button>
-              <button class="btn-ghost" @click="printManifest">Imprimir</button>
-              <button class="rounded bg-emerald-600 px-3 py-2 hover:bg-emerald-500 text-sm"
-                      :disabled="!hayEnRuta"
-                      @click="marcarTodosEntregados">
-                Marcar todos entregados
-              </button>
-              <router-link
-              v-if="rutaSel"
-              class="rounded bg-white/10 px-3 py-2 hover:bg-white/20 text-sm"
-              :to="{ name:'op.ruta', params:{ id: rutaSel.id } }"
-              target="_blank"
-            >
-              Ver como operador
-            </router-link>
-            </div>
-          </div>
+            </header>
 
-          <!-- Tabla: pedidos de la ruta -->
-          <div class="table-wrap">
-            <div class="table-scroll">
-              <table class="data-table min-w-[1100px]">
-                <thead>
-                  <tr>
-                    <th class="w-24 text-left">Folio</th>
-                    <th class="w-56 text-left">Producto</th>
-                    <th class="w-24 text-right">Cantidad</th>
-                    <th class="w-48 text-left">Solicitante</th>
-                    <th class="w-48 text-left">Comunidad</th>
-                    <th class="w-40 text-left">Estado</th>
-                    <th class="w-64 text-left">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="p in pedidosRuta" :key="p.id">
-                    <td class="font-medium whitespace-nowrap">{{ p.folio }}</td>
-                    <td class="truncate">{{ p.producto }}</td>
-                    <td class="text-right">{{ p.cantidad }}</td>
-                    <td class="truncate">{{ p.solicitanteNombre || '—' }}</td>
-                    <td class="truncate">{{ p.solicitanteComunidad || '—' }}</td>
-                    <td>
-                      <span
-                        class="px-2 py-1 rounded text-xs font-medium"
-                        :class="{
-                          'bg-amber-500/15 text-amber-300 border border-amber-500/30': p.estado === 'pendiente',
-                          'bg-blue-500/15 text-blue-300 border border-blue-500/30': p.estado === 'en_ruta',
-                          'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30': p.estado === 'entregado',
-                          'bg-rose-500/15 text-rose-300 border border-rose-500/30': p.estado === 'cancelado'
-                        }">
-                        {{ p.estado }}
-                      </span>
-                    </td>
-                    <td class="space-x-2 whitespace-nowrap">
-                      <button class="btn-ghost"
-                              @click="quitarPedido(p.id)">
-                        Quitar
-                      </button>
-                    </td>
-                  </tr>
-                  <tr v-if="pedidosRuta.length === 0">
-                    <td colspan="7" class="py-6 text-center text-white/60">La ruta aún no tiene pedidos.</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Desglose -->
-          <div class="mt-6">
-            <h4 class="font-semibold mb-2">Desglose por producto</h4>
-            <div class="table-wrap">
-              <div class="table-scroll max-h-[260px]">
-                <table class="data-table min-w-[700px]">
+            <!-- Tabla: pendientes (scroll interno) -->
+            <div class="table-wrap overflow-hidden">
+              <div class="table-scroll overflow-x-auto" role="region" aria-label="Pedidos pendientes" tabindex="0">
+                <table class="data-table min-w-[920px] md:min-w-[1050px]">
                   <thead>
                     <tr>
-                      <th class="text-left w-2/5">Producto</th>
-                      <th class="text-right w-1/5">Sacos</th>
-                      <th class="text-right w-1/5">Precio</th>
-                      <th class="text-right w-1/5">Subtotal</th>
+                      <th class="w-10"></th>
+                      <th class="w-24 text-left">Folio</th>
+                      <th class="w-56 text-left">Producto</th>
+                      <th class="w-24 text-right">Cantidad</th>
+                      <th class="w-48 text-left">Solicitante</th>
+                      <th class="w-48 text-left">Comunidad</th>
+                      <th class="w-36 text-left">Fecha</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="r in porProducto" :key="r.producto">
-                      <td class="truncate">{{ r.producto }}</td>
-                      <td class="text-right">{{ r.sacos }}</td>
-                      <td class="text-right">${{ r.precio.toFixed(2) }}</td>
-                      <td class="text-right">${{ r.subtotal.toFixed(2) }}</td>
+                    <tr v-for="p in pendientes" :key="p.id">
+                      <td>
+                        <input type="checkbox"
+                               :checked="seleccion.has(p.id)"
+                               @change="toggleSeleccion(p.id, ($event.target as HTMLInputElement).checked)" />
+                      </td>
+                      <td class="font-medium whitespace-nowrap">{{ p.folio }}</td>
+                      <td class="truncate">{{ p.producto }}</td>
+                      <td class="text-right">{{ p.cantidad }}</td>
+                      <td class="truncate">{{ p.solicitanteNombre || '—' }}</td>
+                      <td class="truncate">{{ p.solicitanteComunidad || '—' }}</td>
+                      <td class="whitespace-nowrap">{{ p.fechaISO }}</td>
                     </tr>
-                    <tr v-if="porProducto.length === 0">
-                      <td colspan="4" class="py-4 text-center text-white/60">Sin datos.</td>
+                    <tr v-if="pendientes.length === 0">
+                      <td class="py-6 text-center text-white/60" colspan="7">Sin pedidos pendientes.</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
           </div>
-        </template>
+        </div>
 
-        <template v-else>
-          <p class="text-white/70">Selecciona una ruta para ver el detalle.</p>
-        </template>
-      </div>
+        <!-- Grid: lista de rutas + detalle -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <!-- Lista de rutas -->
+          <div class="rounded-xl bg-white/5 border border-white/10 p-4">
+            <h3 class="font-semibold mb-3">Transportista</h3>
+
+            <div v-for="r in listaRutas" :key="r.id"
+                 class="mb-2 rounded-lg border border-white/10 bg-white/5 p-3 cursor-pointer hover:bg-white/10"
+                 :class="{'ring-2 ring-emerald-500': selectedRutaId === r.id}"
+                 @click="selectedRutaId = r.id">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="font-medium truncate max-w-[15rem]">{{ r.nombre }}</div>
+                  <div class="text-xs text-white/60">{{ r.fechaISO }}</div>
+                </div>
+                <span class="px-2 py-1 rounded text-xs border border-white/15 bg-white/10 whitespace-nowrap">
+                  {{ r.estado === 'planificada' ? 'Planificada' : r.estado === 'en_ruta' ? 'En ruta' : 'Finalizada' }}
+                </span>
+              </div>
+              <div class="text-xs text-white/60 mt-1">Pedidos: {{ r.pedidos.length }}</div>
+            </div>
+
+            <div v-if="rutaSel" class="mt-4 space-y-2">
+              <button class="w-full rounded bg-rose-700 px-3 py-2 hover:bg-rose-600 disabled:opacity-50"
+                      :disabled="!canDeleteRuta"
+                      @click="eliminarRuta">
+                Eliminar ruta (vacía)
+              </button>
+              <button class="w-full rounded bg-rose-800 px-3 py-2 hover:bg-rose-700"
+                      @click="eliminarRutaForzada">
+                Eliminar ruta (forzado)
+              </button>
+            </div>
+          </div>
+
+          <!-- Detalle de ruta -->
+          <div class="lg:col-span-2 rounded-xl bg-white/5 border border-white/10 p-4">
+            <template v-if="rutaSel">
+              <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
+                <div>
+                  <h3 class="font-semibold">Pedidos en {{ rutaSel.nombre }}</h3>
+                  <div class="text-sm text-white/70">
+                    Pedidos: {{ totalPedidos }} · Sacos: {{ totalSacos }} · Estimado: ${{ totalEstimado.toFixed(2) }}
+                  </div>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    @click="exportCsv"
+                    class="inline-flex items-center rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    Exportar CSV
+                  </button>
+
+                  <button
+                    @click="printManifest"
+                    class="inline-flex items-center rounded bg-gray-600 px-3 py-2 text-sm font-medium text-white hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400">
+                    Imprimir
+                  </button>
+                  <button class="rounded bg-emerald-600 px-3 py-2 hover:bg-emerald-500 text-sm"
+                          :disabled="!hayEnRuta"
+                          @click="marcarTodosEntregados">
+                    Marcar todos entregados
+                  </button>
+                    <router-link
+                      v-if="rutaSel"
+                      :to="{ name:'op.ruta', params:{ id: rutaSel.id } }"
+                      target="_blank"
+                      class="inline-flex items-center rounded bg-amber-500 px-3 py-2 text-sm font-medium text-gray-900 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300">
+                      Ver como operador
+                    </router-link>
+                </div>
+              </div>
+
+              <!-- Tabla: pedidos de la ruta (scroll interno) -->
+              <div class="table-wrap">
+                <div class="table-scroll" role="region" aria-label="Pedidos de la ruta" tabindex="0">
+                  <table class="data-table min-w-[980px] md:min-w-[1100px]">
+                    <thead>
+                      <tr>
+                        <th class="w-24 text-left">Folio</th>
+                        <th class="w-56 text-left">Producto</th>
+                        <th class="w-24 text-right">Cantidad</th>
+                        <th class="w-48 text-left">Solicitante</th>
+                        <th class="w-48 text-left">Comunidad</th>
+                        <th class="w-40 text-left">Estado</th>
+                        <th class="w-64 text-left">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="p in pedidosRuta" :key="p.id">
+                        <td class="font-medium whitespace-nowrap">{{ p.folio }}</td>
+                        <td class="truncate">{{ p.producto }}</td>
+                        <td class="text-right">{{ p.cantidad }}</td>
+                        <td class="truncate">{{ p.solicitanteNombre || '—' }}</td>
+                        <td class="truncate">{{ p.solicitanteComunidad || '—' }}</td>
+                        <td>
+                          <span
+                            class="px-2 py-1 rounded text-xs font-medium"
+                            :class="{
+                              'bg-amber-500/15 text-amber-300 border border-amber-500/30': p.estado === 'pendiente',
+                              'bg-blue-500/15 text-blue-300 border border-blue-500/30': p.estado === 'en_ruta',
+                              'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30': p.estado === 'entregado',
+                              'bg-rose-500/15 text-rose-300 border border-rose-500/30': p.estado === 'cancelado'
+                            }">
+                            {{ p.estado }}
+                          </span>
+                        </td>
+                        <td class="space-x-2 whitespace-nowrap">
+                          <button
+                            class="inline-flex items-center rounded bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400"
+                            @click="quitarPedido(p.id)"
+                          >
+                            Quitar
+                          </button>
+                        </td>
+                      </tr>
+                      <tr v-if="pedidosRuta.length === 0">
+                        <td colspan="7" class="py-6 text-center text-white/60">La ruta aún no tiene pedidos.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Desglose -->
+              <div class="mt-6">
+                <h4 class="font-semibold mb-2">Desglose por producto</h4>
+                <div class="table-wrap">
+                  <div class="table-scroll max-h-[260px]" role="region" aria-label="Desglose por producto" tabindex="0">
+                    <table class="data-table min-w-[680px] md:min-w-[700px]">
+                      <thead>
+                        <tr>
+                          <th class="text-left w-2/5">Producto</th>
+                          <th class="text-right w-1/5">Sacos</th>
+                          <th class="text-right w-1/5">Precio</th>
+                          <th class="text-right w-1/5">Subtotal</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="r in porProducto" :key="r.producto">
+                          <td class="truncate">{{ r.producto }}</td>
+                          <td class="text-right">{{ r.sacos }}</td>
+                          <td class="text-right">${{ r.precio.toFixed(2) }}</td>
+                          <td class="text-right">${{ r.subtotal.toFixed(2) }}</td>
+                        </tr>
+                        <tr v-if="porProducto.length === 0">
+                          <td colspan="4" class="py-4 text-center text-white/60">Sin datos.</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <template v-else>
+              <p class="text-white/70">Selecciona una ruta para ver el detalle.</p>
+            </template>
+          </div>
+        </div>
+      </section>
+
     </div>
-  </section>
+  </div>
 </template>
 
 <style scoped>
+
+/* Mantén la tabla contenida dentro del card */
+.table-wrap {
+  max-width: 100%;
+  border-radius: 0.75rem;            /* combina bonito con tu card */
+}
+
+/* Scroll horizontal interno al card (no al body) */
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch; /* scroll suave en iOS */
+  overscroll-behavior-x: contain;    /* evita que arrastre el layout */
+  scrollbar-gutter: stable both-edges;
+}
+
+/* Estilito al scrollbar (opcional) */
+.table-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+.table-scroll::-webkit-scrollbar-track {
+  background: rgba(255,255,255,.06);
+  border-radius: 999px;
+}
+.table-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.18);
+  border-radius: 999px;
+}
+.table-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.28);
+}
+
+/* En pantallas muy angostas, ligeramente menos padding del card
+   para que el scroll no parezca “cortado” */
+@media (max-width: 480px) {
+  .table-scroll { padding-bottom: 2px; }
+}
+
+
 /* Botones discretos del tema oscuro */
 .btn-ghost {
   background: rgba(255,255,255,.06);

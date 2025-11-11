@@ -291,21 +291,50 @@ function fmtFecha(ts: number) {
               <!-- Acciones -->
               <td class="space-x-2">
                 <template v-if="editId === u.id">
-                  <button class="rounded bg-emerald-600 px-3 py-1 hover:bg-emerald-500" @click="saveEdit">Guardar</button>
-                  <button class="rounded bg-white/10 px-3 py-1 hover:bg-white/20" @click="cancelEdit">Cancelar</button>
+                  <button
+                    class="rounded px-3 py-1 text-white bg-emerald-600 hover:bg-emerald-500"
+                    @click="saveEdit"
+                  >Guardar</button>
+
+                  <button
+                    class="rounded px-3 py-1 text-white bg-gray-600 hover:bg-gray-500"
+                    @click="cancelEdit"
+                  >Cancelar</button>
+
                   <span v-if="editErr" class="text-rose-300 text-xs ml-2">{{ editErr }}</span>
                 </template>
+
                 <template v-else>
-                  <button class="rounded bg-white/10 px-3 py-1 hover:bg-white/20" @click="startEdit(u.id)">Editar</button>
-                  <button class="rounded bg-white/10 px-3 py-1 hover:bg-white/20" @click="toggleActivo(u.id)">
+                  <button
+                    class="rounded px-3 py-1 text-white bg-blue-600 hover:bg-blue-500"
+                    @click="startEdit(u.id)"
+                  >Editar</button>
+
+                  <button
+                    class="rounded px-3 py-1 transition-colors"
+                    :class="u.activo
+                      ? 'bg-red-600 hover:bg-red-500 text-white'
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white'"
+                    @click="toggleActivo(u.id)"
+                  >
                     {{ u.activo ? 'Desactivar' : 'Activar' }}
                   </button>
-                  <button class="rounded bg-white/10 px-3 py-1 hover:bg-white/20" @click="setRol(u.id, u.rol === 'admin' ? 'user' : 'admin')">
+
+
+                  <button
+                    class="rounded px-3 py-1 text-white bg-violet-600 hover:bg-violet-500"
+                    @click="setRol(u.id, u.rol === 'admin' ? 'user' : 'admin')"
+                  >
                     Hacer {{ u.rol === 'admin' ? 'Usuaria' : 'Admin' }}
                   </button>
-                  <button class="rounded bg-amber-600 px-3 py-1 hover:bg-amber-500" @click="resetPassword(u.id)">Reset pass</button>
+
+                  <button
+                    class="rounded px-3 py-1 text-gray-900 bg-amber-500 hover:bg-amber-400"
+                    @click="resetPassword(u.id)"
+                  >Reset pass</button>
                 </template>
               </td>
+
             </tr>
           </tbody>
         </table>
