@@ -18,9 +18,21 @@
         </p>
 
         <div class="flex gap-2">
-          <RouterLink class="rounded bg-white/10 px-3 py-2 text-sm hover:bg-white/20" :to="{ name: 'op.ruta', params: { id: r.id } }">Abrir</RouterLink>
-          <RouterLink class="rounded bg-white/10 px-3 py-2 text-sm hover:bg-white/20" :to="{ name: 'op.ruta.mapa', params: { id: r.id } }">Ver mapa</RouterLink>
+          <RouterLink
+            :to="{ name: 'op.ruta', params: { id: r.id } }"
+            class="inline-flex items-center rounded bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+          >
+            Abrir
+          </RouterLink>
+
+          <RouterLink
+            :to="{ name: 'op.ruta.mapa', params: { id: r.id } }"
+            class="inline-flex items-center rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+            Ver mapa
+          </RouterLink>
         </div>
+
       </article>
     </div>
   </section>

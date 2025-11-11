@@ -237,7 +237,7 @@ function estadoChipClasses(e: Pedido['estado']) {
                 <!-- Pendiente: Asignar (navega a /admin/rutas) -->
                 <!-- antes abría el panel inline; ahora navega a Rutas con query -->
                 <button
-                  class="btn-ghost mt-2"
+                  class="btn-ghost mt-2 hover:bg-blue-500/20 rounded bg-blue-600 px-3 py-1 text-white"
                   @click="$router.push({ name:'a.rutas', query:{ select: p.id } })">
                   Asignar ruta
                 </button>
@@ -252,11 +252,11 @@ function estadoChipClasses(e: Pedido['estado']) {
                 <!-- Cancelar si no está entregado -->
                 <button
                   v-if="p.estado !== 'entregado' && p.estado !== 'cancelado'"
-                  class="rounded bg-white/10 px-3 py-1 hover:bg-white/20"
-                  @click="cancelarPedido(p.id)">
+                  class="inline-flex items-center rounded bg-amber-500 px-3 py-4 text-xs font-medium text-gray-900 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                  @click="cancelarPedido(p.id)"
+                >
                   Cancelar
                 </button>
-
                 <!-- Borrar: solo pendiente y sin ruta -->
                 <button
                   v-if="p.estado === 'pendiente' && !p.routeId"

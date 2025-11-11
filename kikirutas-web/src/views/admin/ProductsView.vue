@@ -169,18 +169,48 @@ function remove(id: string) {
               <!-- Acciones -->
               <td class="space-x-2">
                 <template v-if="editingId === p.id">
-                  <button class="rounded bg-emerald-600 px-3 py-1 hover:bg-emerald-500" @click="saveEdit">Guardar</button>
-                  <button class="rounded bg-white/10 px-3 py-1 hover:bg-white/20" @click="cancelEdit">Cancelar</button>
+                  <button
+                    class="rounded px-3 py-1 text-white bg-emerald-600 hover:bg-emerald-500"
+                    @click="saveEdit"
+                  >
+                    Guardar
+                  </button>
+                  <button
+                    class="rounded px-3 py-1 text-white bg-gray-600 hover:bg-gray-500"
+                    @click="cancelEdit"
+                  >
+                    Cancelar
+                  </button>
                   <span v-if="editErr" class="text-rose-300 text-xs ml-2">{{ editErr }}</span>
                 </template>
+
                 <template v-else>
-                  <button class="rounded bg-white/10 px-3 py-1 hover:bg-white/20" @click="startEdit(p.id)">Editar</button>
-                  <button class="rounded bg-white/10 px-3 py-1 hover:bg-white/20" @click="store.toggleActivo(p.id)">
+                  <button
+                    class="rounded px-3 py-1 text-white bg-blue-600 hover:bg-blue-500"
+                    @click="startEdit(p.id)"
+                  >
+                    Editar
+                  </button>
+
+                  <button
+                    class="rounded px-3 py-1 text-white"
+                    :class="p.activo
+                      ? 'bg-red-600 hover:bg-red-500'
+                      : 'bg-emerald-600 hover:bg-emerald-500'"
+                    @click="store.toggleActivo(p.id)"
+                  >
                     {{ p.activo ? 'Desactivar' : 'Activar' }}
                   </button>
-                  <button class="rounded bg-rose-700 px-3 py-1 hover:bg-rose-600" @click="remove(p.id)">Eliminar</button>
+
+                  <button
+                    class="rounded px-3 py-1 text-white bg-rose-700 hover:bg-rose-600"
+                    @click="remove(p.id)"
+                  >
+                    Eliminar
+                  </button>
                 </template>
               </td>
+
             </tr>
           </tbody>
         </table>

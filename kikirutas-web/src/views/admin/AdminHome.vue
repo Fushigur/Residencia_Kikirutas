@@ -132,7 +132,7 @@ const mesPorProducto = computed(() => {
               <td class="px-2">
                 <RouterLink
                   :to="{ name:'a.rutas', query:{ highlight: p.id } }"
-                  class="rounded bg-emerald-600 px-3 py-1 hover:bg-emerald-500 text-xs"
+                  class="inline-flex items-center rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-500"
                 >
                   Asignar ruta
                 </RouterLink>
