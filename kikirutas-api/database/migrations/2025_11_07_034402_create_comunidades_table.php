@@ -5,21 +5,28 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
-    public function up(): void {
-        Schema::create('comunidades', function (Blueprint $t) {
-            $t->bigIncrements('id_comunidad');
-            $t->unsignedInteger('id_municipio');
-            $t->string('nombre', 160);
-            $t->geometry('geom')->nullable();   // MULTIPOLYGON (cárgalo con SRID 4326)
-            $t->point('centroide')->nullable(); // POINT (cárgalo con SRID 4326)
-            $t->boolean('activo')->default(true);
-            $t->timestamps();
+    public function up(): void
+    {
+        Schema::create('comunidades', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('municipio_id')
+                  ->constrained('municipios')
+                  ->cascadeOnDelete();
 
-            $t->foreign('id_municipio')->references('id_municipio')->on('municipios')->restrictOnDelete();
-            $t->index(['id_municipio','nombre']);
-            $t->spatialIndex('geom');
-            $t->spatialIndex('centroide');
+            $table->string('nombre');
+
+            // Reemplazo del point():
+            $table->decimal('lat', 10, 7)->nullable();
+            $table->decimal('lng', 10, 7)->nullable();
+
+            $table->timestamps();
+
+            $table->unique(['municipio_id', 'nombre']);
         });
     }
-    public function down(): void { Schema::dropIfExists('comunidades'); }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('comunidades');
+    }
 };
