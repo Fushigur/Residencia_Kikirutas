@@ -160,21 +160,21 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed } from 'vue';
-import { RouterLink } from 'vue-router';
-import { storeToRefs } from 'pinia';
+import { reactive, ref, computed } from 'vue'
+import { RouterLink } from 'vue-router'
+import { storeToRefs } from 'pinia'
 
-import { useAuthStore } from '@/stores/auth';
-import { usePerfilStore } from '@/stores/perfil';
+import { useAuthStore } from '@/stores/auth'
+import { usePerfilStore } from '@/stores/perfil'
 
-const auth = useAuthStore();
-const { role, displayName } = storeToRefs(auth);
+const auth = useAuthStore()
+const { role, displayName } = storeToRefs(auth)
 
-const perfil = usePerfilStore();
-perfil.load();
+const perfil = usePerfilStore()
+perfil.load()
 
 // estado local de edición
-const editando = ref(false);
+const editando = ref(false)
 
 // form inicial (prefill con perfil o auth)
 const form = reactive({
@@ -182,72 +182,87 @@ const form = reactive({
   nombre: perfil.nombre || displayName.value || '',
   telefono: perfil.telefono,
   email: perfil.email,
-});
+})
 
 // placeholder si no hay avatar
 const placeholder =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160"><rect width="160" height="160" rx="80" fill="#0f1010"/><circle cx="80" cy="60" r="28" fill="#2b2f2d"/><rect x="35" y="98" width="90" height="40" rx="20" fill="#2b2f2d"/></svg>`
-  );
+  )
 
 // validación mínima
 const valido = computed(() => {
-  const telOk = !form.telefono || /^\d{10}$/.test(form.telefono);
-  const mailOk = !form.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
-  return !!form.nombre && telOk && mailOk;
-});
+  const telOk = !form.telefono || /^\d{10}$/.test(form.telefono)
+  const mailOk = !form.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
+  return !!form.nombre && telOk && mailOk
+})
 
 function activarEdicion() {
-  editando.value = true;
+  editando.value = true
 }
 
 function cancelar() {
   // restaurar desde store
-  form.avatar = perfil.avatar;
-  form.nombre = perfil.nombre || displayName.value || '';
-  form.telefono = perfil.telefono;
-  form.email = perfil.email;
-  editando.value = false;
+  form.avatar = perfil.avatar
+  form.nombre = perfil.nombre || displayName.value || ''
+  form.telefono = perfil.telefono
+  form.email = perfil.email
+  editando.value = false
 }
 
 function guardar() {
-  if (!valido.value) return;
+  if (!valido.value) return
   perfil.set({
     avatar: form.avatar,
     nombre: form.nombre,
     telefono: form.telefono,
     email: form.email,
-  });
+  })
   // opcional: sincronizar nombre visible del auth
   if (form.nombre && form.nombre !== displayName.value) {
-    auth.displayName = form.nombre;
-    auth.saveToStorage?.();
+    auth.displayName = form.nombre
+    auth.saveToStorage?.()
   }
-  editando.value = false;
+  editando.value = false
 }
 
 // carga de avatar
 function onAvatarChange(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => { form.avatar = String(reader.result); };
-  reader.readAsDataURL(file);
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => { form.avatar = String(reader.result) }
+  reader.readAsDataURL(file)
 }
 
 // helpers de contacto asesor
-const digits = (s: string) => (s || '').replace(/\D+/g, '');
+const digits = (s: string) => (s || '').replace(/\D+/g, '')
 const whatsUrl = computed(() => {
-  const phone = digits(perfil.asesorTelefono || '');
-  const text = encodeURIComponent('Hola, necesito apoyo con mi pedido / registro.');
-  return phone ? `https://wa.me/52${phone}?text=${text}` : '#';
-});
+  const phone = digits(perfil.asesorTelefono || '')
+  const text = encodeURIComponent('Hola, necesito apoyo con mi pedido / registro.')
+  return phone ? `https://wa.me/52${phone}?text=${text}` : '#'
+})
 const telUrl = computed(() => {
-  const phone = digits(perfil.asesorTelefono || '');
-  return phone ? `tel:+52${phone}` : '#';
-});
+  const phone = digits(perfil.asesorTelefono || '')
+  return phone ? `tel:+52${phone}` : '#'
+})
 
-// expone role para la tarjeta
-const roleValue = role;
+// === Función llamada por el botón "Solicitar cambio de ubicación"
+function solicitarCambioUbicacion() {
+  const nuevaComunidad = prompt('Nueva comunidad:', perfil.comunidad || '')
+  if (!nuevaComunidad) return
+  const nuevoMunicipio = prompt('Nuevo municipio:', perfil.municipio || '')
+  if (!nuevoMunicipio) return
+
+  ;(perfil as any).solicitudUbicacionPendiente = {
+    comunidad: nuevaComunidad,
+    municipio: nuevoMunicipio,
+    fecha: new Date().toISOString(),
+  }
+
+  alert('Solicitud enviada. El equipo revisará el cambio.')
+  // Si tienes una acción real:
+  // perfil.enviarSolicitudCambioUbicacion?.(nuevaComunidad, nuevoMunicipio)
+}
 </script>

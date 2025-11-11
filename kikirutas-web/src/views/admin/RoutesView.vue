@@ -261,12 +261,6 @@ function eliminarRutaForzada() {
 
         <!-- Plantilla -->
         <div class="mt-3 space-y-2">
-          <label class="block text-sm mb-1">Municipios</label>
-          <select v-model="plantillaId" class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2">
-            <option disabled value="">Seleccione un minicipio</option>
-            <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.nombre }}</option>
-          </select>
-
           <button
             class="rounded bg-blue-600 px-3 py-2 hover:bg-blue-500 disabled:opacity-60"
             :disabled="!plantillaId"
@@ -345,16 +339,9 @@ function eliminarRutaForzada() {
     <div class="grid lg:grid-cols-3 gap-4">
       <!-- Lista de rutas -->
       <div class="rounded-xl bg-white/5 border border-white/10 p-4">
-        <h3 class="font-semibold mb-3">Rutas</h3>
+        <h3 class="font-semibold mb-3">Transportista</h3>
 
         <!-- cerca del título “Rutas” -->
-        <RouterLink
-          class="rounded bg-white/10 px-3 py-2 hover:bg-white/20 text-sm"
-          :to="{ name:'op.hoy' }"
-          target="_blank">
-          Ver como operador (lista)
-        </RouterLink>
-        
         <div v-for="r in listaRutas" :key="r.id"
              class="mb-2 rounded-lg border border-white/10 bg-white/5 p-3 cursor-pointer hover:bg-white/10"
              :class="{'ring-2 ring-emerald-500': selectedRutaId === r.id}"
@@ -448,16 +435,6 @@ function eliminarRutaForzada() {
                       </span>
                     </td>
                     <td class="space-x-2 whitespace-nowrap">
-                      <button v-if="p.estado === 'pendiente'"
-                              class="btn-ghost"
-                              @click="marcarEnRuta(p.id)">
-                        Marcar en ruta
-                      </button>
-                      <button v-if="p.estado !== 'entregado'"
-                              class="rounded bg-emerald-600 px-3 py-1 hover:bg-emerald-500 text-sm"
-                              @click="marcarEntregado(p.id)">
-                        Entregado
-                      </button>
                       <button class="btn-ghost"
                               @click="quitarPedido(p.id)">
                         Quitar
