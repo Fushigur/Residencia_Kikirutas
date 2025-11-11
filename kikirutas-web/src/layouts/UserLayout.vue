@@ -1,12 +1,10 @@
 <template>
   <div class="min-h-screen flex bg-app text-neutral-100">
-    <!-- Sidebar -->
+    <!-- Sidebar (solo desktop) -->
     <aside class="hidden md:block w-[320px] p-4">
       <div class="menu-panel relative overflow-hidden sticky top-4">
-        <!-- Patrón antiguo dentro del panel del menú -->
         <div class="absolute inset-0 bg-kikiba opacity-25 pointer-events-none"></div>
 
-        <!-- Contenido del menú -->
         <div class="relative z-10">
           <!-- Marca -->
           <div class="flex items-center gap-3 p-4 border-b border-white/10">
@@ -70,34 +68,58 @@
         </div>
       </header>
 
-      <main class="p-4 md:p-8">
-        <!-- Panel central (recuadro negro del contenido) -->
+      <main class="p-4 pb-24 md:pb-8 md:p-8">
         <div class="page-panel">
           <RouterView />
         </div>
       </main>
+
+      <!-- Bottom Tabs (solo móvil) -->
+      <nav class="bottom-nav md:hidden grid grid-cols-5">
+        <RouterLink :to="{name:'u.inicio'}" class="tab" :class="{active:isActive('/usuario/inicio')}">
+          <svg viewBox="0 0 24 24" class="icon"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9z"/></svg>
+          <span class="tab-label">Inicio</span>
+        </RouterLink>
+
+        <RouterLink :to="{name:'u.pedido.nuevo'}" class="tab" :class="{active:isActive('/usuario/pedido/nuevo')}">
+          <svg viewBox="0 0 24 24" class="icon"><path d="M12 5v14m-7-7h14"/></svg>
+          <span class="tab-label">Pedido</span>
+        </RouterLink>
+
+        <RouterLink :to="{name:'u.historial'}" class="tab" :class="{active:isActive('/usuario/historial')}">
+          <svg viewBox="0 0 24 24" class="icon"><path d="M12 8v5l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9z"/></svg>
+          <span class="tab-label">Historial</span>
+        </RouterLink>
+
+        <RouterLink :to="{name:'u.inventario'}" class="tab" :class="{active:isActive('/usuario/granja')}">
+          <svg viewBox="0 0 24 24" class="icon"><path d="M3 12l9-7 9 7v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+          <span class="tab-label">Granja</span>
+        </RouterLink>
+
+        <RouterLink :to="{name:'u.perfil'}" class="tab" :class="{active:isActive('/usuario/perfil')}">
+          <svg viewBox="0 0 24 24" class="icon"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-5 0-9 2.5-9 5v1h18v-1c0-2.5-4-5-9-5z"/></svg>
+          <span class="tab-label">Perfil</span>
+        </RouterLink>
+      </nav>
     </div>
   </div>
 </template>
 
-
 <script setup lang="ts">
-import { useRoute, useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import logoUrl from '@/assets/img/Logo.png'
 
-// Importa tu logo - ajusta la ruta según tu estructura de archivos
-import logoUrl from '@/assets/img/Logo.png';
+const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
 
-const route = useRoute();
-const router = useRouter();
-const auth = useAuthStore();
-
-const isActive = (prefix: string) => route.path.startsWith(prefix);
+const isActive = (prefix: string) => route.path.startsWith(prefix)
 
 const onLogout = () => {
-  auth.logout();
-  router.push({ name: 'login' });
-};
+  auth.logout()
+  router.push({ name: 'login' })
+}
 </script>
 
 <style scoped>
@@ -130,7 +152,7 @@ const onLogout = () => {
   .page-panel{ max-width: 1100px; margin: 0 auto; }
 }
 
-/* Panel del menú lateral (con patrón adentro) */
+/* Panel del menú lateral (desktop) */
 .menu-panel{
   background: rgba(18,18,18,.92);
   border: 1px solid rgba(255,255,255,.08);
@@ -139,7 +161,7 @@ const onLogout = () => {
   backdrop-filter: blur(6px);
 }
 
-/* Links del menú */
+/* Links del menú (desktop) */
 .link{
   display:flex; align-items:center; gap:.65rem;
   padding:.65rem .8rem; border-radius:.75rem;
@@ -149,7 +171,7 @@ const onLogout = () => {
 .link.active{ background: rgba(34,167,136,.18); color:#fff; }
 
 /* Iconos */
-.icon{ width:18px; height:18px; fill: currentColor; }
+.icon{ width:20px; height:20px; fill: currentColor; }
 
 /* Botón salir */
 .btn-danger{
@@ -160,4 +182,29 @@ const onLogout = () => {
 
 /* Utilidad */
 .bg-panel{ background: var(--panel); }
+
+/* --- Móvil: bottom tabs --- */
+.bottom-nav{
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 20;
+  background: rgba(18,18,18,.96);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255,255,255,.08);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4px);
+}
+/* Salvaguarda extra: nunca mostrar en >= md si alguna regla lo sobrescribe */
+@media (min-width:768px){
+  .bottom-nav{ display: none !important; }
+}
+
+.tab{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap: .15rem; padding: .5rem 0 .6rem;
+  color: #d6e6df; text-decoration:none; font-size: 11px;
+}
+.tab .icon{ width:22px; height:22px; }
+.tab.active{ color:#fff; }
+.tab:active{ filter:brightness(1.2); }
+.tab-label{ line-height:1; }
 </style>

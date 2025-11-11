@@ -1,5 +1,6 @@
 <template>
-  <section class="min-h-[70vh] grid place-items-center">
+  <!-- ANTES: <section class="min-h-[70vh] grid place-items-center"> -->
+  <section class="min-h-screen grid place-items-center px-4">
     <div class="w-full max-w-xl rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
       <h2 class="text-2xl font-bold mb-1">Crear cuenta</h2>
       <p class="text-sm text-gray-400 mb-6">Registro de prueba. Luego lo conectamos a tu API real.</p>
@@ -94,6 +95,17 @@
           </div>
         </div>
 
+        <!-- Rol (solo Usuaria u Operador) -->
+        <div class="grid gap-2">
+          <label class="text-sm text-gray-300">Rol</label>
+          <select v-model="role"
+                  class="rounded bg-neutral-900 border border-white/10 px-3 py-2 focus:border-cyan-500 outline-none">
+            <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+        </div>
+
         <!-- Términos y condiciones -->
         <div class="flex items-start gap-2">
           <input id="terms" type="checkbox" v-model="accept" class="mt-1" />
@@ -128,7 +140,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore, ROLE_OPTIONS, type ExplicitRole } from '@/stores/auth'
 
 // Datos del formulario
 const nombres = ref('')
@@ -143,22 +155,47 @@ const password = ref('')
 const confirm = ref('')
 const accept = ref(false)
 
+// Rol elegido (por defecto: 'user')
+const role = ref<ExplicitRole>('user')
+// SOLO mostrar Usuaria y Operador en el selector
+const roleOptions = computed(() => ROLE_OPTIONS.filter(o => o.value !== 'admin'))
+
 // Listas de opciones
 const municipios = ref([
-  'Municipio A',
-  'Municipio B', 
-  'Municipio C',
-  'Municipio D'
+  'José María Morelos',
+  'Felipe Carrillo Puerto'
 ])
 
 const comunidades = ref<Record<string, string[]>>({
-  'Municipio A': ['Comunidad A1', 'Comunidad A2', 'Comunidad A3'],
-  'Municipio B': ['Comunidad B1', 'Comunidad B2', 'Comunidad B3'],
-  'Municipio C': ['Comunidad C1', 'Comunidad C2', 'Comunidad C3'],
-  'Municipio D': ['Comunidad D1', 'Comunidad D2', 'Comunidad D3']
+  'José María Morelos': [
+    'José María Morelos',
+    'Candelaria',
+    'Dziuché',
+    'La Presumida',
+    'Santa Gertrudis',
+    'Kancabchén',
+    'Cafetalito',
+    'Cafetal Grande',
+    'Benito Juárez',
+    'Pozo Pirata',
+    'San Carlos',
+    'Chunhuhub',
+    'Polyuc',
+    'Dos Aguadas',
+    'El Naranjal',
+    'Othón P. Blanco',
+    'Puerto Arturo'
+  ],
+  'Felipe Carrillo Puerto': [
+    'Felipe Carrillo Puerto',
+    'Dzula',
+    'X-Yatil',
+    'El Señor',
+    'Tihosuco'
+  ]
 })
 
-const sexos = ref(['Masculino', 'Femenino', 'Otro', 'Prefiero no decir'])
+const sexos = ref(['Masculino', 'Femenino'])
 
 // Computed para filtrar comunidades según municipio seleccionado
 const comunidadesFiltradas = computed(() => {
@@ -173,12 +210,10 @@ watch(municipio, () => {
 
 // Validaciones
 const telefonoValido = computed(() => /^\d{10}$/.test(telefono.value))
-
 const passwordsMatch = computed(() => password.value === confirm.value)
 const passwordFuerte = computed(() =>
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&.,:;#\-_]{8,}$/.test(password.value)
 )
-
 const edadValida = computed(() => !!edad.value && edad.value >= 1 && edad.value <= 120)
 
 const isValid = computed(() =>
@@ -212,12 +247,17 @@ const onSubmit = () => {
     nombreCompleto: `${nombres.value} ${apellidos.value}`
   }
 
-  // Registro de prueba: marcamos sesión y redirigimos
-  auth.loginAs('user', userData.nombreCompleto)
+  // Registro de prueba: marcamos sesión con el rol elegido y redirigimos por rol
+  auth.loginAs(role.value, userData.nombreCompleto)
 
   // Aquí normalmente enviarías los datos a tu API
-  console.log('Datos del usuario:', userData)
+  console.log('Datos del usuario:', { ...userData, role: role.value })
 
-  router.push({ name: 'u.inicio' })
+  if (role.value === 'operator') {
+    router.push({ name: 'op.hoy' })
+  } else {
+    // 'user'
+    router.push({ name: 'u.inicio' })
+  }
 }
 </script>
