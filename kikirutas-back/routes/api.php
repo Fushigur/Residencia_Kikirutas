@@ -5,31 +5,32 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\RutaController;
 
-Route::get('/health', fn() => ['ok'=>true, 'time'=>now()]);
+Route::get('health', fn () => response()->json(['ok' => true, 'time' => now()->toISOString()]));
 
-Route::post('/auth/register', [AuthController::class, 'register']);
-Route::post('/auth/login',    [AuthController::class, 'login']);
+/**
+ * Auth
+ * - register: puedes dejarlo abierto en dev y cerrarlo en prod si quieres.
+ */
+Route::prefix('auth')->controller(AuthController::class)->group(function () {
+    Route::post('register', 'register'); // opcional cerrar en prod
+    Route::post('login', 'login');
 
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('me', 'me');
+        Route::post('logout', 'logout');
+    });
+});
+
+/**
+ * API protegida con Sanctum
+ */
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/auth/me',     [AuthController::class, 'me']);
-    Route::post('/auth/logout',[AuthController::class, 'logout']);
+    // Pedidos
+    Route::apiResource('pedidos', PedidoController::class);
+    Route::patch('pedidos/{id}/estado', [PedidoController::class, 'setEstado']);
 
-    Route::get('/pedidos',            [PedidoController::class, 'index']);
-    Route::post('/pedidos',           [PedidoController::class, 'store']);
-    Route::get('/pedidos/{pedido}',   [PedidoController::class, 'show']);
-    Route::put('/pedidos/{pedido}',   [PedidoController::class, 'update']);
-    Route::delete('/pedidos/{pedido}',[PedidoController::class, 'destroy']);
-    Route::post('/pedidos/{pedido}/estado', [PedidoController::class, 'setEstado']);
-
-    Route::get('/rutas',              [RutaController::class, 'index']);
-    Route::post('/rutas',             [RutaController::class, 'store']);
-    Route::get('/rutas/{ruta}',       [RutaController::class, 'show']);
-    Route::put('/rutas/{ruta}',       [RutaController::class, 'update']);
-    Route::delete('/rutas/{ruta}',    [RutaController::class, 'destroy']);
-
-    Route::post('/rutas/{ruta}/asignar',         [RutaController::class, 'asignarPedido']);
-    Route::delete('/rutas/{ruta}/quitar/{pedido}', [RutaController::class, 'quitarPedido']);
-    Route::post('/rutas/{ruta}/en-curso',        [RutaController::class, 'marcarEnCurso']);
-    Route::post('/rutas/{ruta}/cerrada',         [RutaController::class, 'marcarCerrada']);
-    Route::post('/rutas/{ruta}/entregar-todos',  [RutaController::class, 'marcarTodosEntregados']);
+    // Rutas
+    Route::apiResource('rutas', RutaController::class);
+    Route::post('rutas/{id}/pedidos/{pid}', [RutaController::class, 'assignPedido']);
+    Route::delete('rutas/{id}/pedidos/{pid}', [RutaController::class, 'unassignPedido']);
 });
