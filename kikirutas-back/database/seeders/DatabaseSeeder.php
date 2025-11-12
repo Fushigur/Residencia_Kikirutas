@@ -2,24 +2,38 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+use App\Models\{Role,User,Pedido,Ruta};
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $admin = Role::firstOrCreate(['nombre'=>'admin']);
+        $oper  = Role::firstOrCreate(['nombre'=>'operador']);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        $u = User::firstOrCreate(
+            ['email'=>'admin@gmail.com'],
+            ['name'=>'Admin','password'=>Hash::make('password'), 'role_id'=>$admin->id]
+        );
+
+        $p1 = Pedido::factory()->create([
+            'producto'=>'Alimento A-20 kg','cantidad'=>5,
+            'solicitante_nombre'=>'María Poot','solicitante_comunidad'=>'Kancabchén',
         ]);
+        $p2 = Pedido::factory()->create([
+            'producto'=>'Alimento B-40 kg','cantidad'=>2,
+            'solicitante_nombre'=>'Juana Canul','solicitante_comunidad'=>'Dziuché',
+        ]);
+
+        $ruta = Ruta::create([
+            'fecha'=>now()->toDateString(),
+            'estado'=>'borrador',
+            'chofer_id'=>$u->id,
+            'nombre'=>'Ruta de prueba',
+        ]);
+
+        $ruta->pedidos()->sync([$p1->id,$p2->id]);
     }
 }
