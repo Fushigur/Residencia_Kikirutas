@@ -1,3 +1,4 @@
+<!-- src/views/user/LoginView.vue -->
 <template>
   <section class="min-h-screen flex items-center justify-center px-4">
     <div class="w-full max-w-xl rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-6 shadow-lg">
@@ -6,7 +7,7 @@
         Acceso para navegar por las vistas de KikiRutas.
       </p>
 
-      <form class="mt-6 grid gap-4" @submit.prevent>
+      <form class="mt-6 grid gap-4" @submit.prevent="onSubmit">
         <!-- Correo -->
         <label class="grid gap-1">
           <span class="text-sm text-crema/80">Correo</span>
@@ -37,37 +38,16 @@
           <small v-if="passwordErr" class="text-rose-300">{{ passwordErr }}</small>
         </label>
 
-        <!-- Botones (solo los 3 originales) -->
-        <div class="flex flex-wrap items-center gap-3 mt-2">
-          <button
-            type="button"
-            class="btn-maiz"
-            :disabled="btnLoading === 'user' || hasErrors"
-            @click="loginWithRole('user')"
-          >
-            {{ btnLoading === 'user' ? 'Entrando...' : 'Entrar como Usuaria' }}
-          </button>
+        <!-- Botón único -->
+        <button
+          type="submit"
+          class="rounded bg-blue-600 text-sm px-5 py-2 w-fit self-start disabled:opacity-50"
+          :disabled="loading || hasErrors"
+        >
+          {{ loading ? 'Entrando…' : 'Entrar' }}
+        </button>
 
-          <button
-            type="button"
-            class="rounded bg-rose-600 px-3 py-2 hover:bg-rose-500 disabled:opacity-50"
-            :disabled="btnLoading === 'admin' || hasErrors"
-            @click="loginWithRole('admin')"
-          >
-            {{ btnLoading === 'admin' ? 'Entrando...' : 'Entrar como Admin' }}
-          </button>
-
-          <button
-            type="button"
-            class="rounded bg-blue-600 px-3 py-2 hover:bg-blue-500 disabled:opacity-50"
-            :disabled="btnLoading === 'operator' || hasErrors"
-            @click="loginWithRole('operator')"
-          >
-            {{ btnLoading === 'operator' ? 'Entrando...' : 'Ingresar como operador' }}
-          </button>
-        </div>
-
-        <!-- Errores del backend / de rol -->
+        <!-- Errores del backend / validación -->
         <p v-if="serverErr" class="text-rose-300 text-sm mt-2">{{ serverErr }}</p>
         <ul v-if="Object.keys(fieldErrs).length" class="text-rose-300 text-xs space-y-1">
           <li v-for="(arr, k) in fieldErrs" :key="k">{{ k }}: {{ arr[0] }}</li>
@@ -85,23 +65,22 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore, type Role } from '@/stores/auth'
+import { useAuthStore, type ExplicitRole } from '@/stores/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
 
-// form (de prueba puedes cambiar por vacío)
-const email = ref('admin@gmail.com')
-const password = ref('Password289')
+// Puedes dejarlos en blanco; los relleno para pruebas.
+const email = ref('')
+const password = ref('')
 
-// estado UI
-const btnLoading = ref<Role | null>(null)
+const loading = ref(false)
 const serverErr = ref('')
 const fieldErrs = ref<Record<string, string[]>>({})
 const touched = ref({ email: false, password: false })
 const tried = ref(false)
 
-// validaciones front
+// Validaciones front
 const emailOk = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value))
 const passStrong = computed(() => /^(?=.*[A-Z])(?=.*\d).{8,}$/.test(password.value))
 
@@ -120,49 +99,37 @@ const passwordErr = computed(() => {
 })
 const hasErrors = computed(() => !!emailErr.value || !!passwordErr.value)
 
-// navegación por rol
-const targetByRole: Record<Role, { name: string }> = {
-  user: { name: 'u.inicio' },
-  admin: { name: 'a.resumen' },
-  operator: { name: 'op.hoy' },
+// Destino por rol
+function destFor(role: ExplicitRole | null) {
+  if (role === 'admin')    return { name: 'a.resumen' }
+  if (role === 'operator') return { name: 'op.hoy' }
+  return { name: 'u.inicio' }
 }
 
-// etiquetas para mensajes
-const roleLabel: Record<Role, string> = {
-  user: 'Usuaria',
-  admin: 'Administrador',
-  operator: 'Operador',
-}
-
-async function loginWithRole(target: Role) {
+async function onSubmit() {
   tried.value = true
   serverErr.value = ''
   fieldErrs.value = {}
 
   if (hasErrors.value) return
 
-  btnLoading.value = target
-  const res = await auth.login({ email: email.value, password: password.value })
-  btnLoading.value = null
+  loading.value = true
+  try {
+    const res = await auth.login({ email: email.value, password: password.value })
 
-  if (!res.ok) {
-    serverErr.value = String(res.error || 'Credenciales inválidas')
-    fieldErrs.value = (res as any).fieldErrors ?? {}
-    return
+    if (!res.ok) {
+      serverErr.value = String(res.error || 'Credenciales inválidas')
+      fieldErrs.value = (res as any).fieldErrors ?? {}
+      return
+    }
+
+    // auth.role ya quedó seteado por el store
+    const safeRole = (auth.role || 'user') as ExplicitRole
+    router.push(destFor(safeRole)).catch(() => {})
+  } catch (e: any) {
+    serverErr.value = e?.message || 'No se pudo iniciar sesión'
+  } finally {
+    loading.value = false
   }
-
-  // Rol real devuelto por el back (normalizado en el store)
-  const real = auth.role as Role
-
-  if (real !== target) {
-    // No navegamos; avisamos qué botón debe usar.
-    const etiqueta =
-      real === 'admin' ? 'Admin' : real === 'operator' ? 'Operador' : 'Usuaria'
-    serverErr.value = `Tu cuenta es "${etiqueta}". Debes usar el botón "${etiqueta}".`
-    return
-  }
-
-  // OK: coincide botón con rol
-  router.push(targetByRole[real]).catch(() => {})
 }
 </script>
