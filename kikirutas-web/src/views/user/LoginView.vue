@@ -41,7 +41,7 @@
         <!-- Botón único -->
         <button
           type="submit"
-          class="btn-maiz text-sm px-3 py-1 w-fit self-start"
+          class="rounded bg-blue-600 text-sm px-5 py-2 w-fit self-start disabled:opacity-50"
           :disabled="loading || hasErrors"
         >
           {{ loading ? 'Entrando…' : 'Entrar' }}
@@ -115,7 +115,6 @@ async function onSubmit() {
 
   loading.value = true
   try {
-    // ⬇️ NUEVO: auth.login espera un solo objeto { email, password }
     const res = await auth.login({ email: email.value, password: password.value })
 
     if (!res.ok) {
@@ -134,9 +133,3 @@ async function onSubmit() {
   }
 }
 </script>
-
-<style scoped>
-.btn-maiz {
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-}</style>
