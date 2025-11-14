@@ -1,16 +1,16 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import App from './App.vue';
+// si usas router:
 import router from './router';
 import './main.css';
 
+import api from './api';
+
+console.log('[VITE_API_BASE]', import.meta.env.VITE_API_BASE);
+api.get('/health').then(r => console.log('[API OK]', r.data)).catch(console.error);
+
 const app = createApp(App);
-const pinia = createPinia();
-app.use(pinia);
-
-// 🔑 hidratar el store antes de instalar el router y montar
-import { useAuthStore } from '@/stores/auth';
-useAuthStore().loadFromStorage();
-
-app.use(router);
+app.use(createPinia());
+if (router) app.use(router);
 app.mount('#app');
