@@ -81,4 +81,11 @@ class PedidoController extends Controller
         $p->save();
         return $p;
     }
+
+    public function __construct()
+    {
+        $this->middleware('auth:sanctum');
+    }
+
+
 }
