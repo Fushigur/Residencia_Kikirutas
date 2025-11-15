@@ -18,6 +18,18 @@ const routes: RouteRecordRaw[] = [
     meta: { public: true, hideAuthLinks: true },
   },
   {
+    path: '/olvide',
+    name: 'forgot',
+    component: () => import('@/views/auth/ForgotPasswordView.vue'),
+    meta: { public: true, hideAuthLinks: true },
+  },
+  {
+    path: '/restablecer',
+    name: 'reset',
+    component: () => import('@/views/auth/ResetPasswordView.vue'),
+    meta: { public: true, hideAuthLinks: true },
+  },
+  {
     path: '/registro',
     name: 'register',
     component: () => import('@/views/user/RegisterView.vue'),
@@ -38,18 +50,18 @@ const routes: RouteRecordRaw[] = [
   },
 
   // Panel Usuaria
-{
-  path: '/usuario',
-  component: () => import('@/layouts/UserLayout.vue'),
-  meta: { requiresAuth: true, role: 'user', noGlobalHeader: true },
-  children: [
-    { path: '', redirect: { name: 'u.inicio' } },
-    { path: 'inicio', name: 'u.inicio', component: () => import('@/views/user/UserHome.vue') },
-      { path: 'pedido/nuevo',  name: 'u.pedido.nuevo',  component: () => import('@/views/user/NewOrderView.vue') },
-      { path: 'historial',     name: 'u.historial',     component: () => import('@/views/user/OrderHistoryView.vue') },
-      { path: 'alertas',       name: 'u.alertas',       component: () => import('@/views/user/AlertsView.vue') },
-      { path: 'perfil',        name: 'u.perfil',        component: () => import('@/views/user/ProfileView.vue') },
-      { path: 'granja',        name: 'u.inventario',    component: () => import('@/views/user/InventarioView.vue') },
+  {
+    path: '/usuario',
+    component: () => import('@/layouts/UserLayout.vue'),
+    meta: { requiresAuth: true, role: 'user', noGlobalHeader: true },
+    children: [
+      { path: '', redirect: { name: 'u.inicio' } },
+      { path: 'inicio',        name: 'u.inicio',       component: () => import('@/views/user/UserHome.vue') },
+      { path: 'pedido/nuevo',  name: 'u.pedido.nuevo', component: () => import('@/views/user/NewOrderView.vue') },
+      { path: 'historial',     name: 'u.historial',    component: () => import('@/views/user/OrderHistoryView.vue') },
+      { path: 'alertas',       name: 'u.alertas',      component: () => import('@/views/user/AlertsView.vue') },
+      { path: 'perfil',        name: 'u.perfil',       component: () => import('@/views/user/ProfileView.vue') },
+      { path: 'granja',        name: 'u.inventario',   component: () => import('@/views/user/InventarioView.vue') },
     ],
   },
 
@@ -60,7 +72,6 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, role: 'admin', noGlobalHeader: true },
     children: [
       { path: '',          redirect: { name: 'a.resumen' } },
-      // OJO: archivo correcto según tu proyecto
       { path: 'resumen',   name: 'a.resumen',   component: () => import('@/views/admin/AdminHome.vue') },
       { path: 'pedidos',   name: 'a.pedidos',   component: () => import('@/views/admin/OrdersBoard.vue') },
       { path: 'rutas',     name: 'a.rutas',     component: () => import('@/views/admin/RoutesView.vue') },
@@ -71,17 +82,17 @@ const routes: RouteRecordRaw[] = [
   },
 
   // Panel Operador
-{
-  path: '/operador',
-  component: () => import('@/layouts/OperatorLayout.vue'),
-  meta: { requiresAuth: true, role: 'operator', noGlobalHeader: true },
-  children: [
-    { path: '', redirect: { name: 'op.hoy' } },
-    { path: 'hoy', name: 'op.hoy', component: () => import('@/views/operator/RoutesTodayView.vue') },
-    { path: 'ruta/:id', name: 'op.ruta', component: () => import('@/views/operator/RouteRunView.vue'), props: true },
-    { path: 'ruta/:id/mapa', name: 'op.ruta.mapa', component: () => import('@/views/operator/RouteMapView.vue'), props: true },
-  ],
-},
+  {
+    path: '/operador',
+    component: () => import('@/layouts/OperatorLayout.vue'),
+    meta: { requiresAuth: true, role: 'operator', noGlobalHeader: true },
+    children: [
+      { path: '',            redirect: { name: 'op.hoy' } },
+      { path: 'hoy',         name: 'op.hoy',        component: () => import('@/views/operator/RoutesTodayView.vue') },
+      { path: 'ruta/:id',    name: 'op.ruta',       component: () => import('@/views/operator/RouteRunView.vue'), props: true },
+      { path: 'ruta/:id/mapa', name: 'op.ruta.mapa', component: () => import('@/views/operator/RouteMapView.vue'), props: true },
+    ],
+  },
 
   // Alias público /chofer (deeplinks)
   {
@@ -113,25 +124,25 @@ router.beforeEach((to: RouteLocationNormalized) => {
   const auth = useAuthStore()
   auth.loadFromStorage?.()
 
-  // normaliza posibles etiquetas del back
+  // Normalizador local (no muta el store)
   const normalizeRole = (r?: string) => {
     const v = (r ?? '').toLowerCase()
     if (v === 'operador') return 'operator'
-    if (v === 'usuaria' || v === 'usuario' || v === 'user') return 'user'
-    return v || undefined
+    if (v === 'usuaria' || v === 'usuario') return 'user'
+    return (v as 'admin' | 'operator' | 'user' | '') || undefined
   }
-  if (auth.role) auth.role = normalizeRole(auth.role) as any
+
+  // Usaremos un rol local normalizado
+  const role = normalizeRole(auth.role as any)
 
   // Si tiene sesión e intenta login/registro → llevar a su panel
   if ((to.name === 'login' || to.name === 'register') && auth.isAuth) {
-    if (auth.role === 'admin') return { name: 'a.resumen' }
-    if (auth.role === 'user' || auth.role === 'operator') {
-      // si es operador, llévalo a su panel; si es user, a inicio
-      return auth.role === 'operator' ? { name: 'op.hoy' } : { name: 'u.inicio' }
-    }
+    if (role === 'admin') return { name: 'a.resumen' }
+    if (role === 'operator') return { name: 'op.hoy' }
+    if (role === 'user') return { name: 'u.inicio' }
   }
 
-  // Públicas
+  // Rutas públicas
   if (to.meta?.public) return true
 
   // Requiere sesión
@@ -139,15 +150,21 @@ router.beforeEach((to: RouteLocationNormalized) => {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 
-  // Rol
+  // Verificación de rol (si la ruta lo pide)
   if (to.meta?.role) {
-    const required = Array.isArray(to.meta.role) ? (to.meta.role as string[]) : [to.meta.role as string]
+    const required = Array.isArray(to.meta.role)
+      ? (to.meta.role as string[])
+      : [to.meta.role as string]
+
     // admin pasa siempre
-    if (auth.role === 'admin') return true
-    // normaliza los requeridos por si hay 'operador' en meta
-    const requiredNorm = required.map(normalizeRole)
-    if (!requiredNorm.includes(String(auth.role))) {
-      if (auth.role === 'user') return { name: 'u.inicio' }
+    if (role === 'admin') return true
+
+    // normaliza metas por si ponen 'operador'
+    const requiredNorm = required.map(normalizeRole).filter(Boolean) as string[]
+
+    if (!requiredNorm.includes(role ?? '')) {
+      if (role === 'user') return { name: 'u.inicio' }
+      if (role === 'operator') return { name: 'op.hoy' }
       return { name: 'login' }
     }
   }

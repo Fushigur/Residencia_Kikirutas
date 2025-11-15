@@ -3,7 +3,9 @@
     <!-- Encabezado de bienvenida -->
     <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
       <div>
-        <h1 class="text-2xl md:text-3xl font-semibold">Hola, {{ auth.displayName ?? 'Bienvenida' }}</h1>
+        <h1 class="text-2xl md:text-3xl font-semibold">
+          Hola, {{ displayName || 'Bienvenida' }}
+        </h1>
         <p class="text-white/70 text-sm mt-1">
           Administra tus pedidos y revisa las alertas de entrega.
         </p>
@@ -49,9 +51,19 @@
 </template>
 
 <script setup lang="ts">
-import { RouterLink } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
-const auth = useAuthStore();
+import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
+
+// Nombre mostrado sin depender de una propiedad inexistente en el store
+const displayName = computed(() => {
+  const u: any = auth.user
+  if (!u) return ''
+  // intenta name, luego nombre (por si viene del back en español)
+  return String(u.name ?? u.nombre ?? '').trim()
+})
 </script>
 
 <style scoped>

@@ -3,7 +3,9 @@
   <section class="min-h-screen grid place-items-center px-4">
     <div class="w-full max-w-xl rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
       <h2 class="text-2xl font-bold mb-1">Crear cuenta</h2>
-      <p class="text-sm text-gray-400 mb-6">Crea tu cuenta con nosotros y unete a ese lindo proyecto, Kikibá</p>
+      <p class="text-sm text-gray-400 mb-6">
+        Crea tu cuenta con nosotros y únete a este lindo proyecto, Kikibá.
+      </p>
 
       <!-- Mensaje de error general -->
       <p v-if="formError" class="mb-3 text-sm text-rose-400">{{ formError }}</p>
@@ -16,7 +18,7 @@
             <input
               v-model.trim="nombres"
               type="text"
-              :class="inputClass(!!nombres && nombres.trim().length === 0 || !!serverErrs.nombres)"
+              :class="inputClass((!!nombres && nombres.trim().length === 0) || !!serverErrs.nombres)"
               class="base-input"
               autocomplete="given-name"
             />
@@ -28,7 +30,7 @@
             <input
               v-model.trim="apellidos"
               type="text"
-              :class="inputClass(!!apellidos && apellidos.trim().length === 0 || !!serverErrs.apellidos)"
+              :class="inputClass((!!apellidos && apellidos.trim().length === 0) || !!serverErrs.apellidos)"
               class="base-input"
               autocomplete="family-name"
             />
@@ -66,7 +68,7 @@
               type="tel"
               inputmode="numeric"
               maxlength="10"
-              :class="inputClass(!!telefono && !telefonoValido || !!serverErrs.telefono)"
+              :class="inputClass(((!!telefono && !telefonoValido)) || !!serverErrs.telefono)"
               class="base-input"
               placeholder="10 dígitos"
               autocomplete="tel"
@@ -80,7 +82,7 @@
             <input
               v-model.trim="email"
               type="email"
-              :class="inputClass(!!email && !emailValido || !!serverErrs.email)"
+              :class="inputClass(((!!email && !emailValido)) || !!serverErrs.email)"
               class="base-input"
               placeholder="ejemplo@correo.com"
               autocomplete="email"
@@ -107,7 +109,7 @@
               v-model.number="edad"
               type="number"
               min="1" max="120"
-              :class="inputClass(!!edad && !edadValida || !!serverErrs.edad)"
+              :class="inputClass(((!!edad && !edadValida)) || !!serverErrs.edad)"
               class="base-input"
             />
             <p v-if="!!edad && !edadValida" class="hint-err">La edad debe estar entre 1 y 120 años.</p>
@@ -122,7 +124,7 @@
             <input
               v-model="password"
               type="password"
-              :class="inputClass(!!password && !passwordFuerte || !!serverErrs.password)"
+              :class="inputClass(((!!password && !passwordFuerte)) || !!serverErrs.password)"
               class="base-input"
               autocomplete="new-password"
             />
@@ -137,7 +139,7 @@
             <input
               v-model="confirm"
               type="password"
-              :class="inputClass(!!confirm && !passwordsMatch || !!serverErrs.confirm)"
+              :class="inputClass(((!!confirm && !passwordsMatch)) || !!serverErrs.confirm)"
               class="base-input"
               autocomplete="new-password"
             />
@@ -162,17 +164,20 @@
           <label for="terms" class="text-sm text-gray-300">Acepto los términos y condiciones.</label>
         </div>
 
-        <!-- Botones -->
-        <div class="flex gap-3 pt-1">
+        <!-- Acciones -->
+        <div class="flex items-center gap-3 pt-1">
           <button
             type="submit"
             class="rounded bg-emerald-600 px-4 py-2 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            :disabled="!isValid || auth.loading"
+            :disabled="!isValid || loading"
           >
-            {{ auth.loading ? 'Registrando…' : 'Registrarme' }}
+            {{ loading ? 'Registrando…' : 'Registrarme' }}
           </button>
 
-          <RouterLink :to="{ name: 'login' }" class="rounded bg-slate-700 px-4 py-2 hover:bg-slate-600">
+          <RouterLink
+            :to="{ name: 'login' }"
+            class="rounded bg-slate-700 px-4 py-2 hover:bg-slate-600"
+          >
             Ya tengo cuenta
           </RouterLink>
         </div>
@@ -181,10 +186,12 @@
   </section>
 </template>
 
+
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { getErrorMessage, getFieldErrors } from '@/api'
 
 type ExplicitRole = 'user' | 'operator'
 
@@ -218,11 +225,13 @@ const comunidades = ref<Record<string, string[]>>({
   ],
   'Felipe Carrillo Puerto': ['Felipe Carrillo Puerto', 'Dzula', 'X-Yatil', 'El Señor', 'Tihosuco']
 })
+
 const sexos = ref<string[]>(['Femenino', 'Masculino'])
-const roleOptions = [
-  { label: 'Usuaria',  value: 'user' as ExplicitRole },
-  { label: 'Operador', value: 'operator' as ExplicitRole },
+const roleOptions: Array<{ label: string; value: ExplicitRole }> = [
+  { label: 'Usuaria',  value: 'user' },
+  { label: 'Operador', value: 'operator' },
 ]
+
 
 /* ---------- Derivados ---------- */
 const comunidadesFiltradas = computed(() => comunidades.value[municipio.value] ?? [])
@@ -291,6 +300,7 @@ function takeFirstErrors(errors: any): Record<string, string> {
 /* ---------- Submit ---------- */
 const auth = useAuthStore()
 const router = useRouter()
+const loading = ref(false)
 
 // Limpia mensaje general cuando el usuario edita campos críticos
 watch([email, telefono, password, confirm], () => { formError.value = '' })
@@ -299,39 +309,36 @@ async function onSubmit() {
   serverErrs.value = {}
   formError.value = ''
 
-  if (!isValid.value) {
+  if (!isValid.value || loading.value) {
     formError.value = 'Revisa los campos marcados en rojo.'
     return
   }
 
-  // 1=admin, 2=operator, 3=user (solo usamos 2/3 aquí)
-  const roleId = role.value === 'operator' ? 2 : 3
+  loading.value = true
+  try {
+    // El backend espera: name, email, password, password_confirmation y role/role_id
+    const fullName = `${nombres.value} ${apellidos.value}`.trim()
 
-  const res = await auth.register({
-    nombres:   nombres.value,
-    apellidos: apellidos.value,
-    municipio: municipio.value,
-    comunidad: comunidad.value,
-    telefono:  telefono.value,
-    email:     email.value,
-    sexo:      sexo.value,
-    edad:      Number(edad.value || 0),
-    password:  password.value,
-    confirm:   confirm.value,
-    role:      role.value,   // 'user' | 'operator'
-    role_id:   roleId,       // el que espera el back
-  } as any)
+    const returnedRole = await auth.register({
+      name: fullName,
+      email: email.value.trim(),
+      password: password.value,
+      password_confirmation: confirm.value,
+      role: role.value, // 'user' | 'operator'
+    })
 
-  if ((res as any).ok) {
-    // Usa el rol que normalizó el store si el back devolvió usuario con rol
-    const r = (auth.role || role.value) as ExplicitRole
+    // Redirige según el rol real que devolvió/normalizó el store
+    const r: ExplicitRole = returnedRole === 'operator' ? 'operator' : 'user'
     router.push(r === 'operator' ? { name: 'op.hoy' } : { name: 'u.inicio' }).catch(() => {})
-  } else {
-    serverErrs.value = takeFirstErrors((res as any).fieldErrors)
-    formError.value  = toSpanish(String((res as any).error || 'No se pudo registrar'))
+  } catch (e: any) {
+    formError.value  = toSpanish(getErrorMessage(e))
+    serverErrs.value = takeFirstErrors(getFieldErrors(e))
+  } finally {
+    loading.value = false
   }
 }
 </script>
+
 
 
 
