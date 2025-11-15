@@ -8,6 +8,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -30,11 +33,9 @@ class AuthController extends Controller
             return response()->json(['message' => 'Contraseña incorrecta.'], 422);
         }
 
-        // Normaliza a 'admin' | 'operator' | 'user'
-        $roleName = $user->role_name;         // accessor del modelo
-        $roleText = $user->role_readable;     // accessor legible: Admin | Operador | Usuaria
+        $roleName = $user->role_name;       // 'admin' | 'operator' | 'user'
+        $roleText = $user->role_readable;   // 'Admin' | 'Operador' | 'Usuaria'
 
-        // Si el front envió el botón (expected) y no coincide con el rol real, avisamos
         if (!empty($data['expected']) && $data['expected'] !== $roleName) {
             return response()->json([
                 'message' => "Tu cuenta es '{$roleText}'. Debes usar el botón '{$roleText}'.",
@@ -58,25 +59,22 @@ class AuthController extends Controller
     /* ==================== REGISTER ==================== */
     public function register(Request $request)
     {
-        // Permitimos registro solo para user/operator desde el front
+        // Solo user/operator desde el front
         $validated = $request->validate([
             'name'                   => ['required', 'string', 'max:120'],
             'email'                  => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password'               => ['required', 'string', 'min:8', 'confirmed'], // requiere password_confirmation
-            // Soportamos varias formas de indicar rol:
+            'password'               => ['required', 'string', 'min:8', 'confirmed'], // password_confirmation
             'role'                   => ['nullable', Rule::in(['user', 'operator'])],
             'role_id'                => ['nullable', 'integer', Rule::in([2, 3])],   // 2=operator, 3=user
-            'nombreRol'              => ['nullable', 'string'],                      // "Operador" | "Usuaria"
+            'nombreRol'              => ['nullable', 'string'],
         ]);
 
-        // Resolver role_id de forma robusta
         $roleId = $this->resolveRoleId(
             $request->input('role_id'),
             $request->input('role'),
             $request->input('nombreRol')
         );
 
-        // Bloquea que alguien intente registrarse como admin
         if ($roleId === 1) {
             return response()->json(['message' => 'No está permitido registrarse como Admin.'], 422);
         }
@@ -86,7 +84,7 @@ class AuthController extends Controller
             'name'     => $validated['name'],
             'email'    => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'role_id'  => $roleId ?? 3, // por defecto: Usuaria
+            'role_id'  => $roleId ?? 3, // por defecto Usuaria
         ]);
 
         $user->load('role');
@@ -126,62 +124,89 @@ class AuthController extends Controller
         return response()->noContent();
     }
 
-    /* ==================== Helpers ==================== */
-
-    /**
-     * Resuelve role_id a partir de posibles inputs.
-     * - role_id (numérico) → 2 u 3
-     * - role (string) → 'operator' | 'user'
-     * - nombreRol (string) → 'Operador' | 'Usuaria' (o variantes)
-     * - fallback: 3 (Usuaria)
-     */
-    private function resolveRoleId($roleId, ?string $role, ?string $nombreRol): ?int
+    /* ==================== FORGOT PASSWORD ==================== */
+    public function forgotPassword(Request $request)
     {
-        // 1) Si ya viene role_id válido (2/3), úsalo
-        if (in_array((int)$roleId, [2, 3], true)) {
-            return (int)$roleId;
+        $request->validate([
+            'email' => ['required', 'email', 'exists:users,email'],
+        ]);
+
+        $status = Password::sendResetLink($request->only('email'));
+
+        if ($status === Password::RESET_LINK_SENT) {
+            // En desarrollo, con MAIL_MAILER=log, el enlace se verá en storage/logs/laravel.log
+            return response()->json(['message' => __($status)], 200);
         }
 
-        // 2) Si viene role (user/operator)
+        return response()->json(['message' => __($status)], 422);
+    }
+
+    /* ==================== RESET PASSWORD ==================== */
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token'                 => ['required', 'string'],
+            'email'                 => ['required', 'email'],
+            'password'              => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user) use ($request) {
+                /** @var User $user */
+                $user->forceFill([
+                    'password' => Hash::make($request->password),
+                ])->save();
+
+                // Invalida tokens anteriores por seguridad
+                $user->tokens()->delete();
+
+                event(new PasswordReset($user));
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return response()->json(['message' => __($status)], 200);
+        }
+
+        return response()->json(['message' => __($status)], 422);
+    }
+
+    /* ==================== Helpers ==================== */
+    private function resolveRoleId($roleId, ?string $role, ?string $nombreRol): ?int
+    {
+        if (in_array((int)$roleId, [2, 3], true)) return (int)$roleId;
+
         if ($role) {
             $v = strtolower(trim($role));
             if (str_contains($v, 'oper')) return 2;
             if (str_contains($v, 'user') || str_contains($v, 'usu')) return 3;
         }
 
-        // 3) Si viene nombreRol (Operador/Usuaria)
         if ($nombreRol) {
             $v = strtolower(trim($nombreRol));
-            if (str_starts_with($v, 'oper')) return 2;   // Operador, Operadora, Operator
-            if (str_starts_with($v, 'usu'))  return 3;   // Usuaria, Usuario, User
+            if (str_starts_with($v, 'oper')) return 2;
+            if (str_starts_with($v, 'usu'))  return 3;
         }
 
-        // 4) Intento por tabla roles.nombre (admin/operador/usuaria)
         if ($role) {
-            $mapText = strtolower(trim($role));
-            $guess = $this->guessRoleNombre($mapText);
+            $guess = $this->guessRoleNombre(strtolower(trim($role)));
             if ($guess) {
                 $id = Role::where('nombre', $guess)->value('id');
                 if ($id) return (int)$id;
             }
         }
         if ($nombreRol) {
-            $mapText = strtolower(trim($nombreRol));
-            $guess = $this->guessRoleNombre($mapText);
+            $guess = $this->guessRoleNombre(strtolower(trim($nombreRol)));
             if ($guess) {
                 $id = Role::where('nombre', $guess)->value('id');
                 if ($id) return (int)$id;
             }
         }
 
-        // 5) Fallback: Usuaria
         return 3;
     }
 
-    /**
-     * Mapea textos variados a los nombres exactos de tu tabla `roles.nombre`
-     * ('admin' | 'operador' | 'usuaria')
-     */
     private function guessRoleNombre(string $v): ?string
     {
         if (str_contains($v, 'adm')) return 'admin';
@@ -190,3 +215,4 @@ class AuthController extends Controller
         return null;
     }
 }
+    
