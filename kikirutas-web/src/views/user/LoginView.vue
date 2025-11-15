@@ -47,6 +47,17 @@
           {{ loading ? 'Entrando…' : 'Entrar' }}
         </button>
 
+        <!-- Link: Olvidé mi contraseña -->
+        <div class="text-right -mt-1">
+          <RouterLink
+            :to="{ name: 'forgot', query: { email: email || undefined } }"
+            class="text-sm text-maiz hover:underline"
+          >
+            ¿Olvidaste tu contraseña?
+          </RouterLink>
+        </div>
+
+
         <!-- Errores del backend / validación -->
         <p v-if="serverErr" class="text-rose-300 text-sm mt-2">{{ serverErr }}</p>
         <ul v-if="Object.keys(fieldErrs).length" class="text-rose-300 text-xs space-y-1">
@@ -66,11 +77,12 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore, type ExplicitRole } from '@/stores/auth'
+// (opcional) si quieres extraer errores 422 de Laravel:
+// import { getFieldErrors } from '@/api'
 
 const router = useRouter()
 const auth = useAuthStore()
 
-// Puedes dejarlos en blanco; los relleno para pruebas.
 const email = ref('')
 const password = ref('')
 
@@ -115,19 +127,13 @@ async function onSubmit() {
 
   loading.value = true
   try {
-    const res = await auth.login({ email: email.value, password: password.value })
-
-    if (!res.ok) {
-      serverErr.value = String(res.error || 'Credenciales inválidas')
-      fieldErrs.value = (res as any).fieldErrors ?? {}
-      return
-    }
-
-    // auth.role ya quedó seteado por el store
-    const safeRole = (auth.role || 'user') as ExplicitRole
-    router.push(destFor(safeRole)).catch(() => {})
+    // auth.login ahora devuelve el rol y lanza error si algo sale mal
+    const role = await auth.login({ email: email.value, password: password.value })
+    router.push(destFor(role)).catch(() => {})
   } catch (e: any) {
     serverErr.value = e?.message || 'No se pudo iniciar sesión'
+    // (opcional) si importaste getFieldErrors:
+    // fieldErrs.value = getFieldErrors(e)
   } finally {
     loading.value = false
   }

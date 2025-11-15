@@ -5,30 +5,32 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\RutaController;
 
-Route::get('/health', fn () => response()->noContent());
+Route::get('/health', fn() => response()->noContent());
 
-// ── Auth ───────────────────────────────────────────────────────────────────────
+// ---------- Auth públicas ----------
 Route::prefix('auth')->group(function () {
     Route::post('login',    [AuthController::class, 'login'])->name('auth.login');
     Route::post('register', [AuthController::class, 'register'])->name('auth.register');
+    Route::get('me',        [AuthController::class, 'me'])->middleware('auth:sanctum')->name('auth.me');
+    Route::post('logout',   [AuthController::class, 'logout'])->middleware('auth:sanctum')->name('auth.logout');
 
-    Route::middleware('auth:sanctum')->group(function () {
-        Route::get('me',      [AuthController::class, 'me'])->name('auth.me');
-        Route::post('logout', [AuthController::class, 'logout'])->name('auth.logout');
-    });
+    // Recuperación de contraseña
+    Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->name('auth.forgot');
+    Route::post('reset-password',  [AuthController::class, 'resetPassword'])->name('auth.reset');
+
+    /* Route::post('/auth/forgot-password', ForgotPasswordController::class)
+    ->middleware('throttle:5,1'); */
 });
 
-// ── Protegido con Sanctum ─────────────────────────────────────────────────────
+// ---------- Rutas protegidas ----------
 Route::middleware('auth:sanctum')->group(function () {
+    // Rutas (Admin/Operador)
+    Route::get('rutas',           [RutaController::class, 'index'])->name('rutas.index');
+    Route::post('rutas',          [RutaController::class, 'store'])->name('rutas.store');
+    Route::get('rutas/{ruta}',    [RutaController::class, 'show'])->name('rutas.show');
+    Route::put('rutas/{ruta}',    [RutaController::class, 'update'])->name('rutas.update');
+    Route::delete('rutas/{ruta}', [RutaController::class, 'destroy'])->name('rutas.destroy');
 
-    // Rutas (si usas middleware de rol, puedes activar: ->middleware('role:admin,operator'))
-    Route::get('rutas',              [RutaController::class, 'index'])->name('rutas.index');
-    Route::post('rutas',             [RutaController::class, 'store'])->name('rutas.store');
-    Route::get('rutas/{ruta}',       [RutaController::class, 'show'])->name('rutas.show');
-    Route::put('rutas/{ruta}',       [RutaController::class, 'update'])->name('rutas.update');
-    Route::delete('rutas/{ruta}',    [RutaController::class, 'destroy'])->name('rutas.destroy');
-
-    // Asignación / desasignación de pedidos a rutas
     Route::post('rutas/{id}/pedidos/{pid}',   [RutaController::class, 'assignPedido'])->name('rutas.assignPedido');
     Route::delete('rutas/{id}/pedidos/{pid}', [RutaController::class, 'unassignPedido'])->name('rutas.unassignPedido');
 
@@ -38,13 +40,4 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('pedidos/{pedido}',      [PedidoController::class, 'update'])->name('pedidos.update');
     Route::delete('pedidos/{pedido}',   [PedidoController::class, 'destroy'])->name('pedidos.destroy');
     Route::patch('pedidos/{id}/estado', [PedidoController::class, 'setEstado'])->name('pedidos.setEstado');
-});
-
-Route::get('/health', function () {
-    return response()->json([
-        'ok'   => true,
-        'app'  => config('app.name'),
-        'env'  => config('app.env'),
-        'time' => now()->toISOString(),
-    ], 200);
 });

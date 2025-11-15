@@ -1,0 +1,5 @@
+<tr>
+<td class="content-cell" align="center">
+    © {{ date('Y') }} {{ $slot }}. Todos los derechos reservados.
+</td>
+</tr>
