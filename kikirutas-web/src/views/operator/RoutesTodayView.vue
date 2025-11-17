@@ -39,36 +39,73 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRutasStore } from '@/stores/rutas'
 
-interface RutaItem { id: string; nombre?: string; fechaISO?: string; paradas?: any[]; pedidos?: string[] }
+interface RutaItem {
+  id: string
+  nombre?: string
+  fechaISO?: string
+  paradas?: any[]
+  pedidos?: string[]
+}
 
 const rutasStore = useRutasStore()
-const loading = computed<boolean>(() => Boolean((rutasStore as any).loading ?? false))
 
+// loading local del componente
+const loading = ref(false)
+
+// Rutas que se muestran hoy
 const rutas = computed<RutaItem[]>(() => {
-  const fromGetter = (rutasStore as any).ordenadas as RutaItem[] | undefined
-  if (Array.isArray(fromGetter) && fromGetter.length > 0) return fromGetter
+  // Si el store ya expone un getter rutasDeHoy, lo usamos
   const deHoy = (rutasStore as any).rutasDeHoy as RutaItem[] | undefined
-  if (Array.isArray(deHoy) && deHoy.length > 0) return deHoy
+  if (Array.isArray(deHoy)) return deHoy
+
+  // Si no, tomamos ordenadas o items y filtramos por fecha de hoy
+  const lista =
+    ((rutasStore as any).ordenadas as RutaItem[] | undefined) ??
+    ((rutasStore as any).items as RutaItem[] | undefined)
+
+  if (!Array.isArray(lista)) return []
+
+  const hoy = new Date().toISOString().slice(0, 10)
+  return lista.filter(r => r.fechaISO === hoy)
+})
+
+onMounted(async () => {
+  loading.value = true
+  const hoy = new Date().toISOString().slice(0, 10)
+
   try {
-    const raw = localStorage.getItem('rutas_kikirutas'); if (!raw) return []
-    const parsed = JSON.parse(raw); return Array.isArray(parsed) ? parsed as RutaItem[] : []
-  } catch { return [] }
+    // Usa el load() nuevo del store, que ahora va contra Laravel
+    await (rutasStore as any).load?.({ fecha: hoy })
+  } catch (e) {
+    console.error('Error cargando rutas de hoy', e)
+  } finally {
+    loading.value = false
+  }
 })
 
-onMounted(() => {
-  ;(rutasStore as any).loadDeHoy?.()
-  ;(rutasStore as any).load?.()
-})
-
+// Solo para pruebas/demo: llena el store con datos de ejemplo (no toca el backend)
 function sembrarDemo() {
+  const hoy = new Date().toISOString().slice(0, 10)
   const demo: RutaItem[] = [
-    { id: 'hoy-01', nombre: 'JMM → Candelaria', paradas: ['Candelaria','Dziuché'], pedidos: ['p-1','p-2','p-3'], fechaISO: new Date().toISOString().slice(0,10) },
-    { id: 'hoy-02', nombre: 'JMM → Kancabchén', paradas: ['La Presumida','Kancabchén'], pedidos: ['p-4','p-5'], fechaISO: new Date().toISOString().slice(0,10) },
+    {
+      id: 'hoy-01',
+      nombre: 'JMM → Candelaria',
+      paradas: ['Candelaria', 'Dziuché'],
+      pedidos: ['p-1', 'p-2', 'p-3'],
+      fechaISO: hoy,
+    },
+    {
+      id: 'hoy-02',
+      nombre: 'JMM → Kancabchén',
+      paradas: ['La Presumida', 'Kancabchén'],
+      pedidos: ['p-4', 'p-5'],
+      fechaISO: hoy,
+    },
   ]
-  try { localStorage.setItem('rutas_kikirutas', JSON.stringify(demo)) } catch {}
-  location.reload()
+
+  ;(rutasStore as any).items = demo
 }
 </script>

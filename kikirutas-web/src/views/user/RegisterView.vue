@@ -320,12 +320,19 @@ async function onSubmit() {
     const fullName = `${nombres.value} ${apellidos.value}`.trim()
 
     const returnedRole = await auth.register({
-      name: fullName,
-      email: email.value.trim(),
-      password: password.value,
-      password_confirmation: confirm.value,
-      role: role.value, // 'user' | 'operator'
-    })
+    name: fullName,
+    email: email.value.trim(),
+    password: password.value,
+    password_confirmation: confirm.value,
+    role: role.value, // 'user' | 'operator'
+
+    // Datos extra para guardar en Laravel (si el back los acepta)
+    telefono: telefono.value || undefined,
+    sexo: sexo.value || undefined,
+    edad: edad.value ?? undefined,
+    comunidad: comunidad.value || undefined,
+    municipio: municipio.value || undefined,
+  })
 
     // Redirige según el rol real que devolvió/normalizó el store
     const r: ExplicitRole = returnedRole === 'operator' ? 'operator' : 'user'

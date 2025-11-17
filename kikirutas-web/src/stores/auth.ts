@@ -30,6 +30,17 @@ type UserPayload = {
   email: string
   role: ExplicitRole
   roleText?: string
+
+  // Datos extra que nos manda Laravel (para pedidos, perfil, etc.)
+  nombre?: string
+  apellido_paterno?: string
+  apellido_materno?: string
+  comunidad?: string
+  municipio?: string
+  estado?: string
+  telefono?: string
+  sexo?: string
+  edad?: number | null
 }
 
 type State = {
@@ -106,9 +117,25 @@ function buildUserFromMe(data: any): UserPayload | null {
     email: String(src?.email ?? src?.correo ?? ''),
     role,
     roleText: ROLE_DISPLAY[role],
+
+    // Extras que queremos conservar
+    nombre: src?.nombre,
+    apellido_paterno: src?.apellido_paterno,
+    apellido_materno: src?.apellido_materno,
+    comunidad: src?.comunidad,
+    municipio: src?.municipio,
+    estado: src?.estado,
+    telefono: src?.telefono,
+    sexo: src?.sexo,
+    edad:
+      typeof src?.edad !== 'undefined' && src?.edad !== null
+        ? Number(src.edad)
+        : null,
   }
+
   return user
 }
+
 
 /* ─────────────── Store ─────────────── */
 
@@ -212,12 +239,19 @@ export const useAuthStore = defineStore('auth', {
 
     /** Register: si llega token, setApiToken y luego /auth/me */
     async register(payload: {
-      name: string
-      email: string
-      password: string
-      password_confirmation?: string
-      role: ExplicitRole // 'user' | 'operator'
-    }): Promise<ExplicitRole> {
+    name: string
+    email: string
+    password: string
+    password_confirmation?: string
+    role: ExplicitRole // 'user' | 'operator'
+
+    telefono?: string
+    sexo?: string
+    edad?: number | null
+    comunidad?: string
+    municipio?: string
+  }): Promise<ExplicitRole> {
+
       this.error = null
       try {
         const { data } = await api.post('/auth/register', payload)
