@@ -16,13 +16,14 @@ class User extends Authenticatable
         'email',
         'password',
         'role_id',
-        'nombre',
-        'apellido_paterno',
-        'apellido_materno',
+        'telefono',
+        'sexo',
+        'edad',
         'comunidad',
         'municipio',
         'estado',
     ];
+
 
     protected $hidden = ['password', 'remember_token'];
 

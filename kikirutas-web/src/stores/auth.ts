@@ -43,6 +43,14 @@ type UserPayload = {
   edad?: number | null
 }
 
+type UpdateProfilePayload = {
+  name?: string
+  telefono?: string | null
+  sexo?: string | null
+  edad?: number | null
+}
+
+
 type State = {
   token: string | null
   user: UserPayload | null
@@ -239,56 +247,80 @@ export const useAuthStore = defineStore('auth', {
 
     /** Register: si llega token, setApiToken y luego /auth/me */
     async register(payload: {
-    name: string
-    email: string
-    password: string
-    password_confirmation?: string
-    role: ExplicitRole // 'user' | 'operator'
+      name: string
+      email: string
+      password: string
+      password_confirmation?: string
+      role: ExplicitRole // 'user' | 'operator'
 
-    telefono?: string
-    sexo?: string
-    edad?: number | null
-    comunidad?: string
-    municipio?: string
-  }): Promise<ExplicitRole> {
+      telefono?: string
+      sexo?: string
+      edad?: number | null
+      comunidad?: string
+      municipio?: string
+    }): Promise<ExplicitRole> {
 
-      this.error = null
-      try {
-        const { data } = await api.post('/auth/register', payload)
-        const token = data?.token || data?.access_token
+        this.error = null
+        try {
+          const { data } = await api.post('/auth/register', payload)
+          const token = data?.token || data?.access_token
 
-        if (token) {
-          this.token = token
-          setApiToken(token)
-          const role = await this.fetchMe()
-          return role
+          if (token) {
+            this.token = token
+            setApiToken(token)
+            const role = await this.fetchMe()
+            return role
+          }
+
+          // Fallback si backend devolviera user directamente
+          const maybe = buildUserFromMe(data)
+          if (maybe) {
+            this.user = maybe
+            this.meLoaded = true
+            this.persist()
+            return maybe.role
+          }
+
+          throw new Error('Registro completado, pero no se recibió token.')
+        } catch (err: any) {
+          this.error = getErrorMessage(err)
+          throw new Error(this.error)
         }
+      },
 
-        // Fallback si backend devolviera user directamente
-        const maybe = buildUserFromMe(data)
-        if (maybe) {
-          this.user = maybe
-          this.meLoaded = true
-          this.persist()
-          return maybe.role
-        }
+      async fetchMe(): Promise<ExplicitRole> {
+        const { data } = await api.get('/auth/me')
+        const user = buildUserFromMe(data)
+        if (!user) throw new Error('No fue posible determinar el rol del usuario')
 
-        throw new Error('Registro completado, pero no se recibió token.')
-      } catch (err: any) {
-        this.error = getErrorMessage(err)
-        throw new Error(this.error)
+        this.user = user
+        this.meLoaded = true
+        this.persist()
+        return user.role
+      },
+        async updateProfile(payload: UpdateProfilePayload) {
+      if (!this.token) {
+        throw new Error('No hay sesión activa')
       }
-    },
 
-    async fetchMe(): Promise<ExplicitRole> {
-      const { data } = await api.get('/auth/me')
-      const user = buildUserFromMe(data)
-      if (!user) throw new Error('No fue posible determinar el rol del usuario')
+      const body: any = {}
+      if (payload.name !== undefined) body.name = payload.name
+      if (payload.telefono !== undefined) body.telefono = payload.telefono
+      if (payload.sexo !== undefined) body.sexo = payload.sexo
+      if (payload.edad !== undefined && payload.edad !== null) {
+        body.edad = payload.edad
+      }
 
-      this.user = user
-      this.meLoaded = true
-      this.persist()
-      return user.role
+      const { data } = await api.put('/auth/profile', body)
+      const updated = buildUserFromMe(data)
+
+      if (updated) {
+        this.user = updated
+        this.meLoaded = true
+        this.persist()
+      }
+
+      return updated
     },
 
     async logout() {

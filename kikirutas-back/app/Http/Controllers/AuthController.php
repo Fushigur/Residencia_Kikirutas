@@ -49,7 +49,10 @@ class AuthController extends Controller
                 'id'        => $user->id,
                 'name'      => $user->name,
                 'email'     => $user->email,
+                'edad'      => $user->edad,
+                'telefono'      => $user->telefono,
                 'role'      => $roleName,
+                'sexo'      => $user->sexo,
                 'roleText'  => $roleText,
                 // Datos de ubicación (si existen en la tabla users)
                 'comunidad' => $user->comunidad,
@@ -81,6 +84,10 @@ class AuthController extends Controller
             'role_id'   => ['nullable', 'integer', Rule::in([2, 3])],   // 2=operator, 3=user
             'nombreRol' => ['nullable', 'string'],
 
+            'telefono'  => ['nullable', 'string', 'max:20'],
+            'sexo'      => ['nullable', 'string', 'max:20'],
+            'edad'      => ['nullable', 'integer', 'min:10', 'max:120'],
+
             // Campos opcionales de ubicación
             'comunidad' => ['nullable', 'string', 'max:120'],
             'municipio' => ['nullable', 'string', 'max:120'],
@@ -103,6 +110,13 @@ class AuthController extends Controller
             'email'     => $validated['email'],
             'password'  => Hash::make($validated['password']),
             'role_id'   => $roleId ?? 3, // por defecto Usuaria
+
+            // contacto
+            'telefono'  => $validated['telefono'] ?? null,
+            'sexo'      => $validated['sexo'] ?? null,
+            'edad'      => $validated['edad'] ?? null,
+
+            // ubicación
             'comunidad' => $validated['comunidad'] ?? null,
             'municipio' => $validated['municipio'] ?? null,
             'estado'    => $validated['estado'] ?? null,
@@ -119,11 +133,15 @@ class AuthController extends Controller
                 'email'     => $user->email,
                 'role'      => $user->role_name,
                 'roleText'  => $user->role_readable,
+                'telefono'  => $user->telefono,
+                'sexo'      => $user->sexo,
+                'edad'      => $user->edad,
                 'comunidad' => $user->comunidad,
                 'municipio' => $user->municipio,
                 'estado'    => $user->estado,
             ],
         ], 201);
+
     }
 
     /* ==================== ME ==================== */
@@ -138,11 +156,68 @@ class AuthController extends Controller
             'email'     => $u->email,
             'role'      => $u->role_name,
             'roleText'  => $u->role_readable,
+
+            // Nuevos campos
+            'telefono'  => $u->telefono,
+            'sexo'      => $u->sexo,
+            'edad'      => $u->edad,
+
             'comunidad' => $u->comunidad,
             'municipio' => $u->municipio,
             'estado'    => $u->estado,
         ]);
     }
+
+    /* ==================== UPDATE PROFILE ==================== */
+    public function updateProfile(Request $request)
+    {
+        /** @var User $u */
+        $u = $request->user();
+
+        // Validamos solo lo que sí puede cambiar la usuaria
+        $data = $request->validate([
+            'name'     => ['nullable', 'string', 'max:120'],
+            'telefono' => ['nullable', 'string', 'max:20'],
+            'sexo'     => ['nullable', 'string', 'max:20'],
+            'edad'     => ['nullable', 'integer', 'min:10', 'max:120'],
+            // si en un futuro quieres permitir cambio de comunidad/municipio/estado,
+            // los agregamos aquí y manejamos la lógica de aprobación aparte.
+        ]);
+
+        if (array_key_exists('name', $data)) {
+            $u->name = $data['name'];
+        }
+        if (array_key_exists('telefono', $data)) {
+            $u->telefono = $data['telefono'];
+        }
+        if (array_key_exists('sexo', $data)) {
+            $u->sexo = $data['sexo'];
+        }
+        if (array_key_exists('edad', $data)) {
+            $u->edad = $data['edad'];
+        }
+
+        $u->save();
+
+        // Regresamos el usuario en el mismo formato que login/me
+        $u->load('role');
+
+        return response()->json([
+            'id'        => $u->id,
+            'name'      => $u->name,
+            'email'     => $u->email,
+            'role'      => $u->role_name,
+            'roleText'  => $u->role_readable,
+            'telefono'  => $u->telefono,
+            'sexo'      => $u->sexo,
+            'edad'      => $u->edad,
+            'comunidad' => $u->comunidad,
+            'municipio' => $u->municipio,
+            'estado'    => $u->estado,
+        ]);
+    }
+
+
 
     /* ==================== LOGOUT ==================== */
     public function logout(Request $request)
