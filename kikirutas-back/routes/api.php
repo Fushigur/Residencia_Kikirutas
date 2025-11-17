@@ -35,6 +35,9 @@ Route::prefix('auth')->group(function () {
 
 // ---------- Rutas protegidas ----------
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('usuario/dashboard', [PedidoController::class, 'dashboardUsuario'])
+        ->name('usuario.dashboard');
+
     // Rutas (Admin/Operador)
     Route::get('rutas',           [RutaController::class, 'index'])->name('rutas.index');
     Route::post('rutas',          [RutaController::class, 'store'])->name('rutas.store');
