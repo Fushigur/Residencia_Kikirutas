@@ -4,8 +4,17 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\RutaController;
+use App\Http\Controllers\InventarioController;
 
-Route::get('/health', fn() => response()->noContent());
+
+// Ping de salud para el front (health check)
+Route::get('/health', function () {
+    return response()->json([
+        'status' => 'ok',
+        'time'   => now()->toISOString(),
+    ]);
+});
+
 
 // ---------- Auth públicas ----------
 Route::prefix('auth')->group(function () {
@@ -17,9 +26,11 @@ Route::prefix('auth')->group(function () {
     // Recuperación de contraseña
     Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->name('auth.forgot');
     Route::post('reset-password',  [AuthController::class, 'resetPassword'])->name('auth.reset');
+    // Editar perfil
+    Route::put('profile', [AuthController::class, 'updateProfile'])
+        ->middleware('auth:sanctum')
+        ->name('auth.profile.update');
 
-    /* Route::post('/auth/forgot-password', ForgotPasswordController::class)
-    ->middleware('throttle:5,1'); */
 });
 
 // ---------- Rutas protegidas ----------
@@ -41,4 +52,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('pedidos/{pedido}',      [PedidoController::class, 'update'])->name('pedidos.update');
     Route::delete('pedidos/{pedido}',   [PedidoController::class, 'destroy'])->name('pedidos.destroy');
     Route::patch('pedidos/{id}/estado', [PedidoController::class, 'setEstado'])->name('pedidos.setEstado');
+
+    // Inventario de la usuaria (Mi granja)
+    Route::get('inventario', [InventarioController::class, 'show'])
+        ->name('inventario.show');
+
+    Route::put('inventario', [InventarioController::class, 'upsert'])
+        ->name('inventario.upsert');
 });
