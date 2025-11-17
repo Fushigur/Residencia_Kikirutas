@@ -16,7 +16,6 @@
     </div>
 
         <!-- Tarjetas principales -->
-        <!-- Tarjetas principales -->
         <div class="grid md:grid-cols-3 gap-4">
           <article class="card">
             <h3 class="card-title">Acciones rápidas</h3>
@@ -99,87 +98,109 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import api from '@/api'
 import { useAuthStore } from '@/stores/auth'
-import { usePedidosStore, type PedidoEstado } from '@/stores/pedidos'
-import { useRutasStore } from '@/stores/rutas'
+import type { PedidoEstado } from '@/stores/pedidos'
 
 const auth = useAuthStore()
-const pedidos = usePedidosStore()
-const rutas = useRutasStore()
 
-// Nombre mostrado sin depender de una propiedad inexistente en el store
+// Nombre mostrado en el saludo
 const displayName = computed(() => {
   const u: any = auth.user
   if (!u) return ''
-  // intenta name, luego nombre (por si viene del back en español)
   return String(u.name ?? u.nombre ?? '').trim()
 })
 
-const hasPedidos = computed(() => pedidos.ordenados.length > 0)
+// ---------- Tipos locales para el dashboard ----------
+type PedidoResumen = {
+  id: number
+  producto: string
+  cantidad: number
+  estado: PedidoEstado
+  fechaISO: string | null
+}
 
-// Mostramos sólo los últimos 3 pedidos de la usuaria
-const ultimosPedidos = computed(() => pedidos.ordenados.slice(0, 3))
+type ProximaRutaUI = {
+  fechaISO: string | null
+  choferNombre: string | null
+  nombre: string | null
+  estado: string | null
+}
 
-// Calcula la próxima ruta donde viaja alguno de los pedidos de la usuaria
-const proximaRuta = computed(() => {
-  if (!hasPedidos.value || rutas.items.length === 0) return null
+// ---------- Estado local ----------
+const ultimosPedidos = ref<PedidoResumen[]>([])
+const proximaRuta = ref<ProximaRutaUI | null>(null)
 
-  // Tomamos todos los ids de pedidos de la usuaria
-  const ids = new Set(pedidos.ordenados.map((p) => p.id))
+const hasPedidos = computed(() => ultimosPedidos.value.length > 0)
 
-  const candidatas = rutas.items.filter((r) =>
-    r.pedidos.some((pid) => ids.has(pid))
-  )
-
-  // Sólo rutas que no estén finalizadas
-  const activas = candidatas.filter((r) => r.estado !== 'finalizada')
-  if (activas.length === 0) return null
-
-  // Ordenamos por fecha ascendente (la más próxima primero)
-  const ordenadas = [...activas].sort((a, b) => a.fechaISO.localeCompare(b.fechaISO))
-
-  return ordenadas[0]
-})
-
+// ---------- Helpers de estado ----------
 function labelEstado(e: PedidoEstado): string {
+  const map: Record<PedidoEstado, string> = {
+    pendiente: 'Pendiente',
+    en_ruta: 'En ruta',
+    entregado: 'Entregado',
+    cancelado: 'Cancelado',
+  }
+  return map[e] ?? e
+}
+
+function estadoBadgeClass(e: PedidoEstado): string {
   switch (e) {
     case 'pendiente':
-      return 'Pendiente'
+      return 'bg-yellow-500/20 text-yellow-300'
     case 'en_ruta':
-      return 'En ruta'
+      return 'bg-blue-500/20 text-blue-300'
     case 'entregado':
-      return 'Entregado'
+      return 'bg-emerald-500/20 text-emerald-300'
     case 'cancelado':
-      return 'Cancelado'
+      return 'bg-red-500/20 text-red-300'
     default:
-      return String(e)
+      return 'bg-slate-500/20 text-slate-200'
   }
 }
 
-function estadoBadgeClass(e: PedidoEstado) {
-  switch (e) {
-    case 'pendiente':
-      return 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40'
-    case 'en_ruta':
-      return 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
-    case 'entregado':
-      return 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-    case 'cancelado':
-      return 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-    default:
-      return 'bg-white/10 text-white border border-white/20'
+// ---------- Carga desde /api/usuario/dashboard ----------
+async function loadDashboard() {
+  try {
+    const { data } = await api.get('/usuario/dashboard')
+
+    const pedidos = Array.isArray(data.pedidos_recientes)
+      ? data.pedidos_recientes
+      : []
+
+    ultimosPedidos.value = pedidos.map((p: any) => ({
+      id: Number(p.id),
+      producto: String(p.producto ?? 'Pedido'),
+      cantidad: Number(p.cantidad ?? 0),
+      estado: (p.estado ?? 'pendiente') as PedidoEstado,
+      fechaISO: p.fecha ?? null,
+    }))
+
+    if (data.proxima_ruta) {
+      const r = data.proxima_ruta
+      proximaRuta.value = {
+        fechaISO: r.fecha ?? null,
+        choferNombre: r.chofer_nombre ?? null,
+        nombre: r.chofer_nombre ?? null,
+        estado: r.estado ?? null,
+      }
+    } else {
+      proximaRuta.value = null
+    }
+  } catch (err) {
+    // Si algo falla, dejamos todo vacío para que el template muestre los mensajes por defecto
+    ultimosPedidos.value = []
+    proximaRuta.value = null
   }
 }
 
-onMounted(async () => {
-  // Carga sólo los pedidos de la usuaria actual
-  await pedidos.load({ mine: true })
-  // Carga las rutas para poder calcular la "próxima ruta"
-  await rutas.load()
+onMounted(() => {
+  loadDashboard()
 })
 </script>
+
 
 
 <style scoped>
