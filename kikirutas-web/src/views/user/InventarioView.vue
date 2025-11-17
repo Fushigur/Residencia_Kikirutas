@@ -73,32 +73,51 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue';
+import { reactive, onMounted } from 'vue';
 import { useInventarioStore } from '@/stores/inventario';
 
 const inv = useInventarioStore();
-inv.load();
 
 const form = reactive({
-  gallinas: inv.gallinas,
-  sacos: inv.sacos,
-  kgPorSaco: inv.kgPorSaco,
-  consumoGrPorGallinaDia: inv.consumoGrPorGallinaDia,
-  diasSeguridad: inv.diasSeguridad,
+  gallinas: 0,
+  sacos: 0,
+  kgPorSaco: 40,
+  consumoGrPorGallinaDia: 110,
+  diasSeguridad: 5,
 });
 
-function onSave() {
+onMounted(async () => {
+  try {
+    await inv.fetchFromServer();
+  } catch {
+    // Si falla la API, usamos lo que haya en localStorage
+    inv.load();
+  }
+
+  form.gallinas = inv.gallinas;
+  form.sacos = inv.sacos;
+  form.kgPorSaco = inv.kgPorSaco;
+  form.consumoGrPorGallinaDia = inv.consumoGrPorGallinaDia;
+  form.diasSeguridad = inv.diasSeguridad;
+});
+
+async function onSave() {
   inv.set(form);
-  // await inv.saveToServer()  // si conectas con tu API
+  await inv.saveToServer();
 }
 
 function onReset() {
-  form.gallinas = 0;
-  form.sacos = 0;
-  form.kgPorSaco = 40;
-  form.consumoGrPorGallinaDia = 110;
-  form.diasSeguridad = 5;
+  inv.$reset()
+
+  form.gallinas = inv.gallinas
+  form.sacos = inv.sacos
+  form.kgPorSaco = inv.kgPorSaco
+  form.consumoGrPorGallinaDia = inv.consumoGrPorGallinaDia
+  form.diasSeguridad = inv.diasSeguridad
 }
+
+
+
 </script>
 
 <style scoped>

@@ -11,32 +11,80 @@
         </p>
       </div>
       <div class="flex gap-2">
-        <RouterLink :to="{name:'u.pedido.nuevo'}" class="btn-primary">Nuevo pedido</RouterLink>
         <RouterLink :to="{name:'u.historial'}" class="btn-secondary">Ver historial</RouterLink>
       </div>
     </div>
 
-    <!-- Tarjetas principales -->
-    <div class="grid md:grid-cols-3 gap-4">
-      <article class="card">
-        <h3 class="card-title">Acciones rápidas</h3>
-        <div class="flex flex-wrap gap-2 mt-3">
-          <RouterLink :to="{name:'u.pedido.nuevo'}" class="chip">Hacer pedido</RouterLink>
-          <RouterLink :to="{name:'u.alertas'}" class="chip">Ver alertas</RouterLink>
-          <RouterLink :to="{name:'u.perfil'}" class="chip">Editar perfil</RouterLink>
+        <!-- Tarjetas principales -->
+        <!-- Tarjetas principales -->
+        <div class="grid md:grid-cols-3 gap-4">
+          <article class="card">
+            <h3 class="card-title">Acciones rápidas</h3>
+            <div class="flex flex-wrap gap-2 mt-3">
+              <RouterLink :to="{name:'u.pedido.nuevo'}" class="chip">Hacer pedido</RouterLink>
+              <RouterLink :to="{name:'u.alertas'}" class="chip">Ver alertas</RouterLink>
+              <RouterLink :to="{name:'u.perfil'}" class="chip">Editar perfil</RouterLink>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3 class="card-title">Estado de tus pedidos</h3>
+
+            <div v-if="hasPedidos" class="space-y-2 mt-2">
+              <p class="muted text-xs">
+                Mostrando tus últimos {{ ultimosPedidos.length }} pedidos.
+              </p>
+              <ul class="space-y-2">
+                <li
+                  v-for="p in ultimosPedidos"
+                  :key="p.id"
+                  class="flex items-center justify-between text-sm"
+                >
+                  <div>
+                    <p class="font-medium">
+                      {{ p.producto || 'Pedido' }}
+                    </p>
+                    <p class="text-xs text-white/60">
+                      {{ p.fechaISO }}
+                    </p>
+                  </div>
+                  <span
+                    class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
+                    :class="estadoBadgeClass(p.estado)"
+                  >
+                    {{ labelEstado(p.estado) }}
+                  </span>
+                </li>
+              </ul>
+            </div>
+
+            <p v-else class="muted mt-2">
+              No tienes pedidos registrados aún. Cuando hagas uno, aquí verás su estado.
+            </p>
+          </article>
+
+          <article class="card">
+            <h3 class="card-title">Próxima ruta</h3>
+
+            <div v-if="proximaRuta">
+              <p class="muted mt-2">
+                Tu próximo pedido saldrá en ruta el
+                <strong>{{ proximaRuta.fechaISO }}</strong>
+                con
+                <strong>{{ proximaRuta.choferNombre || proximaRuta.nombre }}</strong>.
+              </p>
+              <p class="text-xs text-white/60 mt-1">
+                Esta información se actualiza cuando el administrador asigna tu pedido a una ruta.
+              </p>
+            </div>
+
+            <p v-else class="muted mt-2">
+              Aún no hay una ruta asignada para tus pedidos pendientes.
+            </p>
+          </article>
         </div>
-      </article>
 
-      <article class="card">
-        <h3 class="card-title">Estado</h3>
-        <p class="muted mt-2">No hay pedidos activos.</p>
-      </article>
 
-      <article class="card">
-        <h3 class="card-title">Próxima ruta</h3>
-        <p class="muted mt-2">Aún no hay fecha programada.</p>
-      </article>
-    </div>
 
     <!-- Sugerencias educativas (mejora de usabilidad) -->
     <div class="card">
@@ -51,11 +99,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { usePedidosStore, type PedidoEstado } from '@/stores/pedidos'
+import { useRutasStore } from '@/stores/rutas'
 
 const auth = useAuthStore()
+const pedidos = usePedidosStore()
+const rutas = useRutasStore()
 
 // Nombre mostrado sin depender de una propiedad inexistente en el store
 const displayName = computed(() => {
@@ -64,7 +116,71 @@ const displayName = computed(() => {
   // intenta name, luego nombre (por si viene del back en español)
   return String(u.name ?? u.nombre ?? '').trim()
 })
+
+const hasPedidos = computed(() => pedidos.ordenados.length > 0)
+
+// Mostramos sólo los últimos 3 pedidos de la usuaria
+const ultimosPedidos = computed(() => pedidos.ordenados.slice(0, 3))
+
+// Calcula la próxima ruta donde viaja alguno de los pedidos de la usuaria
+const proximaRuta = computed(() => {
+  if (!hasPedidos.value || rutas.items.length === 0) return null
+
+  // Tomamos todos los ids de pedidos de la usuaria
+  const ids = new Set(pedidos.ordenados.map((p) => p.id))
+
+  const candidatas = rutas.items.filter((r) =>
+    r.pedidos.some((pid) => ids.has(pid))
+  )
+
+  // Sólo rutas que no estén finalizadas
+  const activas = candidatas.filter((r) => r.estado !== 'finalizada')
+  if (activas.length === 0) return null
+
+  // Ordenamos por fecha ascendente (la más próxima primero)
+  const ordenadas = [...activas].sort((a, b) => a.fechaISO.localeCompare(b.fechaISO))
+
+  return ordenadas[0]
+})
+
+function labelEstado(e: PedidoEstado): string {
+  switch (e) {
+    case 'pendiente':
+      return 'Pendiente'
+    case 'en_ruta':
+      return 'En ruta'
+    case 'entregado':
+      return 'Entregado'
+    case 'cancelado':
+      return 'Cancelado'
+    default:
+      return String(e)
+  }
+}
+
+function estadoBadgeClass(e: PedidoEstado) {
+  switch (e) {
+    case 'pendiente':
+      return 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40'
+    case 'en_ruta':
+      return 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
+    case 'entregado':
+      return 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+    case 'cancelado':
+      return 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+    default:
+      return 'bg-white/10 text-white border border-white/20'
+  }
+}
+
+onMounted(async () => {
+  // Carga sólo los pedidos de la usuaria actual
+  await pedidos.load({ mine: true })
+  // Carga las rutas para poder calcular la "próxima ruta"
+  await rutas.load()
+})
 </script>
+
 
 <style scoped>
 .btn-primary{

@@ -7,15 +7,17 @@ export type RutaEstado = 'planificada' | 'en_ruta' | 'finalizada';
 
 export interface Ruta {
   id: string;
-  nombre: string;        // Operador / nombre de ruta
+  nombre: string;        
   fechaISO: string;      // yyyy-mm-dd
   pedidos: string[];     // ids de pedidos en orden
   estado: RutaEstado;
   inicioISO?: string | null;
   finISO?: string | null;
 
+  choferNombre?: string | null; // nombre del operador (si viene del back)
   templateId?: string | null;
 }
+
 
 type State = { items: Ruta[] };
 
@@ -28,6 +30,19 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Función para formatear fecha ISO a "día mes año"
+function formatearFecha(fechaISO: string): string {
+  const meses = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+  ];
+  
+  const [año, mes, dia] = fechaISO.split('-');
+  const mesTexto = meses[parseInt(mes) - 1];
+  
+  return `${parseInt(dia)} ${mesTexto} ${año}`;
+}
+
 function mapRutaFromApi(r: any): Ruta {
   const fecha = (r.fecha ?? new Date().toISOString()).slice(0, 10);
 
@@ -36,18 +51,21 @@ function mapRutaFromApi(r: any): Ruta {
   if (r.estado === 'en_curso') estado = 'en_ruta';
   if (r.estado === 'cerrada') estado = 'finalizada';
 
+  const choferNombre =
+    r.chofer && typeof r.chofer.name === 'string' ? r.chofer.name : null;
+
   return {
     id: String(r.id),
-    nombre: String(r.nombre ?? r.chofer?.name ?? `Ruta ${r.id}`),
+    nombre: String(r.nombre ?? choferNombre ?? `Ruta ${r.id}`),
     fechaISO: fecha,
     pedidos: Array.isArray(r.pedidos) ? r.pedidos.map((p: any) => String(p.id)) : [],
     estado,
     inicioISO: r.inicio ?? null,
     finISO: r.fin ?? null,
+    choferNombre,
     templateId: null,
   };
 }
-
 
 const slug = (s: string) => s.toLowerCase().trim().replace(/\s+/g, '-');
 
@@ -91,6 +109,14 @@ export const useRutasStore = defineStore('rutas', {
   getters: {
     ordenadas: (s) => [...s.items].sort((a, b) => b.fechaISO.localeCompare(a.fechaISO)),
     byId:      (s) => (id: string) => s.items.find(r => r.id === id),
+    
+    // Getter que retorna rutas con fecha formateada
+    rutasConFechaFormateada: (s) => {
+      return s.items.map(ruta => ({
+        ...ruta,
+        fechaFormateada: formatearFecha(ruta.fechaISO)
+      }));
+    },
   },
 
   actions: {
@@ -226,5 +252,13 @@ export const useRutasStore = defineStore('rutas', {
       }
       return id;
     },
+    
+    // Función helper para formatear fechas (también disponible como action)
+    formatearFecha(fechaISO: string): string {
+      return formatearFecha(fechaISO);
+    },
   },
 });
+
+// Exportar la función para uso fuera del store si es necesario
+export { formatearFecha };

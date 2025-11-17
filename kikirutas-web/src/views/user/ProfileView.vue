@@ -53,13 +53,13 @@
 
           <div class="text-sm text-white/70">
             <p class="font-medium text-white">{{ form.nombre || 'Sin nombre' }}</p>
-            <p>Rol: {{ role || '—' }}</p>
           </div>
         </div>
 
         <div class="space-y-3">
           <div>
             <label class="block text-sm mb-1">Nombre</label>
+            
             <input
               v-model="form.nombre"
               :disabled="!editando"
@@ -98,9 +98,6 @@
             <RouterLink :to="{ name: 'u.historial' }" class="rounded bg-white/10 border border-white/15 px-3 py-2 text-sm hover:bg-white/15">
               Mis pedidos
             </RouterLink>
-            <a href="#" class="rounded bg-white/10 border border-white/15 px-3 py-2 text-sm hover:bg-white/15">
-              Cambiar contraseña
-            </a>
           </div>
         </div>
       </section>
@@ -160,38 +157,72 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed } from 'vue'
+import { reactive, ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { storeToRefs } from 'pinia'
 
 import { useAuthStore } from '@/stores/auth'
 import { usePerfilStore } from '@/stores/perfil'
 
 const auth = useAuthStore()
-const { role, displayName } = storeToRefs(auth)
-
 const perfil = usePerfilStore()
-perfil.load()
 
-// estado local de edición
-const editando = ref(false)
+// Rol para mostrar "Rol: Usuaria / Operador / Admin"
+const role = computed(() => auth.role)
 
-// form inicial (prefill con perfil o auth)
-const form = reactive({
-  avatar: perfil.avatar,
-  nombre: perfil.nombre || displayName.value || '',
-  telefono: perfil.telefono,
-  email: perfil.email,
+// Nombre que viene del backend (login / auth.me)
+const displayNameFromAuth = computed(() => {
+  const u: any = auth.user
+  if (!u) return ''
+  return String(u.name ?? u.nombre ?? '').trim()
 })
 
-// placeholder si no hay avatar
+// Al montar: cargar perfil guardado y rellenar con datos del auth si faltan
+onMounted(() => {
+  perfil.load()
+
+  const u: any = auth.user
+  if (!u) return
+
+  perfil.nombre = u.name ?? u.nombre ?? perfil.nombre
+  perfil.email = u.email ?? perfil.email
+  perfil.telefono = u.telefono ?? perfil.telefono
+  perfil.sexo = u.sexo ?? perfil.sexo
+  perfil.edad = u.edad != null ? String(u.edad) : perfil.edad
+
+  perfil.comunidad = u.comunidad ?? perfil.comunidad
+  perfil.municipio = u.municipio ?? perfil.municipio
+
+  if (u.avatar) {
+    perfil.avatar = u.avatar
+  }
+})
+
+
+// Estado local de edición
+const editando = ref(false)
+
+// Form inicial (perfil + datos del auth si existen)
+const u = computed(() => auth.user as any || {})
+
+const form = reactive({
+  avatar: perfil.avatar ?? u.value.avatar ?? null,
+  nombre: perfil.nombre || u.value.name || '',
+  telefono: perfil.telefono || u.value.telefono || '',
+  email: perfil.email || u.value.email || '',
+  sexo: perfil.sexo || u.value.sexo || '',
+  edad: perfil.edad || (u.value.edad != null ? String(u.value.edad) : ''),
+})
+
+
+
+// Placeholder si no hay avatar
 const placeholder =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160"><rect width="160" height="160" rx="80" fill="#0f1010"/><circle cx="80" cy="60" r="28" fill="#2b2f2d"/><rect x="35" y="98" width="90" height="40" rx="20" fill="#2b2f2d"/></svg>`
+    `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160"><rect width="160" height="160" rx="80" fill="#111827"/><circle cx="80" cy="60" r="32" fill="#374151"/><rect x="35" y="98" width="90" height="40" rx="20" fill="#1F2933"/></svg>`,
   )
 
-// validación mínima
+// Validación mínima
 const valido = computed(() => {
   const telOk = !form.telefono || /^\d{10}$/.test(form.telefono)
   const mailOk = !form.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
@@ -199,52 +230,74 @@ const valido = computed(() => {
 })
 
 function activarEdicion() {
+  // Refrescamos el form por si el perfil cambió
+  form.avatar = perfil.avatar
+  form.nombre = perfil.nombre || displayNameFromAuth.value || ''
+  form.telefono = perfil.telefono || ((auth.user as any)?.telefono ?? '')
+  form.email = perfil.email || ((auth.user as any)?.email ?? '')
   editando.value = true
 }
 
 function cancelar() {
-  // restaurar desde store
   form.avatar = perfil.avatar
-  form.nombre = perfil.nombre || displayName.value || ''
+  form.nombre = perfil.nombre
   form.telefono = perfil.telefono
   form.email = perfil.email
+  form.sexo = perfil.sexo
+  form.edad = perfil.edad
   editando.value = false
 }
 
-function guardar() {
-  if (!valido.value) return
+
+
+  function guardar() {
+    if (!valido.value) return
+
   perfil.set({
     avatar: form.avatar,
-    nombre: form.nombre,
-    telefono: form.telefono,
-    email: form.email,
+    nombre: form.nombre.trim(),
+    telefono: form.telefono.trim(),
+    email: form.email.trim(),
+    sexo: form.sexo,
+    edad: form.edad.trim(),
   })
-  // opcional: sincronizar nombre visible del auth
-  if (form.nombre && form.nombre !== displayName.value) {
-    auth.displayName = form.nombre
-    auth.saveToStorage?.()
+
+  // Opcional: sincronizar también lo que vemos en auth.user (solo front)
+  if (auth.user) {
+    const u: any = auth.user
+    u.name = form.nombre.trim()
+    u.telefono = form.telefono.trim()
+    u.email = form.email.trim()
+    u.sexo = form.sexo
+    u.edad = form.edad.trim()
+    ;(auth as any).persist?.()
   }
+
   editando.value = false
 }
 
-// carga de avatar
+// Carga de avatar
 function onAvatarChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
   const reader = new FileReader()
-  reader.onload = () => { form.avatar = String(reader.result) }
+  reader.onload = () => {
+    form.avatar = String(reader.result)
+  }
   reader.readAsDataURL(file)
 }
 
-// helpers de contacto asesor
-const digits = (s: string) => (s || '').replace(/\D+/g, '')
+// Helpers de contacto del asesor
+const digits = (s: string | null | undefined) => (s || '').replace(/\D+/g, '')
+
 const whatsUrl = computed(() => {
-  const phone = digits(perfil.asesorTelefono || '')
+  const phone = digits(perfil.asesorTelefono)
   const text = encodeURIComponent('Hola, necesito apoyo con mi pedido / registro.')
   return phone ? `https://wa.me/52${phone}?text=${text}` : '#'
 })
+
 const telUrl = computed(() => {
-  const phone = digits(perfil.asesorTelefono || '')
+  const phone = digits(perfil.asesorTelefono)
   return phone ? `tel:+52${phone}` : '#'
 })
 
@@ -252,6 +305,7 @@ const telUrl = computed(() => {
 function solicitarCambioUbicacion() {
   const nuevaComunidad = prompt('Nueva comunidad:', perfil.comunidad || '')
   if (!nuevaComunidad) return
+
   const nuevoMunicipio = prompt('Nuevo municipio:', perfil.municipio || '')
   if (!nuevoMunicipio) return
 
@@ -262,7 +316,8 @@ function solicitarCambioUbicacion() {
   }
 
   alert('Solicitud enviada. El equipo revisará el cambio.')
-  // Si tienes una acción real:
+  // Si después agregas un endpoint real:
   // perfil.enviarSolicitudCambioUbicacion?.(nuevaComunidad, nuevoMunicipio)
 }
 </script>
+

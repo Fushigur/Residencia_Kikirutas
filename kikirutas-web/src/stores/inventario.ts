@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import api from '@/api';
 
 type InventarioState = {
   gallinas: number;                 // total de gallinas
@@ -63,8 +64,27 @@ export const useInventarioStore = defineStore('inventario', {
       }
     },
 
-    // Puntos de extensión para API real:
-    // async saveToServer() { await api.post('/inventario', this.$state); }
-    // async fetchFromServer() { const { data } = await api.get('/inventario'); this.set(data); }
+        // Sincronizar con el backend (Mi granja por usuaria)
+    async saveToServer() {
+      await api.put('/inventario', {
+        gallinas: this.gallinas,
+        sacos: this.sacos,
+        kgPorSaco: this.kgPorSaco,
+        consumoGrPorGallinaDia: this.consumoGrPorGallinaDia,
+        diasSeguridad: this.diasSeguridad,
+      });
+    },
+
+    async fetchFromServer() {
+      const { data } = await api.get('/inventario');
+      this.set({
+        gallinas: data.gallinas ?? 0,
+        sacos: data.sacos ?? 0,
+        kgPorSaco: data.kgPorSaco ?? 40,
+        consumoGrPorGallinaDia: data.consumoGrPorGallinaDia ?? 110,
+        diasSeguridad: data.diasSeguridad ?? 5,
+      });
+    },
+
   },
 });
