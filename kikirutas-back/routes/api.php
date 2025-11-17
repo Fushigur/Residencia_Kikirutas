@@ -36,6 +36,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Pedidos
     Route::get('pedidos',               [PedidoController::class, 'index'])->name('pedidos.index');
+    Route::post('pedidos',              [PedidoController::class, 'store'])->name('pedidos.store'); 
     Route::get('pedidos/{pedido}',      [PedidoController::class, 'show'])->name('pedidos.show');
     Route::put('pedidos/{pedido}',      [PedidoController::class, 'update'])->name('pedidos.update');
     Route::delete('pedidos/{pedido}',   [PedidoController::class, 'destroy'])->name('pedidos.destroy');
