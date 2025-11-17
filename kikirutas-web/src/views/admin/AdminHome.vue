@@ -125,7 +125,7 @@ const mesPorProducto = computed(() => {
             <tr v-for="p in pendientesTop" :key="p.id" class="border-t border-white/10">
               <td class="py-2 px-2 font-medium">{{ p.folio }}</td>
               <td class="px-2"><div class="truncate max-w-[200px]" :title="p.producto">{{ p.producto }}</div></td>
-              <td class="px-2"><div class="truncate max-w-[180px]" :title="p.solicitanteNombre || '—'">{{ p.solicitanteNombre || '—' }}</div></td>
+              <td class="px-2"><div class="truncate max-w-[180px]" :title="p.solicitanteNombre || '—'"> {{ p.solicitanteNombre || '—' }}</div></td>
               <td class="px-2"><div class="truncate max-w-[160px]" :title="p.solicitanteComunidad || '—'">{{ p.solicitanteComunidad || '—' }}</div></td>
               <td class="px-2">{{ p.cantidad }}</td>
               <td class="px-2 whitespace-nowrap">{{ p.fechaISO }}</td>

@@ -81,12 +81,13 @@ import { useInventarioStore } from '@/stores/inventario'
 import { useAlertasStore } from '@/stores/alertas'
 import { usePedidosStore } from '@/stores/pedidos'
 import { useProductosStore } from '@/stores/productos'
+import api from '@/api'
 
 // Stores
 const auth = useAuthStore()
 const inv = useInventarioStore(); inv.load()
 const alertas = useAlertasStore()
-const pedidos = usePedidosStore(); pedidos.load()
+const pedidos = usePedidosStore(); pedidos.load({ mine: true })
 const productosStore = useProductosStore(); productosStore.load(); productosStore.seedDefaults()
 
 // Opciones del select (solo productos activos)
@@ -123,21 +124,32 @@ const precioSeleccionado = computed<number>(() => {
 })
 const total = computed<number>(() => (precioSeleccionado.value || 0) * (cantidad.value || 0))
 
-// Snapshot del solicitante (nombre y comunidad) con tolerancia a distintas formas del store auth
+// Snapshot del solicitante (nombre y comunidad) usando el usuario autenticado real
 function getSolicitante() {
   const a: any = auth
-  const nombre =
-    a.displayName ??
-    a.name ??
-    a.user?.name ??
-    'Usuaria'
 
-  const comunidad =
-    a.communityName ??
-    a.profile?.comunidad ??
-    a.user?.comunidad?.nombre ??
+  // El back devuelve algo como:
+  // { nombre, apellido_paterno, apellido_materno, comunidad, municipio, estado, ... }
+  const user: any = a.user || a.me || a.perfil || {}
+
+  const partesNombre = [
+    user.nombre,
+    user.apellido_paterno,
+    user.apellido_materno,
+  ].filter(Boolean)
+
+  let nombre: string | null = partesNombre.length ? partesNombre.join(' ') : null
+
+  // Respaldo: si solo tenemos `name` (nombre completo en un campo)
+  if (!nombre && user.name) {
+    nombre = String(user.name)
+  }
+
+  const comunidad: string | null =
+    user.comunidad ??
+    user.municipio ?? // por si comunidad y municipio se usan indistinto
     a.comunidad ??
-    '—'
+    null
 
   return { nombre, comunidad }
 }
@@ -145,43 +157,51 @@ function getSolicitante() {
 async function onSubmit() {
   if (!validate()) return
   isSaving.value = true
+  formMsg.value = ''
 
   try {
-    const payload = {
+    const solicitante = getSolicitante()
+
+    const body = {
       producto: producto.value,
       cantidad: cantidad.value ?? 1,
-      observaciones: (observaciones.value || '').trim(),
-      // Si tu API lo requiere, también puedes enviar:
-      // precio: precioSeleccionado.value,
-      // total: total.value,
+      fecha: new Date().toISOString().slice(0, 10),
+
+      // AHORA sí mandamos nombre y comunidad
+      solicitante_nombre: solicitante.nombre ?? undefined,
+      solicitante_comunidad: solicitante.comunidad ?? undefined,
+
+      notas: (observaciones.value || '').trim(),
     }
 
-    // TODO: POST real a tu API
-    // await api.post('/pedidos', payload)
+    // Guarda en Laravel
+    await api.post('/pedidos', body)
 
-    // Guardar en historial local con estado "pendiente" + snapshot de usuaria
-    pedidos.addFromNewOrder(payload, getSolicitante())
+    // Recarga desde el backend SOLO los pedidos de la usuaria logueada
+    await pedidos.load({ mine: true })
 
-    // Alerta de confirmación
+    // Limpiar formulario
+    producto.value = ''
+    cantidad.value = null
+    observaciones.value = ''
+
     alertas.add({
       titulo: 'Pedido creado',
-      mensaje: `Tu pedido de ${payload.cantidad} saco(s) fue registrado.`,
+      mensaje: `Tu pedido de ${body.cantidad} saco(s) fue registrado.`,
       tipo: 'pedido',
       severidad: 'info',
       ctaPrimaria: { label: 'Ver historial', routeName: 'u.historial' },
     })
 
     formMsg.value = 'Pedido registrado. Puedes revisarlo en Historial.'
-    // Opcional: reset del formulario
-    // producto.value = ''
-    // cantidad.value = null
-    // observaciones.value = ''
   } catch (e) {
-    formMsg.value = 'No se pudo registrar el pedido. Inténtalo de nuevo.'
     console.error(e)
+    formMsg.value = 'No se pudo registrar el pedido. Inténtalo de nuevo.'
   } finally {
     isSaving.value = false
   }
 }
 </script>
+
+
 

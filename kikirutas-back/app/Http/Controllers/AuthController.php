@@ -5,12 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Role;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Auth\Events\PasswordReset;
-use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -29,12 +27,13 @@ class AuthController extends Controller
         if (!$user) {
             return response()->json(['message' => 'Correo no registrado.'], 422);
         }
+
         if (!Hash::check($data['password'], $user->password)) {
             return response()->json(['message' => 'Contraseña incorrecta.'], 422);
         }
 
-        $roleName = $user->role_name;       // 'admin' | 'operator' | 'user'
-        $roleText = $user->role_readable;   // 'Admin' | 'Operador' | 'Usuaria'
+        $roleName = $user->role_name;      // 'admin' | 'operator' | 'user'
+        $roleText = $user->role_readable;  // 'Admin' | 'Operador' | 'Usuaria'
 
         if (!empty($data['expected']) && $data['expected'] !== $roleName) {
             return response()->json([
@@ -47,11 +46,15 @@ class AuthController extends Controller
         return response()->json([
             'token' => $token,
             'user'  => [
-                'id'       => $user->id,
-                'name'     => $user->name,
-                'email'    => $user->email,
-                'role'     => $roleName,
-                'roleText' => $roleText,
+                'id'        => $user->id,
+                'name'      => $user->name,
+                'email'     => $user->email,
+                'role'      => $roleName,
+                'roleText'  => $roleText,
+                // Datos de ubicación (si existen en la tabla users)
+                'comunidad' => $user->comunidad,
+                'municipio' => $user->municipio,
+                'estado'    => $user->estado,
             ],
         ]);
     }
@@ -59,14 +62,29 @@ class AuthController extends Controller
     /* ==================== REGISTER ==================== */
     public function register(Request $request)
     {
-        // Solo user/operator desde el front
+        // Por si el front manda otros nombres de campo (ej. comunidadNombre, localidad, etc.)
+        $request->merge([
+            'comunidad' => $request->input('comunidad')
+                ?? $request->input('comunidadNombre')
+                ?? $request->input('localidad'),
+            'municipio' => $request->input('municipio')
+                ?? $request->input('municipioNombre'),
+            'estado'    => $request->input('estado')
+                ?? $request->input('estadoNombre'),
+        ]);
+
         $validated = $request->validate([
-            'name'                   => ['required', 'string', 'max:120'],
-            'email'                  => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password'               => ['required', 'string', 'min:8', 'confirmed'], // password_confirmation
-            'role'                   => ['nullable', Rule::in(['user', 'operator'])],
-            'role_id'                => ['nullable', 'integer', Rule::in([2, 3])],   // 2=operator, 3=user
-            'nombreRol'              => ['nullable', 'string'],
+            'name'      => ['required', 'string', 'max:120'],
+            'email'     => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password'  => ['required', 'string', 'min:8', 'confirmed'], // password_confirmation
+            'role'      => ['nullable', Rule::in(['user', 'operator'])],
+            'role_id'   => ['nullable', 'integer', Rule::in([2, 3])],   // 2=operator, 3=user
+            'nombreRol' => ['nullable', 'string'],
+
+            // Campos opcionales de ubicación
+            'comunidad' => ['nullable', 'string', 'max:120'],
+            'municipio' => ['nullable', 'string', 'max:120'],
+            'estado'    => ['nullable', 'string', 'max:120'],
         ]);
 
         $roleId = $this->resolveRoleId(
@@ -81,10 +99,13 @@ class AuthController extends Controller
 
         /** @var User $user */
         $user = User::create([
-            'name'     => $validated['name'],
-            'email'    => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'role_id'  => $roleId ?? 3, // por defecto Usuaria
+            'name'      => $validated['name'],
+            'email'     => $validated['email'],
+            'password'  => Hash::make($validated['password']),
+            'role_id'   => $roleId ?? 3, // por defecto Usuaria
+            'comunidad' => $validated['comunidad'] ?? null,
+            'municipio' => $validated['municipio'] ?? null,
+            'estado'    => $validated['estado'] ?? null,
         ]);
 
         $user->load('role');
@@ -93,11 +114,14 @@ class AuthController extends Controller
         return response()->json([
             'token' => $token,
             'user'  => [
-                'id'       => $user->id,
-                'name'     => $user->name,
-                'email'    => $user->email,
-                'role'     => $user->role_name,
-                'roleText' => $user->role_readable,
+                'id'        => $user->id,
+                'name'      => $user->name,
+                'email'     => $user->email,
+                'role'      => $user->role_name,
+                'roleText'  => $user->role_readable,
+                'comunidad' => $user->comunidad,
+                'municipio' => $user->municipio,
+                'estado'    => $user->estado,
             ],
         ], 201);
     }
@@ -109,11 +133,14 @@ class AuthController extends Controller
         $u = $request->user()->load('role');
 
         return response()->json([
-            'id'       => $u->id,
-            'name'     => $u->name,
-            'email'    => $u->email,
-            'role'     => $u->role_name,
-            'roleText' => $u->role_readable,
+            'id'        => $u->id,
+            'name'      => $u->name,
+            'email'     => $u->email,
+            'role'      => $u->role_name,
+            'roleText'  => $u->role_readable,
+            'comunidad' => $u->comunidad,
+            'municipio' => $u->municipio,
+            'estado'    => $u->estado,
         ]);
     }
 
@@ -145,9 +172,9 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         $request->validate([
-            'token'                 => ['required', 'string'],
-            'email'                 => ['required', 'email'],
-            'password'              => ['required', 'string', 'min:8', 'confirmed'],
+            'token'    => ['required', 'string'],
+            'email'    => ['required', 'email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
         $status = Password::reset(
@@ -175,7 +202,9 @@ class AuthController extends Controller
     /* ==================== Helpers ==================== */
     private function resolveRoleId($roleId, ?string $role, ?string $nombreRol): ?int
     {
-        if (in_array((int)$roleId, [2, 3], true)) return (int)$roleId;
+        if (in_array((int) $roleId, [2, 3], true)) {
+            return (int) $roleId;
+        }
 
         if ($role) {
             $v = strtolower(trim($role));
@@ -193,14 +222,15 @@ class AuthController extends Controller
             $guess = $this->guessRoleNombre(strtolower(trim($role)));
             if ($guess) {
                 $id = Role::where('nombre', $guess)->value('id');
-                if ($id) return (int)$id;
+                if ($id) return (int) $id;
             }
         }
+
         if ($nombreRol) {
             $guess = $this->guessRoleNombre(strtolower(trim($nombreRol)));
             if ($guess) {
                 $id = Role::where('nombre', $guess)->value('id');
-                if ($id) return (int)$id;
+                if ($id) return (int) $id;
             }
         }
 
@@ -215,4 +245,3 @@ class AuthController extends Controller
         return null;
     }
 }
-    

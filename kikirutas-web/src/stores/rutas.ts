@@ -1,5 +1,6 @@
 // src/stores/rutas.ts
 import { defineStore } from 'pinia';
+import api from '@/api'; 
 import { usePedidosStore } from './pedidos';
 
 export type RutaEstado = 'planificada' | 'en_ruta' | 'finalizada';
@@ -26,6 +27,28 @@ function newId() {
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
+
+function mapRutaFromApi(r: any): Ruta {
+  const fecha = (r.fecha ?? new Date().toISOString()).slice(0, 10);
+
+  // Mapeo de estado Laravel → Front
+  let estado: RutaEstado = 'planificada';
+  if (r.estado === 'en_curso') estado = 'en_ruta';
+  if (r.estado === 'cerrada') estado = 'finalizada';
+
+  return {
+    id: String(r.id),
+    nombre: String(r.nombre ?? r.chofer?.name ?? `Ruta ${r.id}`),
+    fechaISO: fecha,
+    pedidos: Array.isArray(r.pedidos) ? r.pedidos.map((p: any) => String(p.id)) : [],
+    estado,
+    inicioISO: r.inicio ?? null,
+    finISO: r.fin ?? null,
+    templateId: null,
+  };
+}
+
+
 const slug = (s: string) => s.toLowerCase().trim().replace(/\s+/g, '-');
 
 // -------- Plantillas (residencia) --------
@@ -71,11 +94,36 @@ export const useRutasStore = defineStore('rutas', {
   },
 
   actions: {
-    persist() { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.items)); },
-    load() {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      try { this.items = JSON.parse(raw) ?? []; } catch {}
+    persist() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.items));
+      } catch {
+        // por si el navegador bloquea localStorage
+      }
+    },
+
+    async load(opts?: { fecha?: string; estado?: RutaEstado }) {
+      const params: Record<string, any> = {};
+
+      if (opts?.fecha) params.fecha = opts.fecha;
+      if (opts?.estado) {
+        // Mapeo de tu estado del front → estado del back
+        params.estado =
+          opts.estado === 'en_ruta'
+            ? 'en_curso'
+            : opts.estado === 'finalizada'
+            ? 'cerrada'
+            : 'borrador';
+      }
+
+      const res = await api.get('/rutas', { params });
+
+      const data = Array.isArray((res.data as any).data)
+        ? (res.data as any).data
+        : res.data;
+
+      this.items = data.map(mapRutaFromApi);
+      this.persist();
     },
 
     create(payload?: { nombre?: string; fechaISO?: string; templateId?: string | null }) {
@@ -167,7 +215,10 @@ export const useRutasStore = defineStore('rutas', {
       const id = this.create({ nombre: operador || 'Operador', fechaISO, templateId: tid });
 
       const pedidosStore = usePedidosStore();
-      const pendientes = pedidosStore.pendientes ?? pedidosStore.items?.filter((p: any) => p.estado === 'pendiente') ?? [];
+      const pendientes =
+        pedidosStore.pendientes ??
+        pedidosStore.items?.filter((p: any) => p.estado === 'pendiente') ??
+        [];
 
       for (const p of pendientes) {
         const cslug = slug(p.solicitanteComunidad || '');
