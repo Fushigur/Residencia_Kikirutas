@@ -1,46 +1,9 @@
-<template>
-  <section class="container mx-auto">
-    <h1 class="text-2xl font-bold mb-4">Rutas de hoy</h1>
-
-    <div v-if="loading" class="py-10 text-center opacity-80">Cargando rutas…</div>
-
-    <div v-else-if="rutas.length === 0" class="alert alert-info">
-      No hay rutas asignadas hoy.
-      <button class="btn btn-sm btn-primary ms-2" @click="sembrarDemo">Crear demo</button>
-    </div>
-
-    <div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      <article v-for="r in rutas" :key="r.id" class="rounded-xl border border-white/10 bg-white/5 p-4">
-        <h3 class="font-semibold mb-1">{{ r.nombre ?? ('Ruta ' + r.id) }}</h3>
-        <p class="text-sm opacity-80 mb-2">
-          {{ r.paradas?.length ?? 0 }} paradas · {{ (r.pedidos?.length ?? 0) }} pedidos
-          <span v-if="r.fechaISO" class="ms-2 opacity-70">• {{ r.fechaISO }}</span>
-        </p>
-
-        <div class="flex gap-2">
-          <RouterLink
-            :to="{ name: 'op.ruta', params: { id: r.id } }"
-            class="inline-flex items-center rounded bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-          >
-            Abrir
-          </RouterLink>
-
-          <RouterLink
-            :to="{ name: 'op.ruta.mapa', params: { id: r.id } }"
-            class="inline-flex items-center rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          >
-            Ver mapa
-          </RouterLink>
-        </div>
-
-      </article>
-    </div>
-  </section>
-</template>
-
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRutasStore } from '@/stores/rutas'
+import { useAuthStore } from '@/stores/auth'
+import { formatFechaLarga } from '@/utils/dateFormat'
+
 
 interface RutaItem {
   id: string
@@ -48,64 +11,176 @@ interface RutaItem {
   fechaISO?: string
   paradas?: any[]
   pedidos?: string[]
+  choferId?: number | null
 }
 
 const rutasStore = useRutasStore()
+const auth = useAuthStore()
 
-// loading local del componente
 const loading = ref(false)
 
-// Rutas que se muestran hoy
-const rutas = computed<RutaItem[]>(() => {
-  // Si el store ya expone un getter rutasDeHoy, lo usamos
-  const deHoy = (rutasStore as any).rutasDeHoy as RutaItem[] | undefined
-  if (Array.isArray(deHoy)) return deHoy
+// 👉 Fecha local YYYY-MM-DD
+function todayLocalISO(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 
-  // Si no, tomamos ordenadas o items y filtramos por fecha de hoy
-  const lista =
-    ((rutasStore as any).ordenadas as RutaItem[] | undefined) ??
-    ((rutasStore as any).items as RutaItem[] | undefined)
+// 👉 Fecha límite 1 mes adelante
+function monthAheadISO(): string {
+  const d = new Date()
+  d.setMonth(d.getMonth() + 1)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 
-  if (!Array.isArray(lista)) return []
+const hoy = todayLocalISO()
+const limite = monthAheadISO()
 
-  const hoy = new Date().toISOString().slice(0, 10)
-  return lista.filter(r => r.fechaISO === hoy)
+// Base de rutas del store
+const baseRutas = computed<RutaItem[]>(() => {
+  const base =
+    ((rutasStore as any).ordenadas as any[] | undefined) ??
+    ((rutasStore as any).items as any[] | undefined)
+
+  if (!Array.isArray(base)) return []
+  return base as RutaItem[]
+})
+
+// ID del operador actual
+const meId = computed(() => auth.user?.id ?? null)
+
+// 👉 Rutas de HOY (para este operador)
+const rutasHoy = computed<RutaItem[]>(() => {
+  return baseRutas.value
+    .filter((r) => r.fechaISO === hoy)
+    .filter((r) => {
+      if (!meId.value) return false
+      const choferId = (r as any).choferId ?? null
+      return choferId === meId.value
+    })
+})
+
+// 👉 Próximas rutas (desde mañana hasta límite, para este operador)
+const rutasProximas = computed<RutaItem[]>(() => {
+  return baseRutas.value
+    .filter((r) => {
+      if (!r.fechaISO) return false
+      return r.fechaISO > hoy && r.fechaISO <= limite
+    })
+    .filter((r) => {
+      if (!meId.value) return false
+      const choferId = (r as any).choferId ?? null
+      return choferId === meId.value
+    })
 })
 
 onMounted(async () => {
   loading.value = true
-  const hoy = new Date().toISOString().slice(0, 10)
-
   try {
-    // Usa el load() nuevo del store, que ahora va contra Laravel
-    await (rutasStore as any).load?.({ fecha: hoy })
+    // Traemos rutas desde hoy hasta 1 mes adelante
+    await (rutasStore as any).load?.({
+      desde: hoy,
+      hasta: limite,
+    })
   } catch (e) {
-    console.error('Error cargando rutas de hoy', e)
+    console.error('Error cargando rutas', e)
   } finally {
     loading.value = false
   }
 })
-
-// Solo para pruebas/demo: llena el store con datos de ejemplo (no toca el backend)
-function sembrarDemo() {
-  const hoy = new Date().toISOString().slice(0, 10)
-  const demo: RutaItem[] = [
-    {
-      id: 'hoy-01',
-      nombre: 'JMM → Candelaria',
-      paradas: ['Candelaria', 'Dziuché'],
-      pedidos: ['p-1', 'p-2', 'p-3'],
-      fechaISO: hoy,
-    },
-    {
-      id: 'hoy-02',
-      nombre: 'JMM → Kancabchén',
-      paradas: ['La Presumida', 'Kancabchén'],
-      pedidos: ['p-4', 'p-5'],
-      fechaISO: hoy,
-    },
-  ]
-
-  ;(rutasStore as any).items = demo
-}
 </script>
+
+
+<template>
+  <section class="container mx-auto">
+    <h1 class="text-2xl font-bold mb-4">Rutas de hoy</h1>
+
+    <div v-if="loading" class="py-10 text-center opacity-80">
+      Cargando rutas…
+    </div>
+
+    <div v-else>
+      <!-- RUTAS DE HOY -->
+      <div v-if="rutasHoy.length === 0" class="mb-8 text-sm text-white/70">
+        No hay rutas asignadas hoy.
+      </div>
+
+      <div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-10">
+        <article
+          v-for="r in rutasHoy"
+          :key="r.id"
+          class="rounded-xl border border-white/10 bg-white/5 p-4"
+        >
+          <h3 class="font-semibold mb-1">{{ r.nombre ?? ('Ruta ' + r.id) }}</h3>
+          <p class="text-sm opacity-80 mb-2">
+            {{ r.paradas?.length ?? 0 }} paradas · {{ (r.pedidos?.length ?? 0) }} pedidos
+            <span v-if="r.fechaISO" class="ms-2 opacity-70">• {{ formatFechaLarga(r.fechaISO) }}</span>
+          </p>
+
+          <div class="flex gap-2">
+            <RouterLink
+              :to="{ name: 'op.ruta', params: { id: r.id } }"
+              class="inline-flex items-center rounded bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            >
+              Abrir
+            </RouterLink>
+
+            <RouterLink
+              :to="{ name: 'op.ruta.mapa', params: { id: r.id } }"
+              class="inline-flex items-center rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              Ver mapa
+            </RouterLink>
+          </div>
+        </article>
+      </div>
+
+      <!-- PRÓXIMAS RUTAS -->
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-xl font-semibold">Próximas rutas (próximo mes)</h2>
+        
+      </div>
+
+      <div v-if="rutasProximas.length === 0" class="text-sm text-white/70">
+        No tienes rutas programadas en los próximos 30 días.
+      </div>
+
+      <div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <article
+          v-for="r in rutasProximas"
+          :key="r.id"
+          class="rounded-xl border border-white/10 bg-white/5 p-4"
+        >
+          <h3 class="font-semibold mb-1">{{ r.nombre ?? ('Ruta ' + r.id) }}</h3>
+          <p class="text-sm opacity-80 mb-2">
+            {{ r.paradas?.length ?? 0 }} paradas · {{ (r.pedidos?.length ?? 0) }} pedidos
+            <span v-if="r.fechaISO" class="ms-2 opacity-70">• {{ formatFechaLarga(r.fechaISO) }}</span>
+          </p>
+
+          <div class="flex gap-2">
+            <RouterLink
+              :to="{ name: 'op.ruta', params: { id: r.id } }"
+              class="inline-flex items-center rounded bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            >
+              Abrir
+            </RouterLink>
+
+            <RouterLink
+              :to="{ name: 'op.ruta.mapa', params: { id: r.id } }"
+              class="inline-flex items-center rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              Ver mapa
+            </RouterLink>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+</template>
+
+

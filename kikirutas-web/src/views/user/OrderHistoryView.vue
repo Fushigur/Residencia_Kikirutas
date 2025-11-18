@@ -3,6 +3,7 @@ import { onMounted, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePedidosStore, type PedidoEstado } from '@/stores/pedidos'
 import { useAuthStore } from '@/stores/auth'
+import { formatFechaCorta } from '@/utils/dateFormat'
 
 const pedidos = usePedidosStore()
 const auth = useAuthStore()
@@ -78,7 +79,7 @@ function estadoLabel(e: PedidoEstado) {
             <td class="py-2">{{ p.folio }}</td>
             <td>{{ p.producto }}</td>
             <td>{{ p.cantidad }}</td>
-            <td>{{ p.fechaISO }}</td>
+            <td> {{ formatFechaCorta(p.fechaISO) }}</td>
             <td>
               <span
                 class="px-2 py-1 rounded text-xs font-medium"

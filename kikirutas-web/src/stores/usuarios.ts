@@ -1,26 +1,71 @@
-import { defineStore } from 'pinia';
+// src/stores/usuarios.ts
+import { defineStore } from 'pinia'
+import api from '@/api'
 
-export type RolUsuario = 'admin' | 'user';
+export type RolUsuario = 'user' | 'admin' | 'operador'
 
 export interface Usuario {
-  id: string;
-  nombre: string;
-  email: string;
-  telefono?: string;
-  comunidad?: string;
-  rol: RolUsuario;
-  activo: boolean;
-  createdAt: number; // epoch ms
+  id: string
+  nombre: string
+  email: string
+  telefono?: string | null
+  comunidad?: string | null
+  rol: RolUsuario
+  activo: boolean
+  createdAt: number
 }
 
 type State = {
-  items: Usuario[];
-};
+  items: Usuario[]
+}
 
-const STORAGE_KEY = 'usuarios_kikirutas';
+/**
+ * Mapea el usuario que viene del backend Laravel
+ * a la forma que usamos en el front.
+ */
+function mapFromApi(u: any): Usuario {
+  // ---- Rol ----
+  const rolApi = u.nombreRol ?? u.role?.name ?? u.rol ?? null
+  let rol: RolUsuario = 'user'
 
-function newId() {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  if (rolApi) {
+    const r = String(rolApi).toLowerCase()
+    if (r.includes('admin')) {
+      rol = 'admin'
+    } else if (r.includes('operador') || r.includes('operator')) {
+      rol = 'operador'
+    }
+  } else if (typeof u.role_id !== 'undefined') {
+    // Ajusta estos IDs a tu tabla "roles"
+    if (Number(u.role_id) === 1) rol = 'admin'
+    else if (Number(u.role_id) === 2) rol = 'operador'
+    else rol = 'user'
+  }
+
+
+  // ---- Activo / Inactivo ----
+  const activo =
+    typeof u.activo !== 'undefined'
+      ? Boolean(u.activo)
+      : (u.estado ?? u.status ?? 'activo') !== 'inactivo'
+
+  // ---- Fecha de alta ----
+  const createdStr = u.created_at ?? u.createdAt ?? null
+  const createdAt =
+    createdStr && !isNaN(Date.parse(createdStr))
+      ? Date.parse(createdStr)
+      : Date.now()
+
+  return {
+    id: String(u.id),
+    nombre: String(u.name ?? u.nombre ?? ''),
+    email: String(u.email ?? ''),
+    telefono: u.telefono ?? u.phone ?? null,
+    comunidad: u.comunidad ?? null,
+    rol,
+    activo,
+    createdAt,
+  }
 }
 
 export const useUsuariosStore = defineStore('usuarios', {
@@ -29,143 +74,113 @@ export const useUsuariosStore = defineStore('usuarios', {
   }),
 
   getters: {
-    sorted: (s) =>
-      [...s.items].sort((a, b) => {
-        // admins arriba, luego por nombre
-        if (a.rol !== b.rol) return a.rol === 'admin' ? -1 : 1;
-        return a.nombre.localeCompare(b.nombre);
-      }),
+    sorted: (s) => [...s.items].sort((a, b) => b.createdAt - a.createdAt),
     byId: (s) => (id: string) => s.items.find((u) => u.id === id),
-    existsEmail: (s) => (email: string, ignoreId?: string) =>
-      s.items.some(
-        (u) =>
-          u.email.trim().toLowerCase() === email.trim().toLowerCase() &&
-          u.id !== ignoreId
-      ),
   },
 
   actions: {
-    persist() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.items));
-    },
-    load() {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      try {
-        this.items = JSON.parse(raw) ?? [];
-      } catch {}
-    },
-    seedDefaults() {
-      if (this.items.length) return;
-      const now = Date.now();
-      this.items = [
-        {
-          id: newId(),
-          nombre: 'Admin Principal',
-          email: 'admin@kikirutas.local',
-          rol: 'admin',
-          activo: true,
-          createdAt: now - 86400000 * 15,
-        },
-        {
-          id: newId(),
-          nombre: 'Maribel Poot',
-          email: 'maribel@kikirutas.local',
-          telefono: '983-000-1111',
-          comunidad: 'Kancabchén',
-          rol: 'user',
-          activo: true,
-          createdAt: now - 86400000 * 10,
-        },
-        {
-          id: newId(),
-          nombre: 'Lupita Chan',
-          email: 'lupita@kikirutas.local',
-          telefono: '983-000-2222',
-          comunidad: 'Dziuché',
-          rol: 'user',
-          activo: true,
-          createdAt: now - 86400000 * 7,
-        },
-      ];
-      this.persist();
+    // ---------- CARGA DESDE LARAVEL ----------
+    async load() {
+      const res = await api.get('/usuarios')
+      const data = Array.isArray(res.data?.data) ? res.data.data : res.data
+      this.items = (data as any[]).map(mapFromApi)
     },
 
-    create(payload: {
-      nombre: string;
-      email: string;
-      telefono?: string;
-      comunidad?: string;
-      rol: RolUsuario;
+    // ---------- CREAR USUARIO ----------
+    async create(payload: {
+      nombre: string
+      email: string
+      telefono?: string
+      comunidad?: string
+      rol: RolUsuario
     }) {
-      const nombre = payload.nombre?.trim();
-      const email = payload.email?.trim();
-      if (!nombre) throw new Error('Nombre requerido');
-      if (!email) throw new Error('Correo requerido');
-      if (this.existsEmail(email)) throw new Error('Ya existe una cuenta con ese correo');
-
-      const u: Usuario = {
-        id: newId(),
-        nombre,
-        email,
-        telefono: payload.telefono?.trim() || undefined,
-        comunidad: payload.comunidad?.trim() || undefined,
-        rol: payload.rol ?? 'user',
-        activo: true,
-        createdAt: Date.now(),
-      };
-      this.items.push(u);
-      this.persist();
-      return u.id;
-    },
-
-    update(id: string, changes: Partial<Omit<Usuario, 'id' | 'createdAt'>>) {
-      const u = this.items.find((x) => x.id === id);
-      if (!u) return false;
-
-      if (changes.email !== undefined) {
-        const email = changes.email.trim();
-        if (!email) throw new Error('Correo requerido');
-        if (this.existsEmail(email, id)) throw new Error('Ya existe una cuenta con ese correo');
-        u.email = email;
+      const body: any = {
+        name: payload.nombre,
+        email: payload.email,
+        telefono: payload.telefono ?? null,
+        comunidad: payload.comunidad ?? null,
       }
-      if (changes.nombre !== undefined) {
-        const nombre = changes.nombre.trim();
-        if (!nombre) throw new Error('Nombre requerido');
-        u.nombre = nombre;
+
+      // Rol → role_id (ajusta estos IDs según tu tabla "roles")
+      body.role_id = payload.rol === 'admin' ? 1 : 3
+
+      const res = await api.post('/usuarios', body)
+      const user = mapFromApi(res.data)
+      this.items.unshift(user)
+    },
+
+    // ---------- EDITAR USUARIO ----------
+    async update(
+      id: string,
+      payload: {
+        nombre: string
+        email: string
+        telefono?: string
+        comunidad?: string
+        rol: RolUsuario
+      },
+    ) {
+      const u = this.byId(id)
+      if (!u) throw new Error('Usuario no encontrado')
+
+      const body: any = {
+        name: payload.nombre,
+        email: payload.email,
+        telefono: payload.telefono ?? null,
+        comunidad: payload.comunidad ?? null,
       }
-      if (changes.telefono !== undefined) u.telefono = changes.telefono?.trim() || undefined;
-      if (changes.comunidad !== undefined) u.comunidad = changes.comunidad?.trim() || undefined;
-      if (changes.rol !== undefined) u.rol = changes.rol;
-      if (changes.activo !== undefined) u.activo = !!changes.activo;
 
-      this.persist();
-      return true;
+      body.role_id = payload.rol === 'admin' ? 1 : 3
+
+      const res = await api.put(`/usuarios/${id}`, body)
+      const upd = mapFromApi(res.data)
+
+      Object.assign(u, upd)
     },
 
-    toggleActivo(id: string) {
-      const u = this.items.find((x) => x.id === id);
-      if (!u) return false;
-      u.activo = !u.activo;
-      this.persist();
-      return true;
+    // ---------- ACTIVAR / DESACTIVAR ----------
+    async toggleActivo(id: string) {
+      const u = this.byId(id)
+      if (!u) return
+
+      const nuevoActivo = !u.activo
+
+      const res = await api.put(`/usuarios/${id}`, {
+        activo: nuevoActivo,
+      })
+
+      const upd = mapFromApi(res.data)
+      Object.assign(u, upd)
     },
 
-    setRol(id: string, rol: RolUsuario) {
-      const u = this.items.find((x) => x.id === id);
-      if (!u) return false;
-      u.rol = rol;
-      this.persist();
-      return true;
+    // ---------- CAMBIAR ROL ----------
+    async setRol(id: string, rol: RolUsuario) {
+      const u = this.byId(id)
+      if (!u) return
+
+      const body: any = {
+        rol,
+        role_id: rol === 'admin' ? 1 : 3,
+      }
+
+      const res = await api.put(`/usuarios/${id}`, body)
+      const upd = mapFromApi(res.data)
+      Object.assign(u, upd)
     },
 
-    // "Reset" local simulado: retorna una contraseña temporal
-    resetPassword(id: string) {
-      const u = this.items.find((x) => x.id === id);
-      if (!u) return null;
-      const temp = Math.random().toString(36).slice(2, 10);
-      // En un backend real, aquí disparas correo con token o actualizas hash.
-      return temp;
-    },
+    // ---------- RESET PASSWORD (solo front, sin backend) ----------
+    /**
+     * Mantengo esta función síncrona para que siga funcionando
+     * con tu componente actual. Genera una contraseña temporal
+     * y la devuelve (puedes luego implementar el endpoint real).
+     */
+/*     resetPassword(id: string): string | null {
+      const u = this.byId(id)
+      if (!u) return null
+
+      const temp = Math.random().toString(36).slice(2, 10)
+      console.warn('Contraseña temporal para usuario', id, temp)
+      return temp
+    }, */
   },
-});
+})

@@ -11,7 +11,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolesTableSeeder::class,
             UsersTableSeeder::class,
-            // Agrega aquí seeders de pedidos/rutas si luego los necesitas
+            ProductoSeeder::class,
         ]);
     }
 }

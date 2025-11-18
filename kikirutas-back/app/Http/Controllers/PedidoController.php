@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pedido;
+use App\Models\Ruta; 
 use Illuminate\Http\Request;
 
 class PedidoController extends Controller
@@ -45,6 +46,61 @@ class PedidoController extends Controller
 
         return $q->orderByDesc('id')->paginate($perPage);
     }
+
+        /**
+     * Resumen para el panel de la usuaria:
+     * - Últimos pedidos de la beneficiaria autenticada
+     * - Próxima ruta donde tenga algún pedido pendiente/en_ruta
+     */
+    public function dashboardUsuario(Request $req)
+    {
+        $user = $req->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'No autenticado'], 401);
+        }
+
+        $nombre = $user->name;
+
+        // Últimos 3 pedidos de la usuaria (por nombre de solicitante)
+        $recientes = Pedido::where('solicitante_nombre', $nombre)
+            ->orderByDesc('fecha')
+            ->orderByDesc('id')
+            ->limit(3)
+            ->get(['id', 'producto', 'cantidad', 'estado', 'fecha']);
+
+        // Próxima ruta con al menos un pedido pendiente / en_ruta de esta usuaria
+        $hoy = now()->toDateString();
+
+        $ruta = Ruta::with('chofer:id,name')
+            ->whereHas('pedidos', function ($q) use ($nombre) {
+                $q->where('solicitante_nombre', $nombre)
+                  ->whereIn('estado', ['pendiente', 'en_ruta']);
+            })
+            ->whereDate('fecha', '>=', $hoy)
+            ->orderBy('fecha')
+            ->orderBy('id')
+            ->first();
+
+        return response()->json([
+            'pedidos_recientes' => $recientes->map(function (Pedido $p) {
+                return [
+                    'id'       => $p->id,
+                    'producto' => $p->producto,
+                    'cantidad' => $p->cantidad,
+                    'estado'   => $p->estado,
+                    'fecha'    => $p->fecha?->toDateString(),
+                ];
+            }),
+            'proxima_ruta' => $ruta ? [
+                'id'            => $ruta->id,
+                'fecha'         => $ruta->fecha?->toDateString(),
+                'estado'        => $ruta->estado,
+                'chofer_nombre' => $ruta->chofer?->name,
+            ] : null,
+        ]);
+    }
+
 
     /**
      * Crear pedido desde la API

@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router';
 import { usePedidosStore, type Pedido } from '@/stores/pedidos'
 import { useRutasStore } from '@/stores/rutas'
 import { useProductosStore } from '@/stores/productos'
+import { formatFechaCorta } from '@/utils/dateFormat' 
 
 /* Stores */
 const pedidos = usePedidosStore()
@@ -210,7 +211,7 @@ function estadoChipClasses(e: Pedido['estado']) {
             <td class="px-3 text-right tabular-nums">${{ (precio(p.producto) * p.cantidad).toFixed(2) }}</td>
 
             <!-- Fecha -->
-            <td class="px-3 whitespace-nowrap">{{ p.fechaISO }}</td>
+            <td class="px-3 whitespace-nowrap">{{ formatFechaCorta(p.fechaISO) }}</td>
 
             <!-- Estado -->
             <td class="px-3">

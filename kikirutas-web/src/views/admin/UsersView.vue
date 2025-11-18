@@ -6,14 +6,15 @@ const store = useUsuariosStore();
 
 onMounted(() => {
   store.load();
-  store.seedDefaults();
 });
+
 
 /* -----------------------
    Filtros y búsqueda
 ------------------------*/
 const q = ref('');
 const filRol = ref<'todos' | RolUsuario>('todos');
+
 const filEstado = ref<'todos' | 'activos' | 'inactivos'>('todos');
 
 const lista = computed(() => {
@@ -111,7 +112,7 @@ function setRol(id: string, rol: RolUsuario) {
   store.setRol(id, rol);
 }
 
-const resetMsg = ref('');
+/* const resetMsg = ref('');
 function resetPassword(id: string) {
   const temp = store.resetPassword(id);
   if (temp) {
@@ -119,7 +120,7 @@ function resetPassword(id: string) {
     setTimeout(() => (resetMsg.value = ''), 7000);
   }
 }
-
+ */
 /* -----------------------
    Helpers
 ------------------------*/
@@ -151,8 +152,10 @@ function fmtFecha(ts: number) {
           <select v-model="filRol" class="rounded bg-neutral-900 border border-white/10 px-3 py-2">
             <option value="todos">Todos</option>
             <option value="user">Usuarias</option>
+            <option value="operador">Operadores</option>
             <option value="admin">Administradores</option>
           </select>
+
         </div>
         <div>
           <label class="block text-sm mb-1">Estado</label>
@@ -162,9 +165,9 @@ function fmtFecha(ts: number) {
             <option value="inactivos">Inactivos</option>
           </select>
         </div>
-        <div v-if="resetMsg" class="ml-auto text-sm text-amber-300">
+<!--         <div v-if="resetMsg" class="ml-auto text-sm text-amber-300">
           {{ resetMsg }}
-        </div>
+        </div> -->
       </div>
     </div>
 
@@ -192,6 +195,7 @@ function fmtFecha(ts: number) {
           <label class="block text-sm mb-1">Rol</label>
           <select v-model="nuevo.rol" class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2">
             <option value="user">Usuaria</option>
+            <option value="operador">Operador</option>
             <option value="admin">Administrador</option>
           </select>
         </div>
@@ -221,126 +225,173 @@ function fmtFecha(ts: number) {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="u in lista" :key="u.id" class="border-t border-white/10">
-              <!-- Nombre / edición -->
-              <td class="py-2">
-                <template v-if="editId === u.id">
-                  <input v-model.trim="form.nombre" class="rounded bg-neutral-900 border border-white/10 px-2 py-1 w-full" />
-                </template>
-                <template v-else>
-                  <div class="font-medium">{{ u.nombre }}</div>
-                  <div v-if="u.telefono" class="text-xs text-white/60">{{ u.telefono }}</div>
-                </template>
-              </td>
+          <tr
+            v-for="u in lista"
+            :key="u.id"
+            class="border-t border-white/10 hover:bg-white/5 transition-colors"
+            :class="editId === u.id ? 'bg-white/5' : ''"
+          >
+            <!-- Nombre / Teléfono -->
+            <td class="py-3 align-middle">
+              <template v-if="editId === u.id">
+                <div class="flex flex-col gap-1">
+                  <input
+                    v-model.trim="form.nombre"
+                    class="w-full rounded-lg bg-neutral-900 border border-white/15 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                  <input
+                    v-model.trim="form.telefono"
+                    class="w-full rounded-lg bg-neutral-900 border border-white/15 px-2 py-1.5 text-xs text-white/80 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    placeholder="Teléfono"
+                  />
+                </div>
+              </template>
+              <template v-else>
+                <div class="font-medium">{{ u.nombre }}</div>
+                <div v-if="u.telefono" class="text-xs text-white/60">{{ u.telefono }}</div>
+              </template>
+            </td>
 
-              <!-- Email / edición -->
-              <td>
-                <template v-if="editId === u.id">
-                  <input v-model.trim="form.email" type="email" class="rounded bg-neutral-900 border border-white/10 px-2 py-1 w-full" />
-                </template>
-                <template v-else>
-                  {{ u.email }}
-                </template>
-              </td>
+            <!-- Email -->
+            <td class="py-3 align-middle">
+              <template v-if="editId === u.id">
+                <input
+                  v-model.trim="form.email"
+                  type="email"
+                  class="w-full rounded-lg bg-neutral-900 border border-white/15 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+              </template>
+              <template v-else>
+                <div class="truncate max-w-[220px]">{{ u.email }}</div>
+              </template>
+            </td>
 
-              <!-- Comunidad / edición -->
-              <td>
-                <template v-if="editId === u.id">
-                  <input v-model.trim="form.comunidad" class="rounded bg-neutral-900 border border-white/10 px-2 py-1 w-full" />
-                </template>
-                <template v-else>
-                  {{ u.comunidad || '—' }}
-                </template>
-              </td>
+            <!-- Comunidad -->
+            <td class="py-3 align-middle">
+              <template v-if="editId === u.id">
+                <input
+                  v-model.trim="form.comunidad"
+                  class="w-full rounded-lg bg-neutral-900 border border-white/15 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+              </template>
+              <template v-else>
+                {{ u.comunidad || '—' }}
+              </template>
+            </td>
 
-              <!-- Rol -->
-              <td>
-                <template v-if="editId === u.id">
-                  <select v-model="form.rol" class="rounded bg-neutral-900 border border-white/10 px-2 py-1">
-                    <option value="user">Usuaria</option>
-                    <option value="admin">Administrador</option>
-                  </select>
-                </template>
-                <template v-else>
-                  <span
-                    class="px-2 py-1 rounded text-xs font-medium"
-                    :class="u.rol === 'admin'
-                      ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
-                      : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'"
-                  >
-                    {{ u.rol === 'admin' ? 'Admin' : 'Usuaria' }}
-                  </span>
-                </template>
-              </td>
-
-              <!-- Estado -->
-              <td>
+            <!-- Rol -->
+            <td class="py-3 align-middle">
+              <template v-if="editId === u.id">
+                <select v-model="form.rol" class="rounded bg-neutral-900 border border-white/10 px-2 py-1">
+                  <option value="user">Usuaria</option>
+                  <option value="operador">Operador</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </template>
+              <template v-else>
                 <span
                   class="px-2 py-1 rounded text-xs font-medium"
-                  :class="u.activo
-                    ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                    : 'bg-slate-500/15 text-slate-300 border border-slate-500/30'"
+                  :class="String(u.rol) === 'admin'
+                    ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                    : String(u.rol) === 'operador'
+                      ? 'bg-sky-500/15 text-sky-300 border border-sky-500/30'
+                      : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'"
                 >
-                  {{ u.activo ? 'Activo' : 'Inactivo' }}
+                  {{
+                    String(u.rol) === 'admin'
+                      ? 'Admin'
+                      : String(u.rol) === 'operador'
+                        ? 'Operador'
+                        : 'Usuaria'
+                  }}
                 </span>
-              </td>
+              </template>
+            </td>
 
-              <!-- Fecha -->
-              <td>{{ fmtFecha(u.createdAt) }}</td>
+            <!-- Estado -->
+            <td class="py-3 align-middle">
+              <span
+                class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border"
+                :class="u.activo
+                  ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/40'
+                  : 'bg-slate-500/15 text-slate-200 border-slate-500/40'"
+              >
+                {{ u.activo ? 'Activo' : 'Inactivo' }}
+              </span>
+            </td>
 
-              <!-- Acciones -->
-              <td class="space-x-2">
-                <template v-if="editId === u.id">
+            <!-- Alta -->
+            <td class="py-3 align-middle text-sm text-white/70 whitespace-nowrap">
+              {{ fmtFecha(u.createdAt) }}
+            </td>
+            <!-- Acciones (EN UsersView.vue) -->
+            <td class="py-3 align-middle">
+              <!-- MODO EDICIÓN -->
+              <template v-if="editId === u.id">
+                <div class="flex flex-wrap gap-2">
                   <button
-                    class="rounded px-3 py-1 text-white bg-emerald-600 hover:bg-emerald-500"
+                    class="inline-flex items-center rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500"
                     @click="saveEdit"
-                  >Guardar</button>
-
+                  >
+                    Guardar
+                  </button>
                   <button
-                    class="rounded px-3 py-1 text-white bg-gray-600 hover:bg-gray-500"
+                    class="inline-flex items-center rounded-full bg-neutral-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-600"
                     @click="cancelEdit"
-                  >Cancelar</button>
+                  >
+                    Cancelar
+                  </button>
 
-                  <span v-if="editErr" class="text-rose-300 text-xs ml-2">{{ editErr }}</span>
-                </template>
+                  <span v-if="editErr" class="block w-full text-[11px] text-rose-300 mt-1">
+                    {{ editErr }}
+                  </span>
+                </div>
+              </template>
 
-                <template v-else>
+              <!-- MODO NORMAL -->
+              <template v-else>
+                <div class="flex flex-wrap gap-2">
                   <button
-                    class="rounded px-3 py-1 text-white bg-blue-600 hover:bg-blue-500"
+                    class="inline-flex items-center rounded-full bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
                     @click="startEdit(u.id)"
-                  >Editar</button>
+                  >
+                    Editar
+                  </button>
 
                   <button
-                    class="rounded px-3 py-1 transition-colors"
+                    class="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium text-white"
                     :class="u.activo
-                      ? 'bg-red-600 hover:bg-red-500 text-white'
-                      : 'bg-emerald-600 hover:bg-emerald-500 text-white'"
+                      ? 'bg-red-600 hover:bg-red-500'
+                      : 'bg-emerald-600 hover:bg-emerald-500'"
                     @click="toggleActivo(u.id)"
                   >
                     {{ u.activo ? 'Desactivar' : 'Activar' }}
                   </button>
 
-
                   <button
-                    class="rounded px-3 py-1 text-white bg-violet-600 hover:bg-violet-500"
+                    class="inline-flex items-center rounded-full bg-violet-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-600"
                     @click="setRol(u.id, u.rol === 'admin' ? 'user' : 'admin')"
                   >
                     Hacer {{ u.rol === 'admin' ? 'Usuaria' : 'Admin' }}
                   </button>
-
-                  <button
-                    class="rounded px-3 py-1 text-gray-900 bg-amber-500 hover:bg-amber-400"
-                    @click="resetPassword(u.id)"
-                  >Reset pass</button>
-                </template>
-              </td>
-
-            </tr>
-          </tbody>
+                </div>
+              </template>
+            </td>
+          </tr>
+        </tbody>
         </table>
       </div>
-
       <p v-else class="text-white/70 text-sm">No hay usuarios con esos filtros.</p>
     </div>
   </section>
 </template>
+
+<style scoped>
+td, th {
+  font-size: 0.85rem;
+}
+@media (max-width: 768px) {
+  table { font-size: 0.8rem; }
+}
+</style>
+

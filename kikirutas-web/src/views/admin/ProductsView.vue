@@ -1,85 +1,120 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { useProductosStore } from '@/stores/productos';
+import { computed, onMounted, ref } from 'vue'
+import { useProductosStore } from '@/stores/productos'
 
-const store = useProductosStore();
+const store = useProductosStore()
 
-onMounted(() => {
-  store.load();
-  store.seedDefaults();
-});
+/* --- estado de carga general --- */
+const loading = ref(false)
+const loadErr = ref('')
 
-const productos = computed(() => store.sorted);
+onMounted(async () => {
+  loading.value = true
+  loadErr.value = ''
+  try {
+    await store.load()
+  } catch (e: any) {
+    console.error('Error cargando productos', e)
+    loadErr.value = 'No se pudo cargar la lista de productos.'
+  } finally {
+    loading.value = false
+  }
+})
+
+const productos = computed(() => store.ordenados)
 
 /* --- Alta de producto --- */
-const nuevoNombre = ref('');
-const nuevoPrecio = ref<number | null>(null);
-const formMsg = ref('');
-const formErr = ref('');
+const nuevoNombre = ref('')
+const nuevoPrecio = ref<number | null>(null)
+const formMsg = ref('')
+const formErr = ref('')
 
 function resetForm() {
-  nuevoNombre.value = '';
-  nuevoPrecio.value = null;
-  formMsg.value = '';
-  formErr.value = '';
+  nuevoNombre.value = ''
+  nuevoPrecio.value = null
+  formMsg.value = ''
+  formErr.value = ''
 }
 
-function crearProducto() {
-  formMsg.value = '';
-  formErr.value = '';
+async function crearProducto() {
+  formMsg.value = ''
+  formErr.value = ''
   try {
-    store.create({ nombre: nuevoNombre.value, precio: nuevoPrecio.value ?? 0 });
-    formMsg.value = 'Producto creado';
-    resetForm();
+    await store.create({
+      nombre: nuevoNombre.value,
+      precio: nuevoPrecio.value ?? 0,
+    })
+    formMsg.value = 'Producto creado'
+    resetForm()
   } catch (e: any) {
-    formErr.value = e?.message ?? 'No se pudo crear';
+    console.error('Error creando producto', e)
+    formErr.value = e?.message ?? 'No se pudo crear el producto'
   }
 }
 
 /* --- Edición inline --- */
-const editingId = ref<string | null>(null);
-const editNombre = ref('');
-const editPrecio = ref<number | null>(null);
-const editErr = ref('');
+const editingId = ref<string | null>(null)
+const editNombre = ref('')
+const editPrecio = ref<number | null>(null)
+const editErr = ref('')
 
 function startEdit(id: string) {
-  const p = store.byId(id);
-  if (!p) return;
-  editingId.value = id;
-  editNombre.value = p.nombre;
-  editPrecio.value = p.precio;
-  editErr.value = '';
+  const p = store.byId(id)
+  if (!p) return
+  editingId.value = id
+  editNombre.value = p.nombre
+  editPrecio.value = p.precio
+  editErr.value = ''
 }
 
 function cancelEdit() {
-  editingId.value = null;
-  editNombre.value = '';
-  editPrecio.value = null;
-  editErr.value = '';
+  editingId.value = null
+  editNombre.value = ''
+  editPrecio.value = null
+  editErr.value = ''
 }
 
-function saveEdit() {
-  if (!editingId.value) return;
-  editErr.value = '';
+async function saveEdit() {
+  if (!editingId.value) return
+  editErr.value = ''
   try {
-    store.update(editingId.value, { nombre: editNombre.value, precio: editPrecio.value ?? 0 });
-    editingId.value = null;
+    await store.update(editingId.value, {
+      nombre: editNombre.value,
+      precio: editPrecio.value ?? 0,
+    })
+    editingId.value = null
   } catch (e: any) {
-    editErr.value = e?.message ?? 'No se pudo guardar';
+    console.error('Error actualizando producto', e)
+    editErr.value = e?.message ?? 'No se pudo guardar los cambios'
   }
 }
 
-function remove(id: string) {
-  const p = store.byId(id);
-  if (!p) return;
-  if (!confirm(`¿Eliminar "${p.nombre}"?`)) return;
-  store.remove(id);
+/* --- Eliminar producto --- */
+async function remove(id: string) {
+  const p = store.byId(id)
+  if (!p) return
+  if (!confirm(`¿Eliminar "${p.nombre}"?`)) return
+
+  try {
+    await store.remove(id)
+  } catch (e: any) {
+    console.error('Error eliminando producto', e)
+    alert(e?.message ?? 'No se pudo eliminar el producto')
+  }
 }
 </script>
 
 <template>
   <section class="space-y-4">
     <h1 class="text-2xl font-semibold">Productos</h1>
+
+    <!-- Error de carga -->
+    <div
+      v-if="loadErr"
+      class="rounded-lg border border-rose-500/40 bg-rose-900/30 text-rose-100 text-sm px-3 py-2"
+    >
+      {{ loadErr }}
+    </div>
 
     <!-- Alta -->
     <div class="rounded-xl bg-white/5 border border-white/10 p-4 max-w-xl">
@@ -100,7 +135,8 @@ function remove(id: string) {
           <input
             v-model.number="nuevoPrecio"
             type="number"
-            min="0.01" step="0.01"
+            min="0.01"
+            step="0.01"
             class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2"
             placeholder="380.00"
           />
@@ -108,7 +144,10 @@ function remove(id: string) {
       </div>
 
       <div class="flex items-center gap-3 mt-3">
-        <button class="rounded bg-emerald-600 px-4 py-2 hover:bg-emerald-500" @click="crearProducto">
+        <button
+          class="rounded bg-emerald-600 px-4 py-2 hover:bg-emerald-500"
+          @click="crearProducto"
+        >
           Guardar
         </button>
         <span v-if="formMsg" class="text-sm text-emerald-300">{{ formMsg }}</span>
@@ -118,9 +157,16 @@ function remove(id: string) {
 
     <!-- Tabla -->
     <div class="rounded-xl bg-white/5 border border-white/10 p-4">
-      <h3 class="font-semibold mb-3">Lista</h3>
+      <h3 class="font-semibold mb-3">
+        Lista <span class="text-white/60 text-sm">({{ productos.length }})</span>
+      </h3>
 
-      <div v-if="productos.length" class="overflow-x-auto">
+      <!-- Estado de carga -->
+      <div v-if="loading" class="py-6 text-sm text-white/70">
+        Cargando productos…
+      </div>
+
+      <div v-else-if="productos.length" class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
             <tr class="text-white/60">
@@ -131,12 +177,19 @@ function remove(id: string) {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="p in productos" :key="p.id" class="border-t border-white/10">
+            <tr
+              v-for="p in productos"
+              :key="p.id"
+              class="border-t border-white/10"
+            >
               <!-- Nombre -->
               <td class="py-2">
                 <template v-if="editingId === p.id">
-                  <input v-model.trim="editNombre" type="text"
-                         class="rounded bg-neutral-900 border border-white/10 px-2 py-1 w-full" />
+                  <input
+                    v-model.trim="editNombre"
+                    type="text"
+                    class="rounded bg-neutral-900 border border-white/10 px-2 py-1 w-full"
+                  />
                 </template>
                 <template v-else>
                   {{ p.nombre }}
@@ -146,8 +199,13 @@ function remove(id: string) {
               <!-- Precio -->
               <td>
                 <template v-if="editingId === p.id">
-                  <input v-model.number="editPrecio" type="number" min="0.01" step="0.01"
-                         class="rounded bg-neutral-900 border border-white/10 px-2 py-1 w-32" />
+                  <input
+                    v-model.number="editPrecio"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    class="rounded bg-neutral-900 border border-white/10 px-2 py-1 w-32"
+                  />
                 </template>
                 <template v-else>
                   ${{ p.precio.toFixed(2) }}
@@ -158,9 +216,11 @@ function remove(id: string) {
               <td>
                 <span
                   class="px-2 py-1 rounded text-xs font-medium"
-                  :class="p.activo
-                    ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                    : 'bg-slate-500/15 text-slate-300 border border-slate-500/30'"
+                  :class="
+                    p.activo
+                      ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                      : 'bg-slate-500/15 text-slate-300 border border-slate-500/30'
+                  "
                 >
                   {{ p.activo ? 'Activo' : 'Inactivo' }}
                 </span>
@@ -181,7 +241,10 @@ function remove(id: string) {
                   >
                     Cancelar
                   </button>
-                  <span v-if="editErr" class="text-rose-300 text-xs ml-2">{{ editErr }}</span>
+                  <span
+                    v-if="editErr"
+                    class="text-rose-300 text-xs ml-2"
+                  >{{ editErr }}</span>
                 </template>
 
                 <template v-else>
@@ -194,9 +257,11 @@ function remove(id: string) {
 
                   <button
                     class="rounded px-3 py-1 text-white"
-                    :class="p.activo
-                      ? 'bg-red-600 hover:bg-red-500'
-                      : 'bg-emerald-600 hover:bg-emerald-500'"
+                    :class="
+                      p.activo
+                        ? 'bg-red-600 hover:bg-red-500'
+                        : 'bg-emerald-600 hover:bg-emerald-500'
+                    "
                     @click="store.toggleActivo(p.id)"
                   >
                     {{ p.activo ? 'Desactivar' : 'Activar' }}
@@ -210,7 +275,6 @@ function remove(id: string) {
                   </button>
                 </template>
               </td>
-
             </tr>
           </tbody>
         </table>

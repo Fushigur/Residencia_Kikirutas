@@ -9,23 +9,25 @@ class Inventario extends Model
 {
     use HasFactory;
 
+    protected $table = 'inventarios';
+
     protected $fillable = [
-        'user_id',
-        'gallinas',
-        'sacos',
-        'kg_por_saco',
-        'consumo_gr_por_gallina_dia',
-        'dias_seguridad',
+        'producto',
+        'precio',
+        'activo',
     ];
 
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
+    // Si necesitas relación con User, descomenta esto:
+    // public function user()
+    // {
+    //     return $this->belongsTo(User::class);
+    // }
 
-        public function inventario()
-    {
-        return $this->hasOne(Inventario::class);
-    }
-
+    // Elimina esta relación circular - causa problemas
+    // public function inventario()
+    // {
+    //     return $this->hasOne(Inventario::class);
+    // }
+    
+    public $timestamps = false;
 }
