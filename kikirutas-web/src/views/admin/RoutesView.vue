@@ -1,17 +1,38 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import api from '@/api'
 import { useRutasStore } from '@/stores/rutas'
 import { usePedidosStore, type Pedido } from '@/stores/pedidos'
 import { useProductosStore } from '@/stores/productos'
 import { templates } from '@/stores/rutas';
+import { formatFechaLarga } from '@/utils/dateFormat'
+import { formatFechaCorta } from '@/utils/dateFormat' 
+
+type OperadorOption = {
+  id: number
+  name: string
+  comunidad?: string | null
+  municipio?: string | null
+  estado?: string | null
+}
+
+const operadores = ref<OperadorOption[]>([])
 
 const plantillaId = ref<string>('')
 
-function crearDesdePlantilla() {
+async function crearDesdePlantilla() {
   if (!plantillaId.value) return
+
   const operador = (nuevaRuta.value.nombre || 'Operador').trim()
-  const id = rutas.createFromTemplate(plantillaId.value, operador, nuevaRuta.value.fechaISO)
+
+  const id = await rutas.createFromTemplate(
+    plantillaId.value,
+    operador,
+    nuevaRuta.value.fechaISO,
+    nuevaRuta.value.choferId ?? null,
+  )
+
   if (id) selectedRutaId.value = id
 }
 
@@ -27,10 +48,30 @@ const router = useRouter()
 const toAssign = ref<string[]>([])
 
 /* ---------- Carga ---------- */
+async function loadOperadores() {
+  try {
+    const res = await api.get('/auth/operators')
+    const data = Array.isArray(res.data) ? res.data : (res.data.data ?? [])
+    operadores.value = data.map((o: any) => ({
+      id: Number(o.id),
+      name: String(o.name ?? o.nombre ?? ''),
+      comunidad: o.comunidad ?? null,
+      municipio: o.municipio ?? null,
+      estado: o.estado ?? null,
+    }))
+  } catch (err) {
+    console.error('No se pudieron cargar los operadores', err)
+    operadores.value = []
+  }
+}
+
 onMounted(async () => {
-  rutas.load()
-  pedidos.load()
-  productos.load()
+  await Promise.all([
+    rutas.load(),
+    pedidos.load(),
+    productos.load(),
+    loadOperadores(),
+  ])
   productos.seedDefaults()
 
   const pre = String(route.query.preselect || '')
@@ -38,6 +79,7 @@ onMounted(async () => {
 
   const qPedido = getQueryString('pedido') || getQueryString('pre') || getQueryString('preselectOrder')
   const qRuta   = getQueryString('ruta')   || getQueryString('routeId') || getQueryString('preselectRoute')
+
   if (qPedido) {
     seleccion.value.add(qPedido)
     await nextTick()
@@ -47,6 +89,7 @@ onMounted(async () => {
 
   if (qPedido || qRuta) router.replace({ query: {} })
 })
+
 
 function getQueryString(key: string): string | null {
   const v = route.query[key]
@@ -58,9 +101,10 @@ function getQueryString(key: string): string | null {
 const selectedRutaId = ref<string | null>(null)
 const rutaSel = computed(() => (selectedRutaId.value ? rutas.byId(selectedRutaId.value) : null))
 
-const nuevaRuta = ref<{ nombre: string; fechaISO: string }>({
+const nuevaRuta = ref<{ nombre: string; fechaISO: string; choferId: number | null }>({
   nombre: '',
   fechaISO: new Date().toISOString().slice(0, 10),
+  choferId: null,
 })
 
 const seleccion = ref<Set<string>>(new Set())
@@ -104,14 +148,19 @@ const porProducto = computed(() => {
 const hayEnRuta = computed(() => pedidosRuta.value.some(p => p.estado === 'en_ruta'))
 
 /* ---------- Acciones ---------- */
-function crearRuta() {
-  const id = rutas.create({
+async function crearRuta() {
+  const id = await rutas.create({
     nombre: (nuevaRuta.value.nombre || 'Ruta sin nombre').trim(),
     fechaISO: nuevaRuta.value.fechaISO,
+    choferId: nuevaRuta.value.choferId ?? null,
   })
-  selectedRutaId.value = id
-  nuevaRuta.value.nombre = ''
+
+  if (id) {
+    selectedRutaId.value = id
+    nuevaRuta.value.nombre = ''
+  }
 }
+
 
 function toggleSeleccion(id: string, checked: boolean) {
   if (checked) seleccion.value.add(id)
@@ -122,11 +171,16 @@ function clearSeleccion() {
   seleccion.value.clear()
 }
 
-function asignarSeleccion() {
+async function asignarSeleccion() {
   if (!rutaDestinoId.value || seleccion.value.size === 0) return
-  for (const pid of seleccion.value) rutas.assignPedido(rutaDestinoId.value, pid)
+
+  for (const pid of seleccion.value) {
+    await rutas.assignPedido(rutaDestinoId.value, pid)
+  }
+
   clearSeleccion()
 }
+
 
 function quitarPedido(pid: string) {
   if (!rutaSel.value) return
@@ -220,25 +274,26 @@ function printManifest() {
 }
 
 /* ---------- Eliminación de rutas ---------- */
-const canDeleteRuta = computed(() => !!rutaSel.value && rutaSel.value.pedidos.length === 0)
+  const canDeleteRuta = computed(() => !!rutaSel.value && rutaSel.value.pedidos.length === 0)
 
-function eliminarRuta() {
-  if (!rutaSel.value) return
-  if (!canDeleteRuta.value) return
-  if (confirm('¿Eliminar esta ruta? Esta acción no se puede deshacer.')) {
-    const ok = rutas.remove(rutaSel.value.id)
-    if (ok) selectedRutaId.value = null
+  async function eliminarRuta() {
+    if (!rutaSel.value) return
+    if (!canDeleteRuta.value) return
+    if (confirm('¿Eliminar esta ruta? Esta acción no se puede deshacer.')) {
+      const ok = await rutas.remove(rutaSel.value.id)
+      if (ok) selectedRutaId.value = null
+    }
   }
-}
 
-function eliminarRutaForzada() {
-  if (!rutaSel.value) return
-  if (rutaSel.value.pedidos.length === 0) return eliminarRuta()
-  if (confirm('La ruta tiene pedidos. Se regresarán a "pendiente" y se eliminará la ruta. ¿Continuar?')) {
-    const ok = rutas.removeAndUnassign(rutaSel.value.id)
-    if (ok) selectedRutaId.value = null
+  async function eliminarRutaForzada() {
+    if (!rutaSel.value) return
+    if (rutaSel.value.pedidos.length === 0) return eliminarRuta()
+    if (confirm('La ruta tiene pedidos. Se regresarán a "pendiente" y se eliminará la ruta. ¿Continuar?')) {
+      const ok = await rutas.removeAndUnassign(rutaSel.value.id)
+      if (ok) selectedRutaId.value = null
+    }
   }
-}
+
 </script>
 
 <template>
@@ -255,23 +310,43 @@ function eliminarRutaForzada() {
           <div class="rounded-xl bg-white/5 border border-white/10 p-4">
             <h3 class="font-semibold mb-3">Ingrese la nueva ruta</h3>
 
-            <label class="block text-sm mb-1">Operador / Localidad</label>
-            <input v-model="nuevaRuta.nombre"
-                   class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2"
-                   placeholder="Ej. Pedro - Norte" />
+            <label class="block text-sm mb-1">Operador</label>
+            <select
+              v-model.number="nuevaRuta.choferId"
+              class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2 text-sm"
+            >
+              <option :value="null">Selecciona un operado</option>
+              <option
+                v-for="op in operadores"
+                :key="op.id"
+                :value="op.id"
+              >
+                {{ op.name }}
+                <span v-if="op.comunidad"> – {{ op.comunidad }}</span>
+                <span v-else-if="op.municipio"> – {{ op.municipio }}</span>
+              </option>
+            </select>
+
+            <!-- Nombre de la ruta -->
+            <label class="block text-sm mt-3 mb-1">Nombre de la ruta (opcional)</label>
+            <input
+              v-model="nuevaRuta.nombre"
+              placeholder="Ej. Candelaria - "
+              class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2"
+            />
 
             <label class="block text-sm mt-3 mb-1">Fecha de entrega</label>
             <input v-model="nuevaRuta.fechaISO" type="date"
                    class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2" />
 
-            <div class="mt-3 space-y-2">
+            <!-- <div class="mt-3 space-y-2">
               <button
                 class="rounded bg-blue-600 px-3 py-2 hover:bg-blue-500 disabled:opacity-60"
                 @click="crearDesdePlantilla"
               >
                 Crear desde plantilla
               </button>
-            </div>
+            </div> -->
 
             <button class="mt-3 rounded bg-emerald-600 px-4 py-2 hover:bg-emerald-500"
                     @click="crearRuta">
@@ -290,7 +365,7 @@ function eliminarRutaForzada() {
                         class="w-full sm:w-auto rounded bg-neutral-900 border border-white/10 px-3 py-2 text-sm">
                   <option disabled value="">Selecciona Transportista</option>
                   <option v-for="r in rutas.ordenadas" :key="r.id" :value="r.id">
-                    {{ r.nombre }} — {{ r.fechaISO }}
+                    {{ r.nombre }} — {{ formatFechaLarga(r.fechaISO) }}
                   </option>
                 </select>
 
@@ -329,7 +404,7 @@ function eliminarRutaForzada() {
                       <td class="text-right">{{ p.cantidad }}</td>
                       <td class="truncate">{{ p.solicitanteNombre || '—' }}</td>
                       <td class="truncate">{{ p.solicitanteComunidad || '—' }}</td>
-                      <td class="whitespace-nowrap">{{ p.fechaISO }}</td>
+                      <td class="whitespace-nowrap">{{ formatFechaCorta(p.fechaISO) }}</td>
                     </tr>
                     <tr v-if="pendientes.length === 0">
                       <td class="py-6 text-center text-white/60" colspan="7">Sin pedidos pendientes.</td>
@@ -354,7 +429,7 @@ function eliminarRutaForzada() {
               <div class="flex items-center justify-between">
                 <div>
                   <div class="font-medium truncate max-w-[15rem]">{{ r.nombre }}</div>
-                  <div class="text-xs text-white/60">{{ r.fechaISO }}</div>
+                  <div class="text-xs text-white/60">{{ formatFechaLarga(r.fechaISO) }}</div>
                 </div>
                 <span class="px-2 py-1 rounded text-xs border border-white/15 bg-white/10 whitespace-nowrap">
                   {{ r.estado === 'planificada' ? 'Planificada' : r.estado === 'en_ruta' ? 'En ruta' : 'Finalizada' }}
@@ -403,13 +478,6 @@ function eliminarRutaForzada() {
                           @click="marcarTodosEntregados">
                     Marcar todos entregados
                   </button>
-                    <router-link
-                      v-if="rutaSel"
-                      :to="{ name:'op.ruta', params:{ id: rutaSel.id } }"
-                      target="_blank"
-                      class="inline-flex items-center rounded bg-amber-500 px-3 py-2 text-sm font-medium text-gray-900 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300">
-                      Ver como operador
-                    </router-link>
                 </div>
               </div>
 

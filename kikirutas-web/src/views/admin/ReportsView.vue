@@ -3,6 +3,8 @@ import { computed, onMounted, ref } from 'vue';
 import { usePedidosStore } from '@/stores/pedidos';
 import { useProductosStore } from '@/stores/productos';
 import { useRutasStore } from '@/stores/rutas';
+import { formatFechaLarga } from '@/utils/dateFormat'
+
 
 const pedidos = usePedidosStore();
 const productos = useProductosStore();
@@ -336,7 +338,7 @@ function estadoEtiqueta(e: string) {
       <div v-if="rutasEnRango.length" class="grid md:grid-cols-3 gap-3">
         <div v-for="r in rutasEnRango" :key="r.id" class="rounded border border-white/10 bg-white/5 p-3">
           <div class="font-medium">{{ r.nombre }}</div>
-          <div class="text-sm text-white/70">{{ r.fechaISO }}</div>
+          <div class="text-sm text-white/70">{{ formatFechaLarga(r.fechaISO) }}</div>
           <div class="text-sm mt-1">Pedidos: <b>{{ r.pedidos.length }}</b></div>
           <div class="text-xs text-white/60">Estado: {{ r.estado }}</div>
         </div>

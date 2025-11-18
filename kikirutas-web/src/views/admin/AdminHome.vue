@@ -4,6 +4,8 @@ import { RouterLink } from 'vue-router'
 import { usePedidosStore } from '@/stores/pedidos'
 import { useRutasStore } from '@/stores/rutas'
 import { useProductosStore } from '@/stores/productos'
+import { formatFechaLarga } from '@/utils/dateFormat'
+import { formatFechaCorta } from '@/utils/dateFormat'
 
 const pedidos = usePedidosStore()
 const rutas = useRutasStore()
@@ -128,7 +130,7 @@ const mesPorProducto = computed(() => {
               <td class="px-2"><div class="truncate max-w-[180px]" :title="p.solicitanteNombre || '—'"> {{ p.solicitanteNombre || '—' }}</div></td>
               <td class="px-2"><div class="truncate max-w-[160px]" :title="p.solicitanteComunidad || '—'">{{ p.solicitanteComunidad || '—' }}</div></td>
               <td class="px-2">{{ p.cantidad }}</td>
-              <td class="px-2 whitespace-nowrap">{{ p.fechaISO }}</td>
+              <td class="px-2 whitespace-nowrap">{{ formatFechaCorta(p.fechaISO) }}</td>
               <td class="px-2">
                 <RouterLink
                   :to="{ name:'a.rutas', query:{ highlight: p.id } }"
@@ -155,7 +157,7 @@ const mesPorProducto = computed(() => {
           <article v-for="r in rutasHoy" :key="r.id" class="rounded border border-white/10 bg-white/5 p-3">
             <div class="flex items-center justify-between">
               <div class="font-medium">{{ r.nombre }}</div>
-              <div class="text-xs text-white/60">{{ r.fechaISO }}</div>
+              <div class="text-xs text-white/60">{{ formatFechaLarga(r.fechaISO) }}</div>
             </div>
             <div class="text-sm mt-1">Pedidos: <b>{{ r.pedidos.length }}</b></div>
             <div class="text-xs text-white/60">Estado: {{ r.estado }}</div>

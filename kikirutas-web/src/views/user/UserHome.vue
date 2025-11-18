@@ -15,77 +15,75 @@
       </div>
     </div>
 
-        <!-- Tarjetas principales -->
-        <div class="grid md:grid-cols-3 gap-4">
-          <article class="card">
-            <h3 class="card-title">Acciones rápidas</h3>
-            <div class="flex flex-wrap gap-2 mt-3">
-              <RouterLink :to="{name:'u.pedido.nuevo'}" class="chip">Hacer pedido</RouterLink>
-              <RouterLink :to="{name:'u.alertas'}" class="chip">Ver alertas</RouterLink>
-              <RouterLink :to="{name:'u.perfil'}" class="chip">Editar perfil</RouterLink>
-            </div>
-          </article>
+    <!-- Tarjetas principales -->
+    <div class="grid md:grid-cols-3 gap-4">
+      <!-- Acciones rápidas -->
+      <article class="card">
+        <h3 class="card-title">Acciones rápidas</h3>
+        <div class="flex flex-wrap gap-2 mt-3">
+          <RouterLink :to="{name:'u.pedido.nuevo'}" class="chip">Hacer pedido</RouterLink>
+          <RouterLink :to="{name:'u.alertas'}" class="chip">Ver alertas</RouterLink>
+          <RouterLink :to="{name:'u.perfil'}" class="chip">Editar perfil</RouterLink>
+        </div>
+      </article>
 
-          <article class="card">
-            <h3 class="card-title">Estado de tus pedidos</h3>
+      <!-- Estado de pedidos -->
+      <article class="card">
+        <h3 class="card-title">Estado de tus pedidos</h3>
 
-            <div v-if="hasPedidos" class="space-y-2 mt-2">
-              <p class="muted text-xs">
-                Mostrando tus últimos {{ ultimosPedidos.length }} pedidos.
-              </p>
-              <ul class="space-y-2">
-                <li
-                  v-for="p in ultimosPedidos"
-                  :key="p.id"
-                  class="flex items-center justify-between text-sm"
-                >
-                  <div>
-                    <p class="font-medium">
-                      {{ p.producto || 'Pedido' }}
-                    </p>
-                    <p class="text-xs text-white/60">
-                      {{ p.fechaISO }}
-                    </p>
-                  </div>
-                  <span
-                    class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
-                    :class="estadoBadgeClass(p.estado)"
-                  >
-                    {{ labelEstado(p.estado) }}
-                  </span>
-                </li>
-              </ul>
-            </div>
-
-            <p v-else class="muted mt-2">
-              No tienes pedidos registrados aún. Cuando hagas uno, aquí verás su estado.
-            </p>
-          </article>
-
-          <article class="card">
-            <h3 class="card-title">Próxima ruta</h3>
-
-            <div v-if="proximaRuta">
-              <p class="muted mt-2">
-                Tu próximo pedido saldrá en ruta el
-                <strong>{{ proximaRuta.fechaISO }}</strong>
-                con
-                <strong>{{ proximaRuta.choferNombre || proximaRuta.nombre }}</strong>.
-              </p>
-              <p class="text-xs text-white/60 mt-1">
-                Esta información se actualiza cuando el administrador asigna tu pedido a una ruta.
-              </p>
-            </div>
-
-            <p v-else class="muted mt-2">
-              Aún no hay una ruta asignada para tus pedidos pendientes.
-            </p>
-          </article>
+        <div v-if="hasPedidos" class="space-y-2 mt-2">
+          <p class="muted text-xs">
+            Mostrando tus últimos {{ ultimosPedidos.length }} pedidos.
+          </p>
+          <ul class="space-y-2">
+            <li
+              v-for="p in ultimosPedidos"
+              :key="p.id"
+              class="flex items-center justify-between text-sm"
+            >
+              <div>
+                <p class="font-medium">
+                  {{ p.producto || 'Pedido' }}
+                </p>
+                <p class="text-xs text-white/60">
+                  {{ formatFechaLarga(p.fechaISO || '') }}
+                </p>
+              </div>
+              <span
+                class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
+                :class="estadoBadgeClass(p.estado)"
+              >
+                {{ labelEstado(p.estado) }}
+              </span>
+            </li>
+          </ul>
         </div>
 
+        <p v-else class="muted mt-2">
+          No tienes pedidos registrados aún. Cuando hagas uno, aquí verás su estado.
+        </p>
+      </article>
 
+      <!-- Próxima ruta -->
+      <article class="card">
+        <h3 class="card-title">Próxima ruta</h3>
 
-    <!-- Sugerencias educativas (mejora de usabilidad) -->
+        <div v-if="proximaRuta">
+          <p class="muted mt-2">
+            {{ proximaRutaMensaje }}
+          </p>
+          <p class="text-xs text-white/60 mt-1">
+            Esta información se actualiza cuando el administrador asigna tu pedido a una ruta.
+          </p>
+        </div>
+
+        <p v-else class="muted mt-2">
+          Aún no hay una ruta asignada para tus pedidos pendientes.
+        </p>
+      </article>
+    </div>
+
+    <!-- Consejos -->
     <div class="card">
       <h3 class="card-title">Consejos útiles</h3>
       <ul class="list mt-3">
@@ -103,6 +101,7 @@ import { RouterLink } from 'vue-router'
 import api from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import type { PedidoEstado } from '@/stores/pedidos'
+import { formatFechaLarga } from '@/utils/dateFormat'
 
 const auth = useAuthStore()
 
@@ -126,7 +125,7 @@ type ProximaRutaUI = {
   fechaISO: string | null
   choferNombre: string | null
   nombre: string | null
-  estado: string | null
+  estado: string | null  // estado de la RUTA: borrador | en_curso | cerrada
 }
 
 // ---------- Estado local ----------
@@ -160,6 +159,51 @@ function estadoBadgeClass(e: PedidoEstado): string {
       return 'bg-slate-500/20 text-slate-200'
   }
 }
+
+// ---------- Helper fecha local ----------
+function todayLocalISO(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+// Mensaje dinámico para la tarjeta "Próxima ruta"
+const proximaRutaMensaje = computed(() => {
+  if (!proximaRuta.value) return ''
+
+  const { fechaISO, choferNombre, nombre, estado } = proximaRuta.value
+  const operador = choferNombre || nombre || 'el operador asignado'
+
+  if (!fechaISO) {
+    return `Tu próximo pedido está programado con ${operador}.`
+  }
+
+  const hoy = todayLocalISO()
+
+  // futura
+  if (fechaISO > hoy) {
+    return `Tu próximo pedido está programado para el ${formatFechaLarga(fechaISO)} con ${operador}.`
+  }
+
+  // hoy y ruta ya en curso
+  if (fechaISO === hoy && estado === 'en_curso') {
+    `Tu pedido ya está en ruta hoy (${formatFechaLarga(fechaISO)}) con ${operador}.`
+  }
+
+  // hoy pero la ruta sigue en borrador/en espera
+  if (fechaISO === hoy) {
+    return `Tu pedido está programado para entregarse hoy (${formatFechaLarga(fechaISO)}) con ${operador}.`
+  }
+
+  // pasada (por si el backend manda la última ruta ya cerrada)
+  if (fechaISO < hoy) {
+    return `Tu última ruta registrada fue el ${formatFechaLarga(fechaISO)} con ${operador}.`
+  }
+
+  return `Tu próximo pedido está programado con ${operador}.`
+})
 
 // ---------- Carga desde /api/usuario/dashboard ----------
 async function loadDashboard() {
@@ -200,8 +244,6 @@ onMounted(() => {
   loadDashboard()
 })
 </script>
-
-
 
 <style scoped>
 .btn-primary{

@@ -1,96 +1,113 @@
-import { defineStore } from 'pinia';
+// src/stores/productos.ts
+import { defineStore } from 'pinia'
+import api from '@/api'
 
 export interface Producto {
-  id: string;
-  nombre: string;
-  precio: number;     // MXN por saco
-  activo: boolean;
+  id: string
+  nombre: string
+  precio: number
+  activo: boolean
+  createdAt: string | null
 }
 
-type State = { items: Producto[] };
+type State = {
+  items: Producto[]
+}
 
-const STORAGE_KEY = 'productos_kikirutas';
+/**
+ * Mapea el producto que viene del backend Laravel
+ * a la forma que usamos en el front.
+ */
+function mapFromApi(p: any): Producto {
+  const createdStr = p.created_at ?? p.createdAt ?? null
 
-function newId() {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  return {
+    id: String(p.id),
+    nombre: String(p.nombre ?? p.name ?? ''),
+    precio: Number(p.precio ?? p.price ?? 0),
+    activo:
+      typeof p.activo !== 'undefined'
+        ? Boolean(p.activo)
+        : (p.estado ?? p.status ?? 'activo') !== 'inactivo',
+    createdAt: createdStr ?? null,
+  }
 }
 
 export const useProductosStore = defineStore('productos', {
-  state: (): State => ({ items: [] }),
+  state: (): State => ({
+    items: [],
+  }),
 
   getters: {
-    sorted: (s) => [...s.items].sort((a, b) => a.nombre.localeCompare(b.nombre)),
-    activos: (s) => s.items.filter(p => p.activo),
-    byId: (s) => (id: string) => s.items.find(p => p.id === id),
-    existsByName: (s) => (nombre: string, ignoreId?: string) =>
-      s.items.some(p => p.nombre.trim().toLowerCase() === nombre.trim().toLowerCase() && p.id !== ignoreId),
+    // 👈 ESTE es el que debes usar en las vistas: store.ordenados
+    ordenados: (s) => [...s.items].sort((a, b) => a.nombre.localeCompare(b.nombre)),
+    activos: (s) => s.items.filter((p) => p.activo),
+    byId: (s) => (id: string) => s.items.find((p) => p.id === id),
   },
 
   actions: {
-    persist() { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.items)); },
-    load() {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      try { this.items = JSON.parse(raw) ?? []; } catch {}
+    // ---------- CARGA DESDE LARAVEL ----------
+    async load() {
+      const res = await api.get('/productos')
+      const data = Array.isArray((res.data as any).data)
+        ? (res.data as any).data
+        : res.data
+
+      this.items = (data as any[]).map(mapFromApi)
     },
 
-    seedDefaults() {
-      if (this.items.length) return;
-      this.items = [
-        { id: newId(), nombre: 'Alimento ponedoras 40kg', precio: 380.00, activo: true },
-        { id: newId(), nombre: 'Alimento iniciador 40kg', precio: 410.00, activo: true },
-      ];
-      this.persist();
+    // Antes sembrábamos productos "fake" desde el front.
+    // Ahora todos vienen de Laravel, así que aquí no hacemos nada.
+    async seedDefaults() {
+      // no-op
     },
 
-    create(payload: { nombre: string; precio: number; activo?: boolean }) {
-      const nombre = payload.nombre.trim();
-      const precio = Number(payload.precio);
-      if (!nombre) throw new Error('Nombre requerido');
-      if (precio <= 0) throw new Error('Precio inválido');
-      if (this.existsByName(nombre)) throw new Error('Ya existe un producto con ese nombre');
-
-      const prod: Producto = { id: newId(), nombre, precio, activo: payload.activo ?? true };
-      this.items.push(prod);
-      this.persist();
-      return prod.id;
-    },
-
-    update(id: string, changes: Partial<Omit<Producto, 'id'>>) {
-      const p = this.items.find(x => x.id === id);
-      if (!p) return false;
-
-      if (changes.nombre !== undefined) {
-        const nombre = changes.nombre.trim();
-        if (!nombre) throw new Error('Nombre requerido');
-        if (this.existsByName(nombre, id)) throw new Error('Ya existe un producto con ese nombre');
-        p.nombre = nombre;
+    // ---------- CREAR PRODUCTO ----------
+    async create(payload: { nombre: string; precio: number }) {
+      const body = {
+        nombre: payload.nombre,
+        precio: payload.precio,
+        activo: true,
       }
-      if (changes.precio !== undefined) {
-        const precio = Number(changes.precio);
-        if (precio <= 0) throw new Error('Precio inválido');
-        p.precio = precio;
+
+      const res = await api.post('/productos', body)
+      const prod = mapFromApi(res.data)
+      this.items.push(prod)
+    },
+
+    // ---------- EDITAR PRODUCTO ----------
+    async update(id: string, payload: { nombre: string; precio: number }) {
+      const p = this.byId(id)
+      if (!p) throw new Error('Producto no encontrado')
+
+      const body = {
+        nombre: payload.nombre,
+        precio: payload.precio,
+        activo: p.activo,
       }
-      if (changes.activo !== undefined) p.activo = !!changes.activo;
 
-      this.persist();
-      return true;
+      const res = await api.put(`/productos/${id}`, body)
+      const upd = mapFromApi(res.data)
+      Object.assign(p, upd)
     },
 
-    remove(id: string) {
-      const i = this.items.findIndex(x => x.id === id);
-      if (i === -1) return false;
-      this.items.splice(i, 1);
-      this.persist();
-      return true;
+    // ---------- ACTIVAR / DESACTIVAR ----------
+    async toggleActivo(id: string) {
+      const p = this.byId(id)
+      if (!p) return
+
+      const res = await api.put(`/productos/${id}`, {
+        activo: !p.activo,
+      })
+
+      const upd = mapFromApi(res.data)
+      Object.assign(p, upd)
     },
 
-    toggleActivo(id: string) {
-      const p = this.items.find(x => x.id === id);
-      if (!p) return false;
-      p.activo = !p.activo;
-      this.persist();
-      return true;
+    // ---------- ELIMINAR ----------
+    async remove(id: string) {
+      await api.delete(`/productos/${id}`)
+      this.items = this.items.filter((p) => p.id !== id)
     },
   },
-});
+})

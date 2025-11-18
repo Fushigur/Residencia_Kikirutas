@@ -8,13 +8,14 @@ export type RutaEstado = 'planificada' | 'en_ruta' | 'finalizada';
 export interface Ruta {
   id: string;
   nombre: string;        
-  fechaISO: string;      // yyyy-mm-dd
-  pedidos: string[];     // ids de pedidos en orden
+  fechaISO: string;
+  pedidos: string[];
   estado: RutaEstado;
   inicioISO?: string | null;
   finISO?: string | null;
-
-  choferNombre?: string | null; // nombre del operador (si viene del back)
+  // NUEVO: id del operador
+  choferId?: number | null;
+  choferNombre?: string | null;
   templateId?: string | null;
 }
 
@@ -46,7 +47,6 @@ function formatearFecha(fechaISO: string): string {
 function mapRutaFromApi(r: any): Ruta {
   const fecha = (r.fecha ?? new Date().toISOString()).slice(0, 10);
 
-  // Mapeo de estado Laravel → Front
   let estado: RutaEstado = 'planificada';
   if (r.estado === 'en_curso') estado = 'en_ruta';
   if (r.estado === 'cerrada') estado = 'finalizada';
@@ -54,14 +54,24 @@ function mapRutaFromApi(r: any): Ruta {
   const choferNombre =
     r.chofer && typeof r.chofer.name === 'string' ? r.chofer.name : null;
 
+  const choferId =
+    typeof r.chofer_id !== 'undefined' && r.chofer_id !== null
+      ? Number(r.chofer_id)
+      : r.chofer && r.chofer.id
+      ? Number(r.chofer.id)
+      : null;
+
   return {
     id: String(r.id),
     nombre: String(r.nombre ?? choferNombre ?? `Ruta ${r.id}`),
     fechaISO: fecha,
-    pedidos: Array.isArray(r.pedidos) ? r.pedidos.map((p: any) => String(p.id)) : [],
+    pedidos: Array.isArray(r.pedidos)
+      ? r.pedidos.map((p: any) => String(p.id))
+      : [],
     estado,
     inicioISO: r.inicio ?? null,
     finISO: r.fin ?? null,
+    choferId,
     choferNombre,
     templateId: null,
   };
@@ -128,10 +138,13 @@ export const useRutasStore = defineStore('rutas', {
       }
     },
 
-    async load(opts?: { fecha?: string; estado?: RutaEstado }) {
-      const params: Record<string, any> = {};
+    async load(opts?: { fecha?: string; desde?: string; hasta?: string; estado?: RutaEstado }) {
+      const params: Record<string, any> = {}
 
-      if (opts?.fecha) params.fecha = opts.fecha;
+      if (opts?.fecha) params.fecha = opts.fecha
+      if (opts?.desde) params.desde = opts.desde
+      if (opts?.hasta) params.hasta = opts.hasta
+
       if (opts?.estado) {
         // Mapeo de tu estado del front → estado del back
         params.estado =
@@ -139,30 +152,39 @@ export const useRutasStore = defineStore('rutas', {
             ? 'en_curso'
             : opts.estado === 'finalizada'
             ? 'cerrada'
-            : 'borrador';
+            : 'borrador'
       }
 
-      const res = await api.get('/rutas', { params });
+      const res = await api.get('/rutas', { params })
 
       const data = Array.isArray((res.data as any).data)
         ? (res.data as any).data
-        : res.data;
+        : res.data
 
-      this.items = data.map(mapRutaFromApi);
-      this.persist();
+      this.items = data.map(mapRutaFromApi)
+      this.persist()
     },
 
-    create(payload?: { nombre?: string; fechaISO?: string; templateId?: string | null }) {
-      const ruta: Ruta = {
-        id: newId(),
-        nombre: (payload?.nombre || 'Ruta sin nombre').trim(),
-        fechaISO: payload?.fechaISO || todayISO(),
-        pedidos: [],
-        estado: 'planificada',
-        inicioISO: null,
-        finISO: null,
-        templateId: payload?.templateId ?? null,
+
+    async create(payload?: {
+      nombre?: string;
+      fechaISO?: string;
+      templateId?: string | null;
+      choferId?: number | null;
+    }) {
+      const body: Record<string, any> = {
+        fecha: payload?.fechaISO || todayISO(),
+        estado: 'borrador',
+        nombre: (payload?.nombre || 'Ruta sin nombre').trim() || null,
       };
+
+      if (payload?.choferId) {
+        body.chofer_id = payload.choferId;
+      }
+
+      const res = await api.post('/rutas', body);
+      const ruta = mapRutaFromApi(res.data);
+
       this.items.unshift(ruta);
       this.persist();
       return ruta.id;
@@ -175,43 +197,102 @@ export const useRutasStore = defineStore('rutas', {
       this.persist();
     },
 
-    assignPedido(rutaId: string, pedidoId: string) {
-      const r = this.items.find(i => i.id === rutaId);
+    async assignPedido(rutaId: string, pedidoId: string) {
+      const r = this.items.find((i) => i.id === rutaId);
       if (!r) return false;
+
+      // 1) Backend: crea el vínculo ruta <-> pedido
+      try {
+        await api.post(`/rutas/${rutaId}/pedidos/${pedidoId}`);
+      } catch (error) {
+        console.error('No se pudo asignar el pedido a la ruta en el backend', error);
+        return false;
+      }
+
+      // 2) Store de pedidos (para que el pedido “sepa” su ruta)
       const pedidos = usePedidosStore();
       const ok = pedidos.assignToRoute(rutaId, pedidoId);
       if (!ok) return false;
+
+      // 3) Actualizar la lista de ids de pedidos en la ruta
       if (!r.pedidos.includes(pedidoId)) r.pedidos.push(pedidoId);
       this.persist();
       return true;
     },
 
-    removePedido(rutaId: string, pedidoId: string) {
-      const r = this.items.find(i => i.id === rutaId);
+
+    async removePedido(rutaId: string, pedidoId: string) {
+      const r = this.items.find((i) => i.id === rutaId);
       if (!r) return false;
+
+      // 1) Backend: eliminar vínculo en pivote pedido_ruta
+      try {
+        await api.delete(`/rutas/${rutaId}/pedidos/${pedidoId}`);
+      } catch (error) {
+        console.error('No se pudo desasignar el pedido de la ruta en el backend', error);
+        return false;
+      }
+
+      // 2) Store de pedidos
       const pedidos = usePedidosStore();
       const ok = pedidos.removeFromRoute(pedidoId);
       if (!ok) return false;
-      r.pedidos = r.pedidos.filter(id => id !== pedidoId);
+
+      // 3) Quitar del arreglo local
+      r.pedidos = r.pedidos.filter((id) => id !== pedidoId);
       this.persist();
       return true;
     },
 
-    remove(id: string) {
-      const idx = this.items.findIndex(r => r.id === id);
+    async remove(id: string) {
+      const idx = this.items.findIndex((r) => r.id === id);
       if (idx === -1) return false;
+
+      // Si tiene pedidos, usamos removeAndUnassign mejor
       if (this.items[idx].pedidos.length) return false;
+
+      // 1) Eliminar la ruta en el backend
+      try {
+        await api.delete(`/rutas/${id}`);
+      } catch (error) {
+        console.error('No se pudo eliminar la ruta en el backend', error);
+        return false;
+      }
+
+      // 2) Eliminarla del store
       this.items.splice(idx, 1);
       this.persist();
       return true;
     },
 
-    removeAndUnassign(id: string) {
-      const r = this.items.find(x => x.id === id);
+    async removeAndUnassign(id: string) {
+      const r = this.items.find((x) => x.id === id);
       if (!r) return false;
+
       const pedidos = usePedidosStore();
-      for (const pid of r.pedidos) pedidos.removeFromRoute(pid);
-      this.items = this.items.filter(x => x.id !== id);
+
+      // 1) Desasignar cada pedido en backend y frontend
+      for (const pid of r.pedidos) {
+        try {
+          await api.delete(`/rutas/${id}/pedidos/${pid}`);
+          pedidos.removeFromRoute(pid);
+          // opcional: regresar el pedido a pendiente
+          pedidos.setEstado(pid, 'pendiente');
+        } catch (error) {
+          console.error(`No se pudo desasignar el pedido ${pid} de la ruta ${id}`, error);
+        }
+      }
+
+      // 2) Eliminar la ruta en el backend
+      try {
+        await api.delete(`/rutas/${id}`);
+      } catch (error) {
+        console.error('No se pudo eliminar la ruta en el backend', error);
+        return false;
+      }
+
+      // 3) Eliminarla del store
+      this.items = this.items.filter((x) => x.id !== id);
       this.persist();
       return true;
     },
@@ -234,11 +315,23 @@ export const useRutasStore = defineStore('rutas', {
       return true;
     },
 
-    createFromTemplate(tid: string, operador: string, fechaISO: string) {
-      const t = templates.find(x => x.id === tid);
+    async createFromTemplate(
+      tid: string,
+      operador: string,
+      fechaISO: string,
+      choferId?: number | null,
+    ) {
+      const t = templates.find((x) => x.id === tid);
       if (!t) return null;
 
-      const id = this.create({ nombre: operador || 'Operador', fechaISO, templateId: tid });
+      const id = await this.create({
+        nombre: operador || 'Operador',
+        fechaISO,
+        templateId: tid,
+        choferId: choferId ?? null,
+      });
+
+      if (!id) return null;
 
       const pedidosStore = usePedidosStore();
       const pendientes =
@@ -248,10 +341,14 @@ export const useRutasStore = defineStore('rutas', {
 
       for (const p of pendientes) {
         const cslug = slug(p.solicitanteComunidad || '');
-        if (t.comunidades.includes(cslug)) this.assignPedido(id, p.id);
+        if (t.comunidades.includes(cslug)) {
+          await this.assignPedido(id, p.id);
+        }
       }
+
       return id;
     },
+
     
     // Función helper para formatear fechas (también disponible como action)
     formatearFecha(fechaISO: string): string {

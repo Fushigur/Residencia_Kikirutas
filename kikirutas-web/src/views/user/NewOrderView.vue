@@ -80,7 +80,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useInventarioStore } from '@/stores/inventario'
 import { useAlertasStore } from '@/stores/alertas'
 import { usePedidosStore } from '@/stores/pedidos'
-import { useProductosStore } from '@/stores/productos'
+import {useProductosStore} from '@/stores/productos'
 import api from '@/api'
 
 // Stores
