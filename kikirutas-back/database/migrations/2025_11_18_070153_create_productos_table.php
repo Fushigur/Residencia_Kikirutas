@@ -4,21 +4,20 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
-        Schema::create('inventarios', function (Blueprint $table) {
+        Schema::create('productos', function (Blueprint $table) {
             $table->id();
-            $table->string('producto');
-            $table->decimal('precio', 8, 2);
+            $table->string('nombre')->unique();
+            $table->decimal('precio', 10, 2);
             $table->boolean('activo')->default(true);
-            $table->timestamps(); // Opcional, si quieres mantener timestamps
+            $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('inventarios');
+        Schema::dropIfExists('productos');
     }
 };

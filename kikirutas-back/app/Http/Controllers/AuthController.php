@@ -319,4 +319,36 @@ class AuthController extends Controller
         if (str_contains($v, 'user') || str_contains($v, 'usu')) return 'usuaria';
         return null;
     }
+
+        /* ==================== OPERADORES ==================== */
+        public function operators(Request $request)
+        {
+            // Operadores = usuarios con role_id = 2
+            $q = User::query()
+                ->where('role_id', 2);
+
+            // (Opcional) filtros por estado / municipio / comunidad
+            if ($request->filled('estado')) {
+                $q->where('estado', $request->input('estado'));
+            }
+            if ($request->filled('municipio')) {
+                $q->where('municipio', $request->input('municipio'));
+            }
+            if ($request->filled('comunidad')) {
+                $q->where('comunidad', $request->input('comunidad'));
+            }
+
+            $ops = $q->orderBy('name')->get([
+                'id',
+                'name',
+                'email',
+                'telefono',
+                'comunidad',
+                'municipio',
+                'estado',
+            ]);
+
+            return response()->json($ops);
+        }
+
 }

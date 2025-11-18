@@ -11,9 +11,19 @@ class RutaController extends Controller
     public function index(Request $req)
     {
         $q = Ruta::with(['chofer:id,name,email', 'pedidos']);
+        // Filtro exacto por fecha (opcional)
         if ($fecha = $req->query('fecha')) {
             $q->whereDate('fecha', $fecha);
         }
+
+        // Filtro por rango opcional: desde / hasta (YYYY-MM-DD)
+        if ($desde = $req->query('desde')) {
+            $q->whereDate('fecha', '>=', $desde);
+        }
+        if ($hasta = $req->query('hasta')) {
+            $q->whereDate('fecha', '<=', $hasta);
+        }
+
         if ($estado = $req->query('estado')) {
             $q->where('estado', $estado);
         }
