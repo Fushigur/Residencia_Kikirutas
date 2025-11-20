@@ -26,14 +26,32 @@
 
     <title>kikirutas-web</title>
   </head>
-  <body>
+    <body>
     <div id="app"></div>
 
+    <!-- Tu app de Vue -->
     <script type="module" src="/src/main.ts"></script>
-    <script
+
+    <!-- Callback global que Google Maps intenta ejecutar -->
+    <script>
+      // Esta función se usa solo como callback del script de Google Maps.
+      // No es necesario que haga nada especial porque dentro de Vue
+      // esperamos a que window.google exista (waitForGoogle()).
+      window.initApp = function initApp() {
+        console.log('Google Maps JavaScript API cargada correctamente');
+      };
+    </script>
+
+    <!-- Script de Google Maps: conserva tu propia API key -->
+<!--     <script
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBYXB_gIntmbGQczrRY37FrHmlsUXd2l-o&libraries=places,geometry&callback=initApp&v=weekly"
       async
       defer
-    ></script>
+    ></script> -->
   </body>
 </html>
+
+</html>
+
+
+<!-- AIzaSyBYXB_gIntmbGQczrRY37FrHmlsUXd2l-o -->
