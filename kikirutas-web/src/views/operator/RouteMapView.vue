@@ -17,7 +17,50 @@ type Pedido = {
   solicitanteNombre?: string
   solicitanteComunidad?: string
 }
+// Convierte una dirección de catálogo a LatLng fijo para Directions.
+// Si no existe en STATIC_COORDS, se deja el string para que Google lo resuelva.
+function asDirectionsLocation(addr: string): any {
+  if (!addr) return addr
+  const c = STATIC_COORDS[addr]
+  if (c && window.google?.maps) {
+    return new window.google.maps.LatLng(c.lat, c.lng)
+  }
+  return addr
+}
+
+
 type LatLng = { lat:number, lng:number }
+
+// Coordenadas fijas Kikibá (tomadas del planner original)
+const STATIC_COORDS: Record<string, LatLng> = {
+  // Bases
+  'José María Morelos, Quintana Roo': { lat: 19.7485, lng: -88.7060 },
+  'Felipe Carrillo Puerto, Quintana Roo': { lat: 19.57987006324777, lng: -88.04392203071264 },
+
+  // JMM
+  'Candelaria, Quintana Roo':        { lat: 19.7362, lng: -88.9580 },
+  'Dziuché, Quintana Roo':           { lat: 19.8971, lng: -88.8098 },
+  'La Presumida, Quintana Roo':      { lat: 19.8010, lng: -88.7534 },
+  'Santa Gertrudis, Quintana Roo':   { lat: 19.7996, lng: -88.7724 },
+  'Kancabchén, Quintana Roo':        { lat: 19.7139, lng: -88.8612 },
+  'Cafetalito, Quintana Roo':        { lat: 19.7276, lng: -88.7990 },
+  'Cafetal Grande, Quintana Roo':    { lat: 19.7163, lng: -88.8217 },
+  'Benito Juárez, Quintana Roo':     { lat: 19.710749410357764, lng: -88.77074818537011 },
+  'Pozo Pirata, Quintana Roo':       { lat: 19.6149, lng: -88.8900 },
+  'San Carlos, Quintana Roo':        { lat: 19.6336, lng: -88.9393 },
+  'Chunhuhub, Quintana Roo':         { lat: 19.5850, lng: -88.5914 },
+  'Polyuc, Quintana Roo':            { lat: 19.6099, lng: -88.5612 },
+  'Dos Aguadas, Quintana Roo':       { lat: 19.6663, lng: -88.6984 },
+  'El Naranjal, Quintana Roo':       { lat: 19.6449, lng: -88.7857 },
+  'Othón P. Blanco, Quintana Roo':   { lat: 19.6203, lng: -89.0054 },
+  'Puerto Arturo, Quintana Roo':     { lat: 19.6591, lng: -89.0668 },
+
+  // FCP
+  'Dzulá, Quintana Roo':             { lat: 19.602682832330864, lng: -88.41559225310304 },
+  'X-Yatil, Quintana Roo':           { lat: 19.662795041921463, lng: -88.4435691850896 },
+  'El Señor, Quintana Roo':          { lat: 19.843208408219397, lng: -88.13529197133691 },
+  'Tihosuco, Quintana Roo':          { lat: 20.19546282557715, lng: -88.37403728985683 },
+}
 
 /* ===================== Stores ===================== */
 const route  = useRoute()
@@ -42,13 +85,20 @@ const hasAssigned = computed(()=> pedidosRuta.value.length > 0)
 /** bases para origen */
 const originOptions = ['José María Morelos, Quintana Roo', 'Felipe Carrillo Puerto, Quintana Roo']
 
-/** catálogo base de localidades (como el diseño anterior) */
-const presetCommunities = [
+/** catálogo base de localidades (separadas por base) */
+const jmmCommunities = [
   'Candelaria','Dziuché','La Presumida','Santa Gertrudis','Kancabchén',
   'Cafetalito','Cafetal Grande','Benito Juárez','Pozo Pirata','San Carlos',
   'Chunhuhub','Polyuc','Dos Aguadas','El Naranjal','Othón P. Blanco',
-  'Puerto Arturo','Dzulá','X-Yatil','El Señor','Tihosuco'
-].map(c=>`${c}, Quintana Roo`)
+  'Puerto Arturo',
+].map(c => `${c}, Quintana Roo`)
+
+const fcpCommunities = [
+  'Dzulá','X-Yatil','El Señor','Tihosuco',
+].map(c => `${c}, Quintana Roo`)
+
+/** universo combinado (para detecciones, etc.) */
+const presetCommunities = [...jmmCommunities, ...fcpCommunities]
 
 /** util para limpiar comunidades inválidas (—, --- , vacíos) */
 const cleanCommunity = (s?: string) => {
@@ -72,23 +122,47 @@ const communitySet = computed(() => {
   return Array.from(set).sort((a,b)=> a.localeCompare(b,'es'))
 })
 
+/** comunidades visibles según la base seleccionada (origen) */
+const filteredCommunities = computed(() => {
+  const isFcp = uiOrigin.value.includes('Felipe')
+  const baseList = isFcp ? fcpCommunities : jmmCommunities
+
+  const set = new Set<string>()
+  // Solo dejamos las que realmente existen en communitySet (por si se amplía)
+  baseList.forEach(c => {
+    if (communitySet.value.includes(c)) set.add(c)
+  })
+
+  return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'))
+})
+
 /** selects */
 const uiOrigin  = ref(originOptions[0])
-const uiDest    = ref(communitySet.value[0] || originOptions[0])
+// El destino se inicializa vacío; el watch de filteredCommunities lo ajusta
+const uiDest    = ref<string>('')
 const uiStops   = ref<string[]>([]) // paradas seleccionadas manualmente
 
-watch(communitySet, (list)=>{
+watch(filteredCommunities, (list) => {
   if (!list.length) return
-  if (!uiDest.value) uiDest.value = list[0]
-}, { immediate:true })
+  // Si el destino actual no pertenece a la base, o está vacío, lo cambiamos
+  if (!uiDest.value || !list.includes(uiDest.value)) {
+    uiDest.value = list[0]
+  }
+}, { immediate: true })
 
 function toggleStop(val:string){
   const i = uiStops.value.indexOf(val)
-  if (i>=0) uiStops.value.splice(i,1)
+  if (i >= 0) uiStops.value.splice(i, 1)
   else uiStops.value.push(val)
 }
-function selectAllStops(){ uiStops.value = communitySet.value.slice(0, 50) }
-function clearStops(){ uiStops.value = [] }
+
+function selectAllStops(){
+  uiStops.value = filteredCommunities.value.slice(0, 50)
+}
+
+function clearStops(){
+  uiStops.value = []
+}
 
 /* ===================== Detección de paradas automáticas ===================== */
 const autoDetectedStops = ref<string[]>([])
@@ -113,12 +187,12 @@ async function detectStopsAlongPath(origin: string, destination: string, candida
   const destPt = await geocodeOSM(destination)
   if (!originPt || !destPt) return []
 
-  // Obtener ruta base entre origen y destino
+  // Obtener ruta base entre origen y destino (usando LatLng fijos si existen)
   const route = await new Promise<any>((resolve) => {
     const dirService = new window.google.maps.DirectionsService()
     dirService.route({
-      origin: origin,
-      destination: destination,
+      origin: asDirectionsLocation(origin),
+      destination: asDirectionsLocation(destination),
       travelMode: window.google.maps.TravelMode.DRIVING,
       region: 'MX'
     }, (res, status) => {
@@ -166,6 +240,7 @@ async function detectStopsAlongPath(origin: string, destination: string, candida
   return picked.map(p => p.community)
 }
 
+
 /** Marca automáticamente las paradas detectadas en la UI */
 function markAutoStopsInUI(stops: string[]) {
   stops.forEach(stop => {
@@ -199,8 +274,8 @@ async function fillFromUI(reverse=false){
   const o = uiOrigin.value
   const d = uiDest.value || o
   
-  // Detectar paradas automáticas
-  const candidates = communitySet.value.filter(c => c !== o && c !== d)
+  // Detectar paradas automáticas (SOLO comunidades de la base seleccionada)
+  const candidates = filteredCommunities.value.filter(c => c !== o && c !== d)
   const autoStops = await detectStopsAlongPath(o, d, candidates)
   
   // Combinar paradas manuales + automáticas (sin duplicados)
@@ -248,7 +323,7 @@ function min(s:number){ return s/60 }
 let drawTimer:any=null
 function drawRouteDebounced(){ clearTimeout(drawTimer); drawTimer=setTimeout(drawRoute, 300) }
 
-/* ---- marcadores por defecto (Morelos y Carrillo) usando OSM (gratis) ---- */
+/* ---- marcadores por defecto (Morelos y Carrillo) ---- */
 let defaultMarkers: any[] = []
 function clearDefaultMarkers(){
   defaultMarkers.forEach(m => m.setMap(null))
@@ -272,21 +347,39 @@ async function showDefaultMarkers(){
 function drawRoute(){
   if (!map || !dirSrv || !dirRnd) return
 
-  const wps = waypointsText.value
-    ? waypointsText.value.split('|').filter(Boolean).map((a:string)=>({location:a, stopover:true}))
+  // Waypoints en texto crudo (para el "signature")
+  const rawWps = waypointsText.value
+    ? waypointsText.value.split('|').filter(Boolean)
     : []
 
-  const req = {
-    origin: originText.value || originOptions[0],
-    destination: destinationText.value || originText.value || originOptions[0],
-    waypoints: wps,
+  // Waypoints para Directions: usar LatLng fijo si existe
+  const wps = rawWps.map((a: string) => ({
+    location: asDirectionsLocation(a),
+    stopover: true,
+  }))
+
+  const originAddr = originText.value || originOptions[0]
+  const destAddr   = destinationText.value || originText.value || originOptions[0]
+
+  // Para evitar recalcular la misma ruta usamos una firma basada en los STRINGS,
+  // no en los LatLng de Google (que no se serializan bien).
+  const sigPayload = {
+    origin: originAddr,
+    destination: destAddr,
+    waypoints: rawWps,
+  }
+  const sig = JSON.stringify(sigPayload)
+  if (sig === lastSig) return
+  lastSig = sig
+
+  const req: any = {
+    origin: asDirectionsLocation(originAddr),
+    destination: asDirectionsLocation(destAddr),
     travelMode: window.google.maps.TravelMode.DRIVING,
     optimizeWaypoints: true,
     language: 'es',
   }
-  const sig = JSON.stringify(req)
-  if (sig === lastSig) return
-  lastSig = sig
+  if (wps.length) req.waypoints = wps
 
   dirSrv.route(req, (res:any, status:string)=>{
     if (status!=='OK' || !res?.routes?.[0]){ legs.value=[]; return }
@@ -323,7 +416,15 @@ try { geoCache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY)||'{}') } catch {
 function saveGeo(){ localStorage.setItem(GEO_CACHE_KEY, JSON.stringify(geoCache)) }
 
 async function geocodeOSM(addr:string):Promise<LatLng|null>{
+  // 1) Primero usar coordenadas fijas si existen (bases y comunidades)
+  if (STATIC_COORDS[addr]) {
+    return STATIC_COORDS[addr]
+  }
+
+  // 2) Después cache local
   if (geoCache[addr]) return geoCache[addr]
+
+  // 3) Si no está en estático, pedir a Nominatim
   try{
     const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(addr)}`
     const res = await fetch(url, { headers:{'Accept-Language':'es'} })
@@ -332,9 +433,12 @@ async function geocodeOSM(addr:string):Promise<LatLng|null>{
       const pt = { lat:Number(data[0].lat), lng:Number(data[0].lon) }
       geoCache[addr] = pt; saveGeo(); return pt
     }
-  }catch{}
+  }catch{
+    // silencioso
+  }
   return null
 }
+
 function haversineKm(a:LatLng,b:LatLng){
   const R=6371, dLat=(b.lat-a.lat)*Math.PI/180, dLng=(b.lng-a.lng)*Math.PI/180
   const s = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2
@@ -427,6 +531,7 @@ watch([()=>rutaSel.value?.id], ()=>{
 })
 </script>
 
+
 <template>
   <section class="space-y-5">
     <!-- Topbar -->
@@ -460,11 +565,23 @@ watch([()=>rutaSel.value?.id], ()=>{
 
           <div class="mb-3">
             <div class="text-sm text-white/70 mb-1">Destino</div>
-            <select v-model="uiDest"
-                    class="w-full rounded-xl bg-neutral-800 border border-neutral-600 text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 hover:bg-neutral-700 transition-colors cursor-pointer">
-              <option v-for="c in communitySet" :key="c" :value="c" class="bg-neutral-800 text-white">{{ c }}</option>
+            <select
+              v-model="uiDest"
+              class="w-full rounded-xl bg-neutral-800 border border-neutral-600 text-white px-3 py-2
+                    focus:outline-none focus:ring-2 focus:ring-emerald-500 hover:bg-neutral-700
+                    transition-colors cursor-pointer"
+            >
+              <option
+                v-for="c in filteredCommunities"
+                :key="c"
+                :value="c"
+                class="bg-neutral-800 text-white"
+              >
+                {{ c }}
+              </option>
             </select>
           </div>
+
 
           <div>
             <div class="flex items-center justify-between mb-2">
@@ -472,37 +589,75 @@ watch([()=>rutaSel.value?.id], ()=>{
               <span class="text-xs text-white/60">{{ uiStops.length }} seleccionadas</span>
             </div>
 
+            <div class="flex gap-2 mb-2">
+              <button class="rounded-full bg-white/10 px-3 py-1 text-sm hover:bg-white/20" @click="selectAllStops">Seleccionar todo</button>
+              <button class="rounded-full bg-white/10 px-3 py-1 text-sm hover:bg-white/20" @click="clearStops">Ninguna</button>
+            </div>
+            <!-- desde aqui -->
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm">Paradas</span>
+              <span class="text-xs text-white/60">{{ uiStops.length }} seleccionadas</span>
+            </div>
+
             <!-- Indicador de paradas automáticas -->
-            <div v-if="autoDetectedStops.length > 0" class="mb-2 p-2 bg-blue-900/30 border border-blue-500/50 rounded-lg">
+            <div
+              v-if="autoDetectedStops.length > 0"
+              class="mb-2 p-2 bg-blue-900/30 border border-blue-500/50 rounded-lg"
+            >
               <div class="text-xs text-blue-300">
-                <span class="font-semibold">✓ Detección automática:</span> 
+                <span class="font-semibold">✓ Detección automática:</span>
                 Se agregaron {{ autoDetectedStops.length }} comunidades de paso
               </div>
             </div>
 
             <div class="flex gap-2 mb-2">
-              <button class="rounded-full bg-white/10 px-3 py-1 text-sm hover:bg-white/20" @click="selectAllStops">Seleccionar todo</button>
-              <button class="rounded-full bg-white/10 px-3 py-1 text-sm hover:bg-white/20" @click="clearStops">Ninguna</button>
+              <button
+                class="rounded-full bg-white/10 px-3 py-1 text-sm hover:bg-white/20"
+                @click="selectAllStops"
+              >
+                Seleccionar todo
+              </button>
+              <button
+                class="rounded-full bg-white/10 px-3 py-1 text-sm hover:bg-white/20"
+                @click="clearStops"
+              >
+                Ninguna
+              </button>
             </div>
 
             <div class="max-h-60 overflow-y-auto space-y-2 pr-1">
               <label
-                v-for="c in communitySet"
+                v-for="c in filteredCommunities"
                 :key="c"
                 :class="[
                   'flex items-center justify-between rounded-xl border px-3 py-2 text-sm transition-colors cursor-pointer',
-                  autoDetectedStops.includes(c) 
-                    ? 'border-blue-500/50 bg-blue-900/20 hover:bg-blue-900/30' 
+                  autoDetectedStops.includes(c)
+                    ? 'border-blue-500/50 bg-blue-900/20 hover:bg-blue-900/30'
                     : 'border-white/10 bg-white/5 hover:bg-white/10'
-                ]">
+                ]"
+              >
                 <div class="flex items-center gap-2">
-                  <input type="checkbox" :checked="uiStops.includes(c)" @change="toggleStop(c)" 
-                         class="rounded border-neutral-400 text-emerald-500 focus:ring-emerald-500 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    :checked="uiStops.includes(c)"
+                    @change="toggleStop(c)"
+                    class="rounded border-neutral-400 text-emerald-500 focus:ring-emerald-500 cursor-pointer"
+                  >
                   <span>{{ c }}</span>
                 </div>
                 <div class="flex items-center gap-1">
-                  <span v-if="autoDetectedStops.includes(c)" class="text-xs text-blue-300">automática</span>
-                  <span v-else class="text-xs text-white/60">parada</span>
+                  <span
+                    v-if="autoDetectedStops.includes(c)"
+                    class="text-xs text-blue-300"
+                  >
+                    automática
+                  </span>
+                  <span
+                    v-else
+                    class="text-xs text-white/60"
+                  >
+                    parada
+                  </span>
                 </div>
               </label>
             </div>
@@ -513,15 +668,27 @@ watch([()=>rutaSel.value?.id], ()=>{
             </p>
 
             <div class="mt-3 flex gap-2">
-              <button class="rounded-xl bg-emerald-600 px-3 py-2 hover:bg-emerald-500 transition-colors" @click="trazadoOptimizado">
+              <button
+                class="rounded-xl bg-emerald-600 px-3 py-2 hover:bg-emerald-500 transition-colors"
+                @click="trazadoOptimizado"
+              >
                 Trazar ruta optimizada
               </button>
-              <button class="rounded-xl bg-white/10 px-3 py-2 hover:bg-white/20 transition-colors" @click="limpiarRuta">Limpiar ruta</button>
+              <button
+                class="rounded-xl bg-white/10 px-3 py-2 hover:bg-white/20 transition-colors"
+                @click="limpiarRuta"
+              >
+                Limpiar ruta
+              </button>
             </div>
-            <button class="mt-2 w-full rounded-xl bg-indigo-600 px-3 py-2 hover:bg-indigo-500 transition-colors" @click="trazadoRegreso">
+            <button
+              class="mt-2 w-full rounded-xl bg-indigo-600 px-3 py-2 hover:bg-indigo-500 transition-colors"
+              @click="trazadoRegreso"
+            >
               Trazar ruta de regreso
             </button>
           </div>
+
         </div>
 
         <!-- Cercanas al destino (radio fijo 1km) -->
@@ -553,18 +720,36 @@ watch([()=>rutaSel.value?.id], ()=>{
       <div class="lg:col-span-8">
         <div class="bg-neutral-900/80 rounded-2xl border border-white/10 p-3 shadow">
           <div class="text-sm text-white/70 mb-2">Previsualización</div>
-          <div v-if="!hasAssigned && !legs.length" class="h-[420px] grid place-items-center text-white/60 text-sm">
-            Asigna pedidos a la ruta o usa el planificador para generar el mapa.
+
+          <!-- 🔹 Mapa siempre renderizado + overlay cuando no hay ruta -->
+          <div class="relative">
+            <div
+              ref="mapEl"
+              class="w-full h-[420px] rounded-xl border border-white/10"
+            ></div>
+
+            <div
+              v-if="!hasAssigned && !legs.length"
+              class="absolute inset-0 grid place-items-center text-white/60 text-sm
+                     bg-neutral-900/70 pointer-events-none rounded-xl"
+            >
+              Asigna pedidos a la ruta o usa el planificador para generar el mapa.
+            </div>
           </div>
-          <div v-else ref="mapEl" class="w-full h-[420px] rounded-xl border border-white/10"></div>
 
           <!-- Resumen -->
           <div v-if="legs.length" class="mt-4 rounded-2xl bg-white/5 border border-white/10 p-4">
             <h3 class="font-semibold mb-3">Resumen del recorrido</h3>
             <div class="flex flex-wrap gap-2 mb-3">
-              <span class="px-2 py-1 rounded text-xs bg-white/10 border border-white/10">Total: {{ totalKm.toFixed(1) }} km</span>
-              <span class="px-2 py-1 rounded text-xs bg-white/10 border border-white/10">Tiempo total: {{ totalMin }} min</span>
-              <span class="px-2 py-1 rounded text-xs bg-white/10 border border-white/10">{{ originText || uiOrigin }} → {{ destinationText || uiDest }}</span>
+              <span class="px-2 py-1 rounded text-xs bg-white/10 border border-white/10">
+                Total: {{ totalKm.toFixed(1) }} km
+              </span>
+              <span class="px-2 py-1 rounded text-xs bg-white/10 border border-white/10">
+                Tiempo total: {{ totalMin }} min
+              </span>
+              <span class="px-2 py-1 rounded text-xs bg-white/10 border border-white/10">
+                {{ originText || uiOrigin }} → {{ destinationText || uiDest }}
+              </span>
             </div>
 
             <div class="overflow-x-auto">
@@ -630,7 +815,11 @@ watch([()=>rutaSel.value?.id], ()=>{
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(row,i) in emprPorLocalidad" :key="i" class="border-b border-white/5 align-top">
+                  <tr
+                    v-for="(row,i) in emprPorLocalidad"
+                    :key="i"
+                    class="border-b border-white/5 align-top"
+                  >
                     <td class="py-2 pr-4">{{ i+1 }}</td>
                     <td class="py-2 pr-4">{{ row.localidad }}</td>
                     <td class="py-2">
@@ -647,6 +836,7 @@ watch([()=>rutaSel.value?.id], ()=>{
 
         </div>
       </div>
+
     </div>
   </section>
 </template>
