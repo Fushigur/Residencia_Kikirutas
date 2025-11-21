@@ -121,13 +121,11 @@ class PedidoController extends Controller
         $user = $req->user();
 
         // Rellenar nombre desde el usuario autenticado si no viene en el body
-        // Nos basamos en $user->name, que es lo que devuelve tu login.
         if (empty($data['solicitante_nombre']) && $user) {
             $data['solicitante_nombre'] = $user->name ?? null;
         }
 
         // Rellenar comunidad desde el usuario autenticado si no viene
-        // (Sólo funcionará si tu tabla users tiene columna comunidad)
         if (empty($data['solicitante_comunidad']) && $user) {
             $data['solicitante_comunidad'] = $user->comunidad ?? null;
         }
@@ -144,7 +142,14 @@ class PedidoController extends Controller
 
         $pedido->save();
 
-        return response()->json($pedido, 201);
+        // Intentar asignar automáticamente este pedido a una ruta existente
+        $this->autoAssignToNearestRuta($pedido);
+
+        // Devolvemos el pedido con sus rutas cargadas (si se asignó)
+        return response()->json(
+            $pedido->load('rutas:id,fecha,estado,nombre'),
+            201
+        );
     }
 
     /**
@@ -204,4 +209,61 @@ class PedidoController extends Controller
 
         return $p;
     }
+
+    /**
+     * Asigna automáticamente un pedido recién creado a la "mejor" ruta disponible.
+     *
+     * Criterios:
+     *  - misma fecha de reparto que el pedido
+     *  - prioridad a rutas que ya pasan por la misma comunidad
+     *  - sólo estados planificada | en_ruta
+     */
+    protected function autoAssignToNearestRuta(Pedido $pedido): void
+    {
+        // Si no tenemos fecha, usamos hoy
+        $fechaPedido = $pedido->fecha
+            ? $pedido->fecha->toDateString()
+            : now()->toDateString();
+
+        // Base: rutas del mismo día y en estado válido
+        $baseQuery = Ruta::query()
+            ->whereDate('fecha', $fechaPedido)
+            ->whereIn('estado', ['planificada', 'en_ruta']);
+
+        $ruta = null;
+
+        // 1) Intentar una ruta que ya atienda la misma comunidad
+        if (!empty($pedido->solicitante_comunidad)) {
+            $ruta = (clone $baseQuery)
+                ->whereHas('pedidos', function ($q) use ($pedido) {
+                    $q->where('solicitante_comunidad', $pedido->solicitante_comunidad);
+                })
+                ->orderBy('fecha')
+                ->orderBy('id')
+                ->first();
+        }
+
+        // 2) Si no encontramos por comunidad, tomamos la primera ruta del día
+        if (!$ruta) {
+            $ruta = $baseQuery
+                ->orderBy('fecha')
+                ->orderBy('id')
+                ->first();
+        }
+
+        if (!$ruta) {
+            // No hay ruta compatible, se queda solo creado el pedido
+            return;
+        }
+
+        // Vincular al pivote sin duplicar
+        $ruta->pedidos()->syncWithoutDetaching([$pedido->id]);
+
+        // Si la ruta ya está en curso → el pedido pasa a "en_ruta"
+        if ($ruta->estado === 'en_ruta') {
+            $pedido->estado = 'en_ruta';
+            $pedido->save();
+        }
+    }
+
 }
