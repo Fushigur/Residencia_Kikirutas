@@ -96,7 +96,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { RouterLink } from 'vue-router'
 import api from '@/api'
 import { useAuthStore } from '@/stores/auth'
@@ -133,6 +133,8 @@ const ultimosPedidos = ref<PedidoResumen[]>([])
 const proximaRuta = ref<ProximaRutaUI | null>(null)
 
 const hasPedidos = computed(() => ultimosPedidos.value.length > 0)
+
+let dashboardTimer: number | undefined
 
 // ---------- Helpers de estado ----------
 function labelEstado(e: PedidoEstado): string {
@@ -174,36 +176,38 @@ const proximaRutaMensaje = computed(() => {
   if (!proximaRuta.value) return ''
 
   const { fechaISO, choferNombre, nombre, estado } = proximaRuta.value
-  const operador = choferNombre || nombre || 'el operador asignado'
+  const operador = choferNombre || nombre || 'la persona operadora asignada'
 
+  // Si por alguna razón no tenemos fecha, sólo mostramos un mensaje general
   if (!fechaISO) {
-    return `Tu próximo pedido está programado con ${operador}.`
+    return `Tienes pedidos pendientes que serán incluidos en la siguiente ruta con ${operador}.`
   }
 
   const hoy = todayLocalISO()
 
-  // futura
+  // Ruta futura
   if (fechaISO > hoy) {
-    return `Tu próximo pedido está programado para el ${formatFechaLarga(fechaISO)} con ${operador}.`
+    return `Tienes pedidos pendientes para la ruta del ${formatFechaLarga(fechaISO)} con ${operador}.`
   }
 
-  // hoy y ruta ya en curso
+  // Hoy y la ruta ya está en curso
   if (fechaISO === hoy && estado === 'en_curso') {
-    `Tu pedido ya está en ruta hoy (${formatFechaLarga(fechaISO)}) con ${operador}.`
+    return `La ruta de hoy (${formatFechaLarga(fechaISO)}) ya está en camino con ${operador}. Sigue el estado de tus pedidos en esta pantalla.`
   }
 
-  // hoy pero la ruta sigue en borrador/en espera
+  // Hoy pero la ruta sigue en borrador/en espera
   if (fechaISO === hoy) {
-    return `Tu pedido está programado para entregarse hoy (${formatFechaLarga(fechaISO)}) con ${operador}.`
+    return `Tus pedidos están programados para entregarse hoy (${formatFechaLarga(fechaISO)}) con ${operador}. En cuanto el operador inicie la ruta verás las actualizaciones.`
   }
 
-  // pasada (por si el backend manda la última ruta ya cerrada)
+  // Fecha pasada (por si el backend devuelve la última ruta con pedidos de esta persona)
   if (fechaISO < hoy) {
-    return `Tu última ruta registrada fue el ${formatFechaLarga(fechaISO)} con ${operador}.`
+    return `Tu última ruta registrada fue el ${formatFechaLarga(fechaISO)} con ${operador}. Todos los pedidos de esa ruta deberían estar entregados.`
   }
 
-  return `Tu próximo pedido está programado con ${operador}.`
+  return `Tienes pedidos pendientes asignados a una ruta con ${operador}.`
 })
+
 
 // ---------- Carga desde /api/usuario/dashboard ----------
 async function loadDashboard() {
@@ -242,19 +246,19 @@ async function loadDashboard() {
 
 onMounted(() => {
   loadDashboard()
+  // refresca el panel cada 30 segundos para reflejar cambios del operador
+  dashboardTimer = window.setInterval(loadDashboard, 30000)
+})
+
+onBeforeUnmount(() => {
+  if (dashboardTimer) {
+    clearInterval(dashboardTimer)
+  }
 })
 </script>
 
 <style scoped>
-.btn-primary{
-  background: var(--brand); color:#0c2b25; font-weight:700;
-  padding:.65rem 1rem; border-radius:.8rem;
-}
-.btn-primary:hover{ filter:brightness(1.05); }
-.btn-secondary{
-  background: rgba(34,167,136,.15); color:#d6e6df; font-weight:600;
-  padding:.65rem 1rem; border-radius:.8rem; border:1px solid rgba(34,167,136,.35);
-}
+
 .btn-secondary:hover{ background: rgba(34,167,136,.22); }
 
 .card{
