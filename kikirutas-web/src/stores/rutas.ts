@@ -132,9 +132,9 @@ export const useRutasStore = defineStore('rutas', {
   actions: {
     persist() {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.items));
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(this.items));
       } catch {
-        // por si el navegador bloquea localStorage
+        // por si el navegador bloquea sessionStorage
       }
     },
 

@@ -45,7 +45,7 @@ const STATIC_COORDS: Record<string, LatLng> = {
   'Kancabchén, Quintana Roo':        { lat: 19.7139, lng: -88.8612 },
   'Cafetalito, Quintana Roo':        { lat: 19.7276, lng: -88.7990 },
   'Cafetal Grande, Quintana Roo':    { lat: 19.7163, lng: -88.8217 },
-  'Benito Juárez, Quintana Roo':     { lat: 19.710749410357764, lng: -88.77074818537011 },
+  'Benito Juárez, Quintana Roo':     { lat: 19.7107, lng: -88.7707 },
   'Pozo Pirata, Quintana Roo':       { lat: 19.6149, lng: -88.8900 },
   'San Carlos, Quintana Roo':        { lat: 19.6336, lng: -88.9393 },
   'Chunhuhub, Quintana Roo':         { lat: 19.5850, lng: -88.5914 },
@@ -412,8 +412,8 @@ const nearbyRadiusKm = 1
 
 const GEO_CACHE_KEY = 'geo_cache_v1'
 let geoCache: Record<string, LatLng> = {}
-try { geoCache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY)||'{}') } catch { geoCache = {} }
-function saveGeo(){ localStorage.setItem(GEO_CACHE_KEY, JSON.stringify(geoCache)) }
+try { geoCache = JSON.parse(sessionStorage.getItem(GEO_CACHE_KEY)||'{}') } catch { geoCache = {} }
+function saveGeo(){ sessionStorage.setItem(GEO_CACHE_KEY, JSON.stringify(geoCache)) }
 
 async function geocodeOSM(addr:string):Promise<LatLng|null>{
   // 1) Primero usar coordenadas fijas si existen (bases y comunidades)
