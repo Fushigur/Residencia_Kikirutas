@@ -106,6 +106,17 @@ const cleanCommunity = (s?: string) => {
   return t && !/^[-—]+$/.test(t) ? t : ''
 }
 
+const formatEstado = (e: PedidoEstado) => {
+  switch (e) {
+    case 'pendiente': return 'Pendiente'
+    case 'en_ruta':   return 'En ruta'
+    case 'entregado': return 'Entregado'
+    case 'cancelado': return 'Cancelado'
+    default: return e
+  }
+}
+
+
 /** comunidades detectadas desde pedidos + catálogo base */
 const allPedidosArray = computed<Pedido[]>(() => {
   const items = (pedidos as any).items as Pedido[] | undefined
@@ -515,6 +526,23 @@ function limpiarRuta(){
   clearAll()
 }
 
+async function marcarEntregado(id: string) {
+  if (!rutaSel.value) return
+
+  // Actualizamos en backend y en el store
+  const ok = await pedidos.setEstado(id, 'entregado', {
+    routeId: String(rutaSel.value.id),
+  })
+
+  if (!ok) {
+    console.warn('No se pudo marcar como entregado el pedido', id)
+    return
+  }
+
+  // Si en esta misma pestaña tienes otros componentes que usan usePedidosStore,
+  // se actualizarán en automático. En otras pestañas, se verá al recargar.
+}
+
 /* ===================== Ciclo de vida ===================== */
 onMounted(async ()=>{
   await waitForGoogle()
@@ -782,21 +810,52 @@ watch([()=>rutaSel.value?.id], ()=>{
             <div class="overflow-x-auto">
               <table class="w-full text-sm">
                 <thead class="text-white/70">
-                  <tr class="border-b border-white/10">
-                    <th class="text-left py-2 pr-4">Nombre</th>
-                    <th class="text-left py-2 pr-4">Localidad</th>
-                    <th class="text-left py-2 pr-4">Producto</th>
-                    <th class="text-left py-2">Cantidad</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="p in pedidosRuta" :key="p.id" class="border-b border-white/5">
-                    <td class="py-2 pr-4">{{ p.solicitanteNombre || 'Usuaria' }}</td>
-                    <td class="py-2 pr-4">{{ cleanCommunity(p.solicitanteComunidad) || '—' }}</td>
-                    <td class="py-2 pr-4">{{ p.producto }}</td>
-                    <td class="py-2">{{ p.cantidad }}</td>
-                  </tr>
-                </tbody>
+                <tr class="border-b border-white/10">
+                  <th class="text-left py-2 pr-4">Nombre</th>
+                  <th class="text-left py-2 pr-4">Localidad</th>
+                  <th class="text-left py-2 pr-4">Producto</th>
+                  <th class="text-left py-2">Cantidad</th>
+                  <th class="text-left py-2">Estado</th>
+                  <th class="text-left py-2">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="p in pedidosRuta" :key="p.id" class="border-b border-white/5">
+                  <td class="py-2 pr-4">{{ p.solicitanteNombre || 'Usuaria' }}</td>
+                  <td class="py-2 pr-4">{{ cleanCommunity(p.solicitanteComunidad) || '—' }}</td>
+                  <td class="py-2 pr-4">{{ p.producto }}</td>
+                  <td class="py-2">{{ p.cantidad }}</td>
+
+                  <!-- Estado visual -->
+                  <td class="py-2">
+                    <span
+                      class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                      :class="{
+                        'bg-yellow-500/20 text-yellow-300': p.estado === 'pendiente',
+                        'bg-sky-500/20 text-sky-300':      p.estado === 'en_ruta',
+                        'bg-emerald-500/20 text-emerald-300': p.estado === 'entregado',
+                        'bg-rose-500/20 text-rose-300':    p.estado === 'cancelado',
+                      }"
+                    >
+                      {{ formatEstado(p.estado) }}
+                    </span>
+                  </td>
+
+                  <!-- Acción Entregada -->
+                  <td class="py-2">
+                    <button
+                      v-if="p.estado !== 'entregado'"
+                      type="button"
+                      class="text-xs rounded-full bg-emerald-600 hover:bg-emerald-500 px-3 py-1"
+                      @click="marcarEntregado(p.id)"
+                    >
+                      Entregada
+                    </button>
+                    <span v-else class="text-xs text-white/60">Completado</span>
+                  </td>
+                </tr>
+              </tbody>
+
               </table>
             </div>
           </div>

@@ -93,7 +93,7 @@ function marcarEntregado(pid: string)  { pedidos.setEstado(pid, 'entregado') }
           :disabled="pendientes === 0"
           @click="iniciarRecorrido"
         >
-          Iniciar recorrido (poner pendientes en ruta)
+          Iniciar recorrido
         </button>
 
         <button
@@ -160,14 +160,6 @@ function marcarEntregado(pid: string)  { pedidos.setEstado(pid, 'entregado') }
                 @click="marcarEnRuta(p.id)"
               >
                 Poner en ruta
-              </button>
-
-              <button
-                v-if="p.estado !== 'entregado'"
-                class="rounded bg-emerald-600 px-3 py-1 hover:bg-emerald-500"
-                @click="marcarEntregado(p.id)"
-              >
-                Marcar entregado
               </button>
             </div>
           </div>
