@@ -68,11 +68,14 @@
       <article class="card">
         <h3 class="card-title">Próxima ruta</h3>
 
-        <div v-if="proximaRuta">
+        <div v-if="proximaRutaMensaje">
           <p class="muted mt-2">
             {{ proximaRutaMensaje }}
           </p>
-          <p class="text-xs text-white/60 mt-1">
+          <p
+            v-if="proximaRuta"
+            class="text-xs text-white/60 mt-1"
+          >
             Esta información se actualiza cuando el administrador asigna tu pedido a una ruta.
           </p>
         </div>
@@ -134,6 +137,16 @@ const proximaRuta = ref<ProximaRutaUI | null>(null)
 
 const hasPedidos = computed(() => ultimosPedidos.value.length > 0)
 
+// Último pedido ENTREGADO entre los recientes
+const ultimoEntregado = computed<PedidoResumen | null>(() => {
+  // vienen ordenados del más reciente al más antiguo
+  for (const p of ultimosPedidos.value) {
+    if (p.estado === 'entregado') return p
+  }
+  return null
+})
+
+
 let dashboardTimer: number | undefined
 
 // ---------- Helpers de estado ----------
@@ -173,41 +186,44 @@ function todayLocalISO(): string {
 
 // Mensaje dinámico para la tarjeta "Próxima ruta"
 const proximaRutaMensaje = computed(() => {
-  if (!proximaRuta.value) return ''
+  const ruta = proximaRuta.value
+  const ultimo = ultimoEntregado.value
 
-  const { fechaISO, choferNombre, nombre, estado } = proximaRuta.value
-  const operador = choferNombre || nombre || 'la persona operadora asignada'
+  // Si no hay ni ruta ni pedidos entregados, no decimos nada
+  if (!ruta && !ultimo) return ''
 
-  // Si por alguna razón no tenemos fecha, sólo mostramos un mensaje general
-  if (!fechaISO) {
-    return `Tienes pedidos pendientes que serán incluidos en la siguiente ruta con ${operador}.`
+  // --- Texto sobre la siguiente / última ruta ---
+  let siguienteParte = ''
+  if (ruta) {
+    const { fechaISO, choferNombre, nombre, estado } = ruta
+    const operador = choferNombre || nombre || 'el operador asignado'
+    const hoy = todayLocalISO()
+
+    if (!fechaISO) {
+      siguienteParte = `Tienes pedidos pendientes que serán incluidos en la próxima ruta con ${operador}.`
+    } else if (fechaISO > hoy) {
+      siguienteParte = `Tu siguiente entrega está programada para el ${formatFechaLarga(fechaISO)} con ${operador}.`
+    } else if (fechaISO === hoy && estado === 'en_curso') {
+      siguienteParte = `Tu pedido ya está en ruta hoy (${formatFechaLarga(fechaISO)}) con ${operador}.`
+    } else if (fechaISO === hoy) {
+      siguienteParte = `Tus pedidos están programados para entregarse hoy (${formatFechaLarga(fechaISO)}) con ${operador}.`
+    } else if (fechaISO < hoy) {
+      siguienteParte = `Tu última ruta registrada fue el ${formatFechaLarga(fechaISO)} con ${operador}.`
+    } else {
+      siguienteParte = `Tu siguiente entrega está programada con ${operador}.`
+    }
   }
 
-  const hoy = todayLocalISO()
-
-  // Ruta futura
-  if (fechaISO > hoy) {
-    return `Tienes pedidos pendientes para la ruta del ${formatFechaLarga(fechaISO)} con ${operador}.`
+  // --- Texto sobre el ÚLTIMO pedido entregado ---
+  let parteEntregado = ''
+  if (ultimo && ultimo.fechaISO) {
+    const fechaUltimo = formatFechaLarga(ultimo.fechaISO)
+    const producto = ultimo.producto || 'tu pedido'
+    parteEntregado = `Tu último pedido entregado fue "${producto}" el ${fechaUltimo}. `
   }
 
-  // Hoy y la ruta ya está en curso
-  if (fechaISO === hoy && estado === 'en_curso') {
-    return `La ruta de hoy (${formatFechaLarga(fechaISO)}) ya está en camino con ${operador}. Sigue el estado de tus pedidos en esta pantalla.`
-  }
-
-  // Hoy pero la ruta sigue en borrador/en espera
-  if (fechaISO === hoy) {
-    return `Tus pedidos están programados para entregarse hoy (${formatFechaLarga(fechaISO)}) con ${operador}. En cuanto el operador inicie la ruta verás las actualizaciones.`
-  }
-
-  // Fecha pasada (por si el backend devuelve la última ruta con pedidos de esta persona)
-  if (fechaISO < hoy) {
-    return `Tu última ruta registrada fue el ${formatFechaLarga(fechaISO)} con ${operador}. Todos los pedidos de esa ruta deberían estar entregados.`
-  }
-
-  return `Tienes pedidos pendientes asignados a una ruta con ${operador}.`
+  return `${parteEntregado}${siguienteParte}`.trim()
 })
-
 
 // ---------- Carga desde /api/usuario/dashboard ----------
 async function loadDashboard() {
