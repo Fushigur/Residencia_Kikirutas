@@ -38,30 +38,30 @@ export const usePerfilStore = defineStore('perfil', {
       this.persist()
     },
 
-    // Guarda en localStorage
+    // Guarda en sessionStorage
     persist() {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.$state))
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(this.$state))
       } catch (err) {
-        console.error('No se pudo guardar el perfil en localStorage', err)
+        console.error('No se pudo guardar el perfil en sessionStorage', err)
       }
     },
 
-    // Carga desde localStorage (si existe)
+    // Carga desde sessionStorage (si existe)
     load() {
-      const raw = localStorage.getItem(STORAGE_KEY)
+      const raw = sessionStorage.getItem(STORAGE_KEY)
       if (!raw) return
       try {
         const parsed = JSON.parse(raw)
         Object.assign(this, parsed)
       } catch (err) {
-        console.error('No se pudo leer el perfil desde localStorage', err)
+        console.error('No se pudo leer el perfil desde sessionStorage', err)
       }
     },
 
     // Limpia perfil y storage
     clear() {
-      localStorage.removeItem(STORAGE_KEY)
+      sessionStorage.removeItem(STORAGE_KEY)
       this.avatar = null
       this.nombre = ''
       this.telefono = ''

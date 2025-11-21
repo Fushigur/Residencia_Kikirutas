@@ -150,10 +150,17 @@ function buildUserFromMe(data: any): UserPayload | null {
 export const useAuthStore = defineStore('auth', {
   state: (): State => ({
     token: getStoredToken(),
-    user: JSON.parse(localStorage.getItem(USER_STORAGE_KEY) || 'null'),
+    user: (() => {
+      try {
+        return JSON.parse(sessionStorage.getItem(USER_STORAGE_KEY) || 'null')
+      } catch {
+        return null
+      }
+    })(),
     meLoaded: false,
     error: null,
   }),
+
 
   getters: {
     isAuth: (s) => !!s.token,
@@ -161,15 +168,19 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    persist() {
-      // Token lo gestiona setApiToken; aquí guardamos user/role
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(this.user))
+      persist() {
+    // Token lo gestiona setApiToken; aquí guardamos user/role
+    try {
+      sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(this.user))
       if (this.user?.role) {
-        localStorage.setItem(ROLE_STORAGE_KEY, this.user.role)
+        sessionStorage.setItem(ROLE_STORAGE_KEY, this.user.role)
       } else {
-        localStorage.removeItem(ROLE_STORAGE_KEY)
+        sessionStorage.removeItem(ROLE_STORAGE_KEY)
       }
-    },
+    } catch {
+      // ignore
+    }
+  },
 
     /** Limpia sesión y Authorization header */
     clearSession() {
@@ -187,7 +198,11 @@ export const useAuthStore = defineStore('auth', {
         this.token = token
         setApiToken(token) // asegura header al recargar
       }
-      this.user = JSON.parse(localStorage.getItem(USER_STORAGE_KEY) || 'null')
+      try {
+        this.user = JSON.parse(sessionStorage.getItem(USER_STORAGE_KEY) || 'null')
+      } catch {
+        this.user = null
+      }
     },
 
     /**

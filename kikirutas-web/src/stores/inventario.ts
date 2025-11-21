@@ -51,11 +51,11 @@ export const useInventarioStore = defineStore('inventario', {
     },
 
     persist() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.$state));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(this.$state));
     },
 
     load() {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = sessionStorage.getItem(STORAGE_KEY);
       if (!raw) return;
       try {
         Object.assign(this, JSON.parse(raw));

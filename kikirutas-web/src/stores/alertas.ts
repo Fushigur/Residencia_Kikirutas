@@ -62,13 +62,13 @@ export const useAlertasStore = defineStore('alertas', {
 
   actions: {
     persist() {
-      localStorage.setItem(
+      sessionStorage.setItem(
         STORAGE_KEY,
         JSON.stringify({ items: this.items, filtros: this.filtros })
       );
     },
     load() {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = sessionStorage.getItem(STORAGE_KEY);
       if (!raw) return;
       try {
         const data = JSON.parse(raw);

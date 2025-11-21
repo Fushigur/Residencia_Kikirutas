@@ -28,23 +28,40 @@ export const ROLE_STORAGE_KEY =
 
 /* ─────────────── Helpers de token / storage ─────────────── */
 export function getStoredToken(): string | null {
-  return localStorage.getItem(TOKEN_STORAGE_KEY)
+  try {
+    return sessionStorage.getItem(TOKEN_STORAGE_KEY)
+  } catch {
+    return null
+  }
 }
 
 export function setApiToken(token: string | null) {
-  if (token) {
-    api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-    localStorage.setItem(TOKEN_STORAGE_KEY, token)
-  } else {
-    delete api.defaults.headers.common['Authorization']
-    localStorage.removeItem(TOKEN_STORAGE_KEY)
+  try {
+    if (token) {
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      sessionStorage.setItem(TOKEN_STORAGE_KEY, token)
+    } else {
+      delete api.defaults.headers.common['Authorization']
+      sessionStorage.removeItem(TOKEN_STORAGE_KEY)
+    }
+  } catch {
+    // Si sessionStorage falla, al menos mantenemos/eliminamos el header
+    if (token) {
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+    } else {
+      delete api.defaults.headers.common['Authorization']
+    }
   }
 }
 
 export function clearAuthStorage() {
-  localStorage.removeItem(TOKEN_STORAGE_KEY)
-  localStorage.removeItem(USER_STORAGE_KEY)
-  localStorage.removeItem(ROLE_STORAGE_KEY)
+  try {
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY)
+    sessionStorage.removeItem(USER_STORAGE_KEY)
+    sessionStorage.removeItem(ROLE_STORAGE_KEY)
+  } catch {
+    // ignore
+  }
 }
 
 /* ─────────────── Tipos / helpers de errores ─────────────── */

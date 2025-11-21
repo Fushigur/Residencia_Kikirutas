@@ -44,7 +44,6 @@ const routes: RouteRecordRaw[] = [
     redirect: () => {
       const auth = useAuthStore()
       auth.logout?.()
-      localStorage.removeItem('auth_token')
       return { name: 'login' }
     },
   },
