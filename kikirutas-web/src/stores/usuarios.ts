@@ -168,19 +168,25 @@ export const useUsuariosStore = defineStore('usuarios', {
       Object.assign(u, upd)
     },
 
+    // ---------- ELIMINAR USUARIO ----------
+    async remove(id: string) {
+      await api.delete(`/usuarios/${id}`)
+      this.items = this.items.filter((u) => u.id !== id)
+    },
+
     // ---------- RESET PASSWORD (solo front, sin backend) ----------
     /**
      * Mantengo esta función síncrona para que siga funcionando
      * con tu componente actual. Genera una contraseña temporal
      * y la devuelve (puedes luego implementar el endpoint real).
      */
-/*     resetPassword(id: string): string | null {
-      const u = this.byId(id)
-      if (!u) return null
-
-      const temp = Math.random().toString(36).slice(2, 10)
-      console.warn('Contraseña temporal para usuario', id, temp)
-      return temp
-    }, */
+    /*     resetPassword(id: string): string | null {
+          const u = this.byId(id)
+          if (!u) return null
+    
+          const temp = Math.random().toString(36).slice(2, 10)
+          console.warn('Contraseña temporal para usuario', id, temp)
+          return temp
+        }, */
   },
 })
