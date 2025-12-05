@@ -14,21 +14,21 @@ use Illuminate\Http\Request;
 Route::get('/health', function () {
     return response()->json([
         'status' => 'ok',
-        'time'   => now()->toISOString(),
+        'time' => now()->toISOString(),
     ]);
 });
 
 
 // ---------- Auth públicas ----------
 Route::prefix('auth')->group(function () {
-    Route::post('login',    [AuthController::class, 'login'])->name('auth.login');
+    Route::post('login', [AuthController::class, 'login'])->name('auth.login');
     Route::post('register', [AuthController::class, 'register'])->name('auth.register');
-    Route::get('me',        [AuthController::class, 'me'])->middleware('auth:sanctum')->name('auth.me');
-    Route::post('logout',   [AuthController::class, 'logout'])->middleware('auth:sanctum')->name('auth.logout');
+    Route::get('me', [AuthController::class, 'me'])->middleware('auth:sanctum')->name('auth.me');
+    Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanctum')->name('auth.logout');
 
     // Recuperación de contraseña
     Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->name('auth.forgot');
-    Route::post('reset-password',  [AuthController::class, 'resetPassword'])->name('auth.reset');
+    Route::post('reset-password', [AuthController::class, 'resetPassword'])->name('auth.reset');
     // Editar perfil
     Route::put('profile', [AuthController::class, 'updateProfile'])
         ->middleware('auth:sanctum')
@@ -43,26 +43,26 @@ Route::prefix('auth')->group(function () {
 });
 
 // ---------- Rutas protegidas ----------
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('usuario/dashboard', [PedidoController::class, 'dashboardUsuario'])
         ->name('usuario.dashboard');
 
     // Rutas (Admin/Operador)
-    Route::get('rutas',           [RutaController::class, 'index'])->name('rutas.index');
-    Route::post('rutas',          [RutaController::class, 'store'])->name('rutas.store');
-    Route::get('rutas/{ruta}',    [RutaController::class, 'show'])->name('rutas.show');
-    Route::put('rutas/{ruta}',    [RutaController::class, 'update'])->name('rutas.update');
+    Route::get('rutas', [RutaController::class, 'index'])->name('rutas.index');
+    Route::post('rutas', [RutaController::class, 'store'])->name('rutas.store');
+    Route::get('rutas/{ruta}', [RutaController::class, 'show'])->name('rutas.show');
+    Route::put('rutas/{ruta}', [RutaController::class, 'update'])->name('rutas.update');
     Route::delete('rutas/{ruta}', [RutaController::class, 'destroy'])->name('rutas.destroy');
 
-    Route::post('rutas/{id}/pedidos/{pid}',   [RutaController::class, 'assignPedido'])->name('rutas.assignPedido');
+    Route::post('rutas/{id}/pedidos/{pid}', [RutaController::class, 'assignPedido'])->name('rutas.assignPedido');
     Route::delete('rutas/{id}/pedidos/{pid}', [RutaController::class, 'unassignPedido'])->name('rutas.unassignPedido');
 
     // Pedidos
-    Route::get('pedidos',               [PedidoController::class, 'index'])->name('pedidos.index');
-    Route::post('pedidos',              [PedidoController::class, 'store'])->name('pedidos.store'); 
-    Route::get('pedidos/{pedido}',      [PedidoController::class, 'show'])->name('pedidos.show');
-    Route::put('pedidos/{pedido}',      [PedidoController::class, 'update'])->name('pedidos.update');
-    Route::delete('pedidos/{pedido}',   [PedidoController::class, 'destroy'])->name('pedidos.destroy');
+    Route::get('pedidos', [PedidoController::class, 'index'])->name('pedidos.index');
+    Route::post('pedidos', [PedidoController::class, 'store'])->name('pedidos.store');
+    Route::get('pedidos/{pedido}', [PedidoController::class, 'show'])->name('pedidos.show');
+    Route::put('pedidos/{pedido}', [PedidoController::class, 'update'])->name('pedidos.update');
+    Route::delete('pedidos/{pedido}', [PedidoController::class, 'destroy'])->name('pedidos.destroy');
     Route::patch('pedidos/{id}/estado', [PedidoController::class, 'setEstado'])->name('pedidos.setEstado');
 
     Route::apiResource('productos', ProductoController::class);
@@ -75,12 +75,17 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('inventario.upsert');
 
     // === PRODUCTOS ===
-    Route::get('/productos',        [ProductoController::class, 'index']);
-    Route::post('/productos',       [ProductoController::class, 'store']);
-    Route::put('/productos/{id}',   [ProductoController::class, 'update']);
-    Route::delete('/productos/{id}',[ProductoController::class, 'destroy']);
+    Route::get('/productos', [ProductoController::class, 'index']);
+    Route::post('/productos', [ProductoController::class, 'store']);
+    Route::put('/productos/{id}', [ProductoController::class, 'update']);
+    Route::delete('/productos/{id}', [ProductoController::class, 'destroy']);
+
+    // === USUARIOS ===
+    Route::get('/usuarios', [UsuarioController::class, 'index']);
+    Route::post('/usuarios', [UsuarioController::class, 'store']);
+    Route::put('/usuarios/{id}', [UsuarioController::class, 'update']);
+    Route::delete('/usuarios/{id}', [UsuarioController::class, 'destroy']);
+
 });
 
-Route::get('/usuarios', [UsuarioController::class, 'index']);
-Route::post('/usuarios', [UsuarioController::class, 'store']);
-Route::put('/usuarios/{id}', [UsuarioController::class, 'update']);
+

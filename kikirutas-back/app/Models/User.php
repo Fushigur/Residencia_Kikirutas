@@ -22,6 +22,7 @@ class User extends Authenticatable
         'comunidad',
         'municipio',
         'estado',
+        'activo',
     ];
 
 
@@ -44,16 +45,16 @@ class User extends Authenticatable
     // normalizado: admin | operator | user
     public function getRoleNameAttribute(): string
     {
-        return (string)($this->role->nombre ?? 'user');
+        return (string) ($this->role->nombre ?? 'user');
     }
 
     // legible: Admin | Operador | Usuaria
     public function getRoleReadableAttribute(): string
     {
         return match ($this->role_name) {
-            'admin'    => 'Admin',
+            'admin' => 'Admin',
             'operator' => 'Operador',
-            default    => 'Usuaria',
+            default => 'Usuaria',
         };
     }
 }

@@ -16,7 +16,7 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $data = $request->validate([
-            'email'    => ['required', 'email'],
+            'email' => ['required', 'email'],
             'password' => ['required', 'string'],
             'expected' => ['nullable', Rule::in(['admin', 'operator', 'user'])],
         ]);
@@ -32,6 +32,10 @@ class AuthController extends Controller
             return response()->json(['message' => 'Contraseña incorrecta.'], 422);
         }
 
+        if (!$user->activo) {
+            return response()->json(['message' => 'Tu cuenta ha sido desactivada. Contacta al administrador.'], 403);
+        }
+
         $roleName = $user->role_name;      // 'admin' | 'operator' | 'user'
         $roleText = $user->role_readable;  // 'Admin' | 'Operador' | 'Usuaria'
 
@@ -45,19 +49,19 @@ class AuthController extends Controller
 
         return response()->json([
             'token' => $token,
-            'user'  => [
-                'id'        => $user->id,
-                'name'      => $user->name,
-                'email'     => $user->email,
-                'edad'      => $user->edad,
-                'telefono'      => $user->telefono,
-                'role'      => $roleName,
-                'sexo'      => $user->sexo,
-                'roleText'  => $roleText,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'edad' => $user->edad,
+                'telefono' => $user->telefono,
+                'role' => $roleName,
+                'sexo' => $user->sexo,
+                'roleText' => $roleText,
                 // Datos de ubicación (si existen en la tabla users)
                 'comunidad' => $user->comunidad,
                 'municipio' => $user->municipio,
-                'estado'    => $user->estado,
+                'estado' => $user->estado,
             ],
         ]);
     }
@@ -72,26 +76,26 @@ class AuthController extends Controller
                 ?? $request->input('localidad'),
             'municipio' => $request->input('municipio')
                 ?? $request->input('municipioNombre'),
-            'estado'    => $request->input('estado')
+            'estado' => $request->input('estado')
                 ?? $request->input('estadoNombre'),
         ]);
 
         $validated = $request->validate([
-            'name'      => ['required', 'string', 'max:120'],
-            'email'     => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password'  => ['required', 'string', 'min:8', 'confirmed'], // password_confirmation
-            'role'      => ['nullable', Rule::in(['user', 'operator'])],
-            'role_id'   => ['nullable', 'integer', Rule::in([2, 3])],   // 2=operator, 3=user
+            'name' => ['required', 'string', 'max:120'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'], // password_confirmation
+            'role' => ['nullable', Rule::in(['user', 'operator'])],
+            'role_id' => ['nullable', 'integer', Rule::in([2, 3])],   // 2=operator, 3=user
             'nombreRol' => ['nullable', 'string'],
 
-            'telefono'  => ['nullable', 'string', 'max:20'],
-            'sexo'      => ['nullable', 'string', 'max:20'],
-            'edad'      => ['nullable', 'integer', 'min:10', 'max:120'],
+            'telefono' => ['nullable', 'string', 'max:20'],
+            'sexo' => ['nullable', 'string', 'max:20'],
+            'edad' => ['nullable', 'integer', 'min:10', 'max:120'],
 
             // Campos opcionales de ubicación
             'comunidad' => ['nullable', 'string', 'max:120'],
             'municipio' => ['nullable', 'string', 'max:120'],
-            'estado'    => ['nullable', 'string', 'max:120'],
+            'estado' => ['nullable', 'string', 'max:120'],
         ]);
 
         $roleId = $this->resolveRoleId(
@@ -106,20 +110,20 @@ class AuthController extends Controller
 
         /** @var User $user */
         $user = User::create([
-            'name'      => $validated['name'],
-            'email'     => $validated['email'],
-            'password'  => Hash::make($validated['password']),
-            'role_id'   => $roleId ?? 3, // por defecto Usuaria
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'role_id' => $roleId ?? 3, // por defecto Usuaria
 
             // contacto
-            'telefono'  => $validated['telefono'] ?? null,
-            'sexo'      => $validated['sexo'] ?? null,
-            'edad'      => $validated['edad'] ?? null,
+            'telefono' => $validated['telefono'] ?? null,
+            'sexo' => $validated['sexo'] ?? null,
+            'edad' => $validated['edad'] ?? null,
 
             // ubicación
             'comunidad' => $validated['comunidad'] ?? null,
             'municipio' => $validated['municipio'] ?? null,
-            'estado'    => $validated['estado'] ?? null,
+            'estado' => $validated['estado'] ?? null,
         ]);
 
         $user->load('role');
@@ -127,18 +131,18 @@ class AuthController extends Controller
 
         return response()->json([
             'token' => $token,
-            'user'  => [
-                'id'        => $user->id,
-                'name'      => $user->name,
-                'email'     => $user->email,
-                'role'      => $user->role_name,
-                'roleText'  => $user->role_readable,
-                'telefono'  => $user->telefono,
-                'sexo'      => $user->sexo,
-                'edad'      => $user->edad,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role_name,
+                'roleText' => $user->role_readable,
+                'telefono' => $user->telefono,
+                'sexo' => $user->sexo,
+                'edad' => $user->edad,
                 'comunidad' => $user->comunidad,
                 'municipio' => $user->municipio,
-                'estado'    => $user->estado,
+                'estado' => $user->estado,
             ],
         ], 201);
 
@@ -151,20 +155,20 @@ class AuthController extends Controller
         $u = $request->user()->load('role');
 
         return response()->json([
-            'id'        => $u->id,
-            'name'      => $u->name,
-            'email'     => $u->email,
-            'role'      => $u->role_name,
-            'roleText'  => $u->role_readable,
+            'id' => $u->id,
+            'name' => $u->name,
+            'email' => $u->email,
+            'role' => $u->role_name,
+            'roleText' => $u->role_readable,
 
             // Nuevos campos
-            'telefono'  => $u->telefono,
-            'sexo'      => $u->sexo,
-            'edad'      => $u->edad,
+            'telefono' => $u->telefono,
+            'sexo' => $u->sexo,
+            'edad' => $u->edad,
 
             'comunidad' => $u->comunidad,
             'municipio' => $u->municipio,
-            'estado'    => $u->estado,
+            'estado' => $u->estado,
         ]);
     }
 
@@ -176,10 +180,10 @@ class AuthController extends Controller
 
         // Validamos solo lo que sí puede cambiar la usuaria
         $data = $request->validate([
-            'name'     => ['nullable', 'string', 'max:120'],
+            'name' => ['nullable', 'string', 'max:120'],
             'telefono' => ['nullable', 'string', 'max:20'],
-            'sexo'     => ['nullable', 'string', 'max:20'],
-            'edad'     => ['nullable', 'integer', 'min:10', 'max:120'],
+            'sexo' => ['nullable', 'string', 'max:20'],
+            'edad' => ['nullable', 'integer', 'min:10', 'max:120'],
             // si en un futuro quieres permitir cambio de comunidad/municipio/estado,
             // los agregamos aquí y manejamos la lógica de aprobación aparte.
         ]);
@@ -203,17 +207,17 @@ class AuthController extends Controller
         $u->load('role');
 
         return response()->json([
-            'id'        => $u->id,
-            'name'      => $u->name,
-            'email'     => $u->email,
-            'role'      => $u->role_name,
-            'roleText'  => $u->role_readable,
-            'telefono'  => $u->telefono,
-            'sexo'      => $u->sexo,
-            'edad'      => $u->edad,
+            'id' => $u->id,
+            'name' => $u->name,
+            'email' => $u->email,
+            'role' => $u->role_name,
+            'roleText' => $u->role_readable,
+            'telefono' => $u->telefono,
+            'sexo' => $u->sexo,
+            'edad' => $u->edad,
             'comunidad' => $u->comunidad,
             'municipio' => $u->municipio,
-            'estado'    => $u->estado,
+            'estado' => $u->estado,
         ]);
     }
 
@@ -247,8 +251,8 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         $request->validate([
-            'token'    => ['required', 'string'],
-            'email'    => ['required', 'email'],
+            'token' => ['required', 'string'],
+            'email' => ['required', 'email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
@@ -283,21 +287,26 @@ class AuthController extends Controller
 
         if ($role) {
             $v = strtolower(trim($role));
-            if (str_contains($v, 'oper')) return 2;
-            if (str_contains($v, 'user') || str_contains($v, 'usu')) return 3;
+            if (str_contains($v, 'oper'))
+                return 2;
+            if (str_contains($v, 'user') || str_contains($v, 'usu'))
+                return 3;
         }
 
         if ($nombreRol) {
             $v = strtolower(trim($nombreRol));
-            if (str_starts_with($v, 'oper')) return 2;
-            if (str_starts_with($v, 'usu'))  return 3;
+            if (str_starts_with($v, 'oper'))
+                return 2;
+            if (str_starts_with($v, 'usu'))
+                return 3;
         }
 
         if ($role) {
             $guess = $this->guessRoleNombre(strtolower(trim($role)));
             if ($guess) {
                 $id = Role::where('nombre', $guess)->value('id');
-                if ($id) return (int) $id;
+                if ($id)
+                    return (int) $id;
             }
         }
 
@@ -305,7 +314,8 @@ class AuthController extends Controller
             $guess = $this->guessRoleNombre(strtolower(trim($nombreRol)));
             if ($guess) {
                 $id = Role::where('nombre', $guess)->value('id');
-                if ($id) return (int) $id;
+                if ($id)
+                    return (int) $id;
             }
         }
 
@@ -314,41 +324,44 @@ class AuthController extends Controller
 
     private function guessRoleNombre(string $v): ?string
     {
-        if (str_contains($v, 'adm')) return 'admin';
-        if (str_contains($v, 'oper') || str_contains($v, 'driver') || str_contains($v, 'chofer')) return 'operador';
-        if (str_contains($v, 'user') || str_contains($v, 'usu')) return 'usuaria';
+        if (str_contains($v, 'adm'))
+            return 'admin';
+        if (str_contains($v, 'oper') || str_contains($v, 'driver') || str_contains($v, 'chofer'))
+            return 'operador';
+        if (str_contains($v, 'user') || str_contains($v, 'usu'))
+            return 'usuaria';
         return null;
     }
 
-        /* ==================== OPERADORES ==================== */
-        public function operators(Request $request)
-        {
-            // Operadores = usuarios con role_id = 2
-            $q = User::query()
-                ->where('role_id', 2);
+    /* ==================== OPERADORES ==================== */
+    public function operators(Request $request)
+    {
+        // Operadores = usuarios con role_id = 2
+        $q = User::query()
+            ->where('role_id', 2);
 
-            // (Opcional) filtros por estado / municipio / comunidad
-            if ($request->filled('estado')) {
-                $q->where('estado', $request->input('estado'));
-            }
-            if ($request->filled('municipio')) {
-                $q->where('municipio', $request->input('municipio'));
-            }
-            if ($request->filled('comunidad')) {
-                $q->where('comunidad', $request->input('comunidad'));
-            }
-
-            $ops = $q->orderBy('name')->get([
-                'id',
-                'name',
-                'email',
-                'telefono',
-                'comunidad',
-                'municipio',
-                'estado',
-            ]);
-
-            return response()->json($ops);
+        // (Opcional) filtros por estado / municipio / comunidad
+        if ($request->filled('estado')) {
+            $q->where('estado', $request->input('estado'));
         }
+        if ($request->filled('municipio')) {
+            $q->where('municipio', $request->input('municipio'));
+        }
+        if ($request->filled('comunidad')) {
+            $q->where('comunidad', $request->input('comunidad'));
+        }
+
+        $ops = $q->orderBy('name')->get([
+            'id',
+            'name',
+            'email',
+            'telefono',
+            'comunidad',
+            'municipio',
+            'estado',
+        ]);
+
+        return response()->json($ops);
+    }
 
 }

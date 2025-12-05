@@ -19,9 +19,10 @@ class UsuarioController extends Controller
             'email' => 'required|email|unique:users,email',
             'telefono' => 'nullable|string|max:20',
             'comunidad' => 'nullable|string|max:120',
-            'role_id' => 'required|integer|in:1,2,3'
+            'role_id' => 'required|integer|in:1,2,3',
         ]);
 
+        // contraseña temporal por defecto
         $data['password'] = bcrypt('12345678');
 
         $u = User::create($data);
@@ -45,5 +46,19 @@ class UsuarioController extends Controller
         $u->update($data);
 
         return $u;
+    }
+
+    public function destroy($id)
+    {
+        $u = User::findOrFail($id);
+
+        // (Opcional) evitar que un admin se elimine a sí mismo o borrar al súper admin
+        // if ($u->role_id === 1) {
+        //     return response()->json(['message' => 'No puedes eliminar a este usuario.'], 403);
+        // }
+
+        $u->delete();
+
+        return response()->json(['message' => 'Usuario eliminado correctamente.'], 200);
     }
 }
