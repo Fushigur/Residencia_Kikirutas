@@ -91,14 +91,14 @@
         <span class="tab-label">Reportes</span>
       </RouterLink>
     </nav>
-    <AdminOrderAlert />
+    <GlobalAlert />
   </div>
 </template>
 
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import AdminOrderAlert from '@/components/AdminOrderAlert.vue'
+import GlobalAlert from '@/components/GlobalAlert.vue'
 
 const route = useRoute()
 const router = useRouter()

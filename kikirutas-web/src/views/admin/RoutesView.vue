@@ -5,6 +5,8 @@ import api from '@/api'
 import { useRutasStore } from '@/stores/rutas'
 import { usePedidosStore, type Pedido } from '@/stores/pedidos'
 import { useProductosStore } from '@/stores/productos'
+import { useAlertasStore } from '@/stores/alertas'
+import ConfirmationModal from '@/components/ConfirmationModal.vue'
 import { templates } from '@/stores/rutas';
 import { formatFechaLarga } from '@/utils/dateFormat'
 import { formatFechaCorta } from '@/utils/dateFormat'
@@ -40,6 +42,7 @@ async function crearDesdePlantilla() {
 const rutas = useRutasStore()
 const pedidos = usePedidosStore()
 const productos = useProductosStore()
+const alertas = useAlertasStore()
 
 /* ---------- Router (para preselección desde OrdersBoard) ---------- */
 const route = useRoute()
@@ -187,7 +190,19 @@ async function asignarSeleccion() {
   }
 
   if (failCount > 0) {
-    alert(`Se asignaron ${successCount} pedidos. Hubo problemas con ${failCount}. Revisa la consola o intenta de nuevo.`)
+    alertas.add({
+      titulo: 'Atención',
+      mensaje: `Se asignaron ${successCount} pedidos. Hubo problemas con ${failCount}.`,
+      tipo: 'pedido',
+      severidad: 'warning'
+    })
+  } else {
+    alertas.add({
+      titulo: 'Éxito',
+      mensaje: `Se asignaron ${successCount} pedidos correctamente.`,
+      tipo: 'pedido',
+      severidad: 'info'
+    })
   }
 
   clearSeleccion()
@@ -206,6 +221,29 @@ function marcarEnRuta(pid: string) {
 function marcarEntregado(pid: string) {
   pedidos.setEstado(pid, 'entregado')
 }
+
+/* ---------- Confirmaciones personalizadas ---------- */
+const showConfirm = ref(false)
+const confirmTitle = ref('')
+const confirmMessage = ref('')
+const confirmAction = ref<(() => void) | null>(null)
+const confirmDanger = ref(false)
+const confirmTextButton = ref('Confirmar')
+
+function openConfirm(title: string, msg: string, action: () => void, danger = false, btnText = 'Confirmar') {
+  confirmTitle.value = title
+  confirmMessage.value = msg
+  confirmAction.value = action
+  confirmDanger.value = danger
+  confirmTextButton.value = btnText
+  showConfirm.value = true
+}
+
+function handleConfirm() {
+  if (confirmAction.value) confirmAction.value()
+  showConfirm.value = false
+}
+
 
 function marcarTodosEntregados() {
   if (!rutaSel.value) return
@@ -291,19 +329,34 @@ const canDeleteRuta = computed(() => !!rutaSel.value && rutaSel.value.pedidos.le
 async function eliminarRuta() {
   if (!rutaSel.value) return
   if (!canDeleteRuta.value) return
-  if (confirm('¿Eliminar esta ruta? Esta acción no se puede deshacer.')) {
-    const ok = await rutas.remove(rutaSel.value.id)
-    if (ok) selectedRutaId.value = null
-  }
+  if (!canDeleteRuta.value) return
+
+  openConfirm(
+    '¿Eliminar ruta?',
+    'Se eliminará esta ruta vacía permanentemente. Esta acción no se puede deshacer.',
+    async () => {
+      const ok = await rutas.remove(rutaSel.value!.id)
+      if (ok) selectedRutaId.value = null
+    },
+    true,
+    'Eliminar'
+  )
 }
 
 async function eliminarRutaForzada() {
   if (!rutaSel.value) return
   if (rutaSel.value.pedidos.length === 0) return eliminarRuta()
-  if (confirm('La ruta tiene pedidos. Se regresarán a "pendiente" y se eliminará la ruta. ¿Continuar?')) {
-    const ok = await rutas.removeAndUnassign(rutaSel.value.id)
-    if (ok) selectedRutaId.value = null
-  }
+
+  openConfirm(
+    '¿Eliminar ruta forzosamente?',
+    'La ruta tiene pedidos asignados. Se regresarán a "pendiente" y se eliminará la ruta. ¿Continuar?',
+    async () => {
+      const ok = await rutas.removeAndUnassign(rutaSel.value!.id)
+      if (ok) selectedRutaId.value = null
+    },
+    true,
+    'Eliminar y desasignar'
+  )
 }
 
 </script>
@@ -566,6 +619,10 @@ async function eliminarRutaForzada() {
       </section>
 
     </div>
+
+    <!-- Modal de confirmación -->
+    <ConfirmationModal :show="showConfirm" :title="confirmTitle" :message="confirmMessage" :danger="confirmDanger"
+      :confirm-text="confirmTextButton" @close="showConfirm = false" @confirm="handleConfirm" />
   </div>
 </template>
 
