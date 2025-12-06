@@ -5,7 +5,8 @@ import { useRoute } from 'vue-router';
 import { usePedidosStore, type Pedido } from '@/stores/pedidos'
 import { useRutasStore } from '@/stores/rutas'
 import { useProductosStore } from '@/stores/productos'
-import { formatFechaCorta } from '@/utils/dateFormat' 
+import { formatFechaCorta } from '@/utils/dateFormat'
+import CancellationModal from '@/components/CancellationModal.vue'
 
 /* Stores */
 const pedidos = usePedidosStore()
@@ -20,10 +21,10 @@ onMounted(() => {
   productos.load()
   productos.seedDefaults()
 
-/*   const pre = String(route.query.select || '');
-  if (pre && pedidos.byId(pre) && !toAssign.value.includes(pre)) {
-    toAssign.value.push(pre);
-  } */
+  /*   const pre = String(route.query.select || '');
+    if (pre && pedidos.byId(pre) && !toAssign.value.includes(pre)) {
+      toAssign.value.push(pre);
+    } */
 })
 
 /* --------- Filtros --------- */
@@ -82,15 +83,33 @@ function marcarEntregado(id: string) {
   pedidos.setEstado(id, 'entregado')
 }
 
+/* Modal cancelación */
+const showCancelModal = ref(false)
+const selectedOrderForCancel = ref<string | null>(null)
+
 function cancelarPedido(id: string) {
-  const reason = prompt('Motivo de cancelación (opcional):') || ''
+  selectedOrderForCancel.value = id
+  showCancelModal.value = true
+}
+
+function confirmCancel(reason: string) {
+  const id = selectedOrderForCancel.value
+  if (!id) return
+
   const p = pedidos.byId(id)
-  if (p && reason) {
-    const tag = `Cancelado: ${reason}`
-    p.observaciones = p.observaciones ? `${p.observaciones} | ${tag}` : tag
-    pedidos.persist()
+  if (p) {
+    // Si hay motivo, lo agregamos a observaciones
+    if (reason) {
+      const tag = `Cancelado: ${reason}`
+      p.observaciones = p.observaciones ? `${p.observaciones} | ${tag}` : tag
+      pedidos.persist()
+    }
+    // Cambiar estado
+    pedidos.setEstado(id, 'cancelado')
   }
-  pedidos.setEstado(id, 'cancelado')
+
+  showCancelModal.value = false
+  selectedOrderForCancel.value = null
 }
 
 // Borrado seguro: solo si está PENDIENTE y sin ruta
@@ -128,12 +147,8 @@ function estadoChipClasses(e: Pedido['estado']) {
       <div class="grid md:grid-cols-5 gap-3">
         <div class="md:col-span-2">
           <label class="block text-sm mb-1">Buscar</label>
-          <input
-            v-model="q"
-            type="text"
-            class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2"
-            placeholder="Folio, producto, solicitante, comunidad o ruta…"
-          />
+          <input v-model="q" type="text" class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2"
+            placeholder="Folio, producto, solicitante, comunidad o ruta…" />
         </div>
 
         <div>
@@ -149,12 +164,14 @@ function estadoChipClasses(e: Pedido['estado']) {
 
         <div>
           <label class="block text-sm mb-1">Desde</label>
-          <input v-model="fechaIni" type="date" class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2" />
+          <input v-model="fechaIni" type="date"
+            class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2" />
         </div>
 
         <div>
           <label class="block text-sm mb-1">Hasta</label>
-          <input v-model="fechaFin" type="date" class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2" />
+          <input v-model="fechaFin" type="date"
+            class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2" />
         </div>
       </div>
     </div>
@@ -163,8 +180,7 @@ function estadoChipClasses(e: Pedido['estado']) {
     <div class="rounded-xl bg-white/5 border border-white/10 p-0 overflow-x-auto">
       <!-- ancho mínimo para que no se achoche -->
       <table class="w-full min-w-[1150px] table-fixed text-sm">
-        <thead
-          class="sticky top-0 z-10 bg-neutral-950/80 backdrop-blur border-b border-white/10 text-white/60">
+        <thead class="sticky top-0 z-10 bg-neutral-950/80 backdrop-blur border-b border-white/10 text-white/60">
           <tr>
             <th class="text-left py-3 px-3 w-[90px]">Folio</th>
             <th class="text-left px-3 w-[220px]">Producto</th>
@@ -181,10 +197,7 @@ function estadoChipClasses(e: Pedido['estado']) {
         </thead>
 
         <tbody>
-          <tr
-            v-for="p in list"
-            :key="p.id"
-            class="border-b border-white/10 hover:bg-white/5 transition-colors">
+          <tr v-for="p in list" :key="p.id" class="border-b border-white/10 hover:bg-white/5 transition-colors">
             <!-- Folio -->
             <td class="py-3 px-3 font-medium">{{ p.folio }}</td>
 
@@ -216,16 +229,15 @@ function estadoChipClasses(e: Pedido['estado']) {
             <!-- Estado -->
             <td class="px-3">
               <span :class="estadoChipClasses(p.estado)">{{ p.estado }}</span>
-              <div v-if="p.observaciones" class="text-[11px] text-white/60 mt-1 max-w-[180px] truncate" :title="p.observaciones">
+              <div v-if="p.observaciones" class="text-[11px] text-white/60 mt-1 max-w-[180px] truncate"
+                :title="p.observaciones">
                 {{ p.observaciones }}
               </div>
             </td>
 
             <!-- Ruta (click para ver) -->
             <td class="px-3">
-              <button
-                v-if="p.routeId"
-                class="text-emerald-300 hover:text-emerald-200 underline underline-offset-4"
+              <button v-if="p.routeId" class="text-emerald-300 hover:text-emerald-200 underline underline-offset-4"
                 @click="goVerRuta(p)">
                 {{ rutas.byId(p.routeId)?.nombre ?? 'Ruta' }}
               </button>
@@ -237,32 +249,25 @@ function estadoChipClasses(e: Pedido['estado']) {
               <div class="flex flex-wrap gap-2">
                 <!-- Pendiente: Asignar (navega a /admin/rutas) -->
                 <!-- antes abría el panel inline; ahora navega a Rutas con query -->
-                <button
-                  class="btn-ghost mt-2 hover:bg-blue-500/20 rounded bg-blue-600 px-3 py-1 text-white"
-                  @click="$router.push({ name:'a.rutas', query:{ select: p.id } })">
+                <button class="btn-ghost mt-2 hover:bg-blue-500/20 rounded bg-blue-600 px-3 py-1 text-white"
+                  @click="$router.push({ name: 'a.rutas', query: { select: p.id } })">
                   Asignar ruta
                 </button>
 
                 <!-- En ruta: marcar entregado -->
-                <button
-                  v-if="p.estado === 'en_ruta'"
-                  class="rounded bg-emerald-600 px-3 py-1 hover:bg-emerald-500">
+                <button v-if="p.estado === 'en_ruta'" class="rounded bg-emerald-600 px-3 py-1 hover:bg-emerald-500">
                   <span @click="marcarEntregado(p.id)">Marcar entregado</span>
                 </button>
 
                 <!-- Cancelar si no está entregado -->
-                <button
-                  v-if="p.estado !== 'entregado' && p.estado !== 'cancelado'"
+                <button v-if="p.estado !== 'entregado' && p.estado !== 'cancelado'"
                   class="inline-flex items-center rounded bg-amber-500 px-3 py-4 text-xs font-medium text-gray-900 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300"
-                  @click="cancelarPedido(p.id)"
-                >
+                  @click="cancelarPedido(p.id)">
                   Cancelar
                 </button>
                 <!-- Borrar: solo pendiente y sin ruta -->
-                <button
-                  v-if="p.estado === 'pendiente' && !p.routeId"
-                  class="rounded bg-rose-700 px-3 py-1 hover:bg-rose-600"
-                  @click="borrarPedido(p.id, p.folio)">
+                <button v-if="p.estado === 'pendiente' && !p.routeId"
+                  class="rounded bg-rose-700 px-3 py-1 hover:bg-rose-600" @click="borrarPedido(p.id, p.folio)">
                   Borrar
                 </button>
               </div>
@@ -275,10 +280,16 @@ function estadoChipClasses(e: Pedido['estado']) {
         </tbody>
       </table>
     </div>
+
+    <CancellationModal :show="showCancelModal" title="Cancelar pedido"
+      message="¿Estás segura? El pedido pasará a estado 'cancelado'. Por favor indica el motivo para el registro."
+      @close="showCancelModal = false" @confirm="confirmCancel" />
   </section>
 </template>
 
 <style scoped>
 /* Para números alineados bonitos */
-.tabular-nums { font-variant-numeric: tabular-nums; }
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
 </style>

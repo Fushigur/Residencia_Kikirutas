@@ -21,12 +21,19 @@ type Pedido = {
 // Si no existe en STATIC_COORDS, se deja el string para que Google lo resuelva.
 function asDirectionsLocation(addr: string): any {
   if (!addr) return addr
-  const c = STATIC_COORDS[addr]
+
+  // Usar versión canónica para que funcione aunque cambien acentos / guiones
+  const canon = canonAddr(addr)
+  const c = STATIC_COORDS_CANON[canon]
+
   if (c && window.google?.maps) {
     return new window.google.maps.LatLng(c.lat, c.lng)
   }
+
+  // Si no hay coord fija, que Google la resuelva con el string
   return addr
 }
+
 
 
 type LatLng = { lat: number, lng: number }
@@ -62,11 +69,35 @@ const STATIC_COORDS: Record<string, LatLng> = {
   'Tihosuco, Quintana Roo': { lat: 20.19546282557715, lng: -88.37403728985683 },
 }
 
+// Normaliza direcciones para compararlas sin importar mayúsculas/acentos/espacios
+function canonAddr(addr: string): string {
+  return (addr ?? '')
+    .normalize('NFD')                     // separa letras y acentos
+    .replace(/[\u0300-\u036f]/g, '')      // quita acentos
+    .toLowerCase()
+    .replace(/[.,]/g, ' ')                // quita puntos/comas
+    .replace(/-/g, ' ')                   // "x yatil" == "x-yatil"
+    .replace(/\s+/g, ' ')                 // colapsa espacios
+    .trim()
+}
+
+// Mapa canónico de las coords estáticas
+const STATIC_COORDS_CANON: Record<string, LatLng> = {}
+const STATIC_LABELS_CANON: Record<string, string> = {}
+
+for (const key in STATIC_COORDS) {
+  const canon = canonAddr(key)
+  STATIC_COORDS_CANON[canon] = STATIC_COORDS[key]
+  STATIC_LABELS_CANON[canon] = key   // para usarlo como título del marcador
+}
+
+
 /* ===================== Stores ===================== */
 const route = useRoute()
 const router = useRouter()
 const rutas = useRutasStore()
 const pedidos = usePedidosStore()
+const mapReady = ref(false)
 
 onMounted(() => { rutas.load?.(); pedidos.load?.() })
 
@@ -282,30 +313,22 @@ function fillFromAssigned() {
   waypointsText.value = addresses.length > 2 ? addresses.slice(1, addresses.length - 1).join('|') : ''
 }
 
-/** Desde UI manual CON detección automática */
-async function fillFromUI(reverse = false) {
+/** Desde UI manual SIN detección automática */
+function fillFromUI(reverse = false) {
   const o = uiOrigin.value
   const d = uiDest.value || o
 
-  // Detectar paradas automáticas (SOLO comunidades de la base seleccionada)
-  const candidates = filteredCommunities.value.filter(c => c !== o && c !== d)
-  const autoStops = await detectStopsAlongPath(o, d, candidates)
-
-  // Combinar paradas manuales + automáticas (sin duplicados)
-  const allStops = [
-    ...uiStops.value,
-    ...autoStops.filter(a => !uiStops.value.includes(a))
-  ]
-
-  // Marcar automáticas en UI
-  markAutoStopsInUI(autoStops)
+  // Paradas: las seleccionadas, evitando duplicar origen/destino
+  const stops = uiStops.value.filter(s => s !== o && s !== d)
 
   originText.value = reverse ? d : o
   destinationText.value = reverse ? o : d
-  waypointsText.value = allStops.join('|')
+  waypointsText.value = stops.join('|')
 
-  return autoStops.length
+  // Opcional: limpiar indicadores de auto-detección
+  autoDetectedStops.value = []
 }
+
 
 /* ===================== Google Maps ===================== */
 const mapEl = ref<HTMLElement | null>(null)
@@ -355,6 +378,61 @@ async function showDefaultMarkers() {
     bounds.extend(pt as any)
   }
   if (!bounds.isEmpty()) map.fitBounds(bounds)
+}
+
+/* ---- marcadores de comunidades de los pedidos ---- */
+let communityMarkers: any[] = []
+
+function clearCommunityMarkers() {
+  communityMarkers.forEach(m => m.setMap(null))
+  communityMarkers = []
+}
+
+// Muestra un pin por cada comunidad de los pedidos de la ruta actual.
+// Solo usa coordenadas fijas (STATIC_COORDS), sin geocoder externo.
+function showCommunityMarkersFromPedidos() {
+  if (!map) {
+    console.warn('[showCommunityMarkersFromPedidos] mapa aún no está listo')
+    return
+  }
+
+  clearCommunityMarkers()
+
+  const pedidosList = pedidosRuta.value ?? []
+  if (!pedidosList.length) return
+
+  const canonSet = new Set<string>()
+  const bounds = new window.google.maps.LatLngBounds()
+
+  for (const pedido of pedidosList) {
+    const comunidadLimpia = cleanCommunity(pedido.solicitanteComunidad)
+    if (!comunidadLimpia) continue
+
+    const addr = toAddress(comunidadLimpia)      // "Dzula" -> "Dzula, Quintana Roo"
+    const canon = canonAddr(addr)               // "dzula quintana roo"
+
+    if (canonSet.has(canon)) continue           // ya dibujamos esta comunidad
+    canonSet.add(canon)
+
+    const coord = STATIC_COORDS_CANON[canon]
+    if (!coord) {
+      console.warn('[showCommunityMarkersFromPedidos] comunidad sin coords fijas:', addr)
+      continue
+    }
+
+    const marker = new window.google.maps.Marker({
+      map,
+      position: coord as any,
+      title: STATIC_LABELS_CANON[canon] ?? addr,
+    })
+
+    communityMarkers.push(marker)
+    bounds.extend(marker.getPosition()!)
+  }
+
+  if (!bounds.isEmpty()) {
+    map.fitBounds(bounds)
+  }
 }
 
 function drawRoute() {
@@ -413,9 +491,11 @@ function resetView() { // reiniciar vista al último bounds conocido
   const b = d?.routes?.[0]?.bounds
   if (b) map.fitBounds(b)
 }
+
 function clearAll() {
   lastSig = ''; legs.value = []; autoDetectedStops.value = []
   dirRnd?.set('directions', null)
+  clearCommunityMarkers()
   showDefaultMarkers()
 }
 
@@ -429,28 +509,36 @@ try { geoCache = JSON.parse(sessionStorage.getItem(GEO_CACHE_KEY) || '{}') } cat
 function saveGeo() { sessionStorage.setItem(GEO_CACHE_KEY, JSON.stringify(geoCache)) }
 
 async function geocodeOSM(addr: string): Promise<LatLng | null> {
-  // 1) Primero usar coordenadas fijas si existen (bases y comunidades)
-  if (STATIC_COORDS[addr]) {
-    return STATIC_COORDS[addr]
+  if (!addr) return null
+
+  const canon = canonAddr(addr)
+
+  // 1) Primero usar coordenadas fijas (bases y comunidades)
+  const staticHit = STATIC_COORDS_CANON[canon]
+  if (staticHit) {
+    return staticHit
   }
 
-  // 2) Después cache local
-  if (geoCache[addr]) return geoCache[addr]
+  // 2) Después cache local (también por clave canónica)
+  if (geoCache[canon]) return geoCache[canon]
 
-  // 3) Si no está en estático, pedir a Nominatim
+  // 3) Si no está en estático, pedir a Nominatim UNA sola vez
   try {
     const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(addr)}`
     const res = await fetch(url, { headers: { 'Accept-Language': 'es' } })
     const data = await res.json()
     if (Array.isArray(data) && data[0]) {
       const pt = { lat: Number(data[0].lat), lng: Number(data[0].lon) }
-      geoCache[addr] = pt; saveGeo(); return pt
+      geoCache[canon] = pt
+      saveGeo()
+      return pt
     }
   } catch {
     // silencioso
   }
   return null
 }
+
 
 function haversineKm(a: LatLng, b: LatLng) {
   const R = 6371, dLat = (b.lat - a.lat) * Math.PI / 180, dLng = (b.lng - a.lng) * Math.PI / 180
@@ -502,26 +590,20 @@ const emprPorLocalidad = computed(() => {
 })
 
 /* ===================== Acciones UI ===================== */
-async function trazadoOptimizado() {
-  const autoCount = await fillFromUI(false)
+function trazadoOptimizado() {
+  // Origen -> Destino con las paradas seleccionadas
+  fillFromUI(false)
   drawRouteDebounced()
   computeNearbyToDestination()
-
-  // Mostrar mensaje informativo
-  if (autoCount > 0) {
-    console.log(`Se agregaron ${autoCount} comunidades de paso automáticamente`)
-  }
 }
-async function trazadoRegreso() {
-  const autoCount = await fillFromUI(true)
+
+function trazadoRegreso() {
+  // Destino -> Origen con las mismas paradas
+  fillFromUI(true)
   drawRouteDebounced()
   computeNearbyToDestination()
-
-  // Mostrar mensaje informativo
-  if (autoCount > 0) {
-    console.log(`Se agregaron ${autoCount} comunidades de paso automáticamente`)
-  }
 }
+
 function limpiarRuta() {
   clearStops()
   autoDetectedStops.value = []
@@ -546,9 +628,26 @@ async function marcarEntregado(id: string) {
   // se actualizarán en automático. En otras pestañas, se verá al recargar.
 }
 
+function buildRouteFromCurrentSelection() {
+  const o = uiOrigin.value
+  const d = uiDest.value || o
+
+  // Solo usamos las paradas que ya están en uiStops (las de los pedidos)
+  const allStops = uiStops.value.slice()
+
+  originText.value = o
+  destinationText.value = d
+  waypointsText.value = allStops.join('|')
+
+  // Dibujar ruta y calcular cercanas
+  drawRouteDebounced()
+  computeNearbyToDestination()
+}
+
+
 /* ===================== Lógica de Auto-Inicialización ===================== */
 
-// Configura automáticamente origen/destino/paradas a partir de los pedidos de la ruta
+// Configura automáticamente el mapa a partir de los pedidos de la ruta
 async function initAutoRoute() {
   // 1) Si no hay pedidos en la ruta, mostrar solo las bases
   if (!pedidosRuta.value.length) {
@@ -556,7 +655,10 @@ async function initAutoRoute() {
     return
   }
 
-  // 2) Comunidades únicas de los pedidos (JMM y FCP)
+  // 2) Hay pedidos: quitamos marcadores por defecto de las bases
+  clearDefaultMarkers()
+
+  // Comunidades únicas de los pedidos (JMM y FCP)
   const comunidadesDePedidos = new Set<string>()
   for (const p of pedidosRuta.value) {
     const c = cleanCommunity(p.solicitanteComunidad)
@@ -569,7 +671,7 @@ async function initAutoRoute() {
     return
   }
 
-  // 3) Elegir BASE (origen) según dónde caen más comunidades
+  // 3) Elegir BASE (origen) según dónde caen más comunidades (solo para el select)
   let jmmCount = 0
   let fcpCount = 0
   for (const addr of listaComunidades) {
@@ -577,24 +679,24 @@ async function initAutoRoute() {
     if (fcpCommunities.includes(addr)) fcpCount++
   }
 
-  // Si hay más de FCP, origen = FCP; si no, origen = JMM
   uiOrigin.value = fcpCount > jmmCount ? originOptions[1] : originOptions[0]
 
-  // 4) Destino: usamos la última comunidad de la lista
+  // 4) Destino y paradas solo para mostrar algo coherente en la UI
   const destino = listaComunidades[listaComunidades.length - 1]
   uiDest.value = destino
-
-  // 5) Paradas: todas las comunidades excepto el destino
   uiStops.value = listaComunidades.filter(c => c !== destino)
 
-  console.log('[initAutoRoute] origen/destino/paradas', {
+  console.log('[initAutoRoute] solo pines de pedidos', {
     origin: uiOrigin.value,
     dest: uiDest.value,
     stops: uiStops.value,
   })
 
-  // 6) Trazar la ruta optimizada con estos datos
-  await trazadoOptimizado()
+  // 5) 🔹 Lo importante: pintar SOLO los pines de las comunidades con pedido
+  showCommunityMarkersFromPedidos()
+
+  // 🔸 NO llamamos a buildRouteFromCurrentSelection()
+  // 🔸 NO llamamos a trazadoOptimizado()
 }
 
 
@@ -604,24 +706,24 @@ async function initAutoRoute() {
 onMounted(async () => {
   await waitForGoogle()
   initMap()
-  showDefaultMarkers()
+  await showDefaultMarkers()   // esperamos a que ponga las bases
+  mapReady.value = true        // ahora sí, el mapa está listo
 })
 
 // Para no correr initAutoRoute más de una vez por ruta
 const autoRouteInitialized = ref(false)
 
 watch(
-  [() => hasAssigned.value, () => rutaSel.value?.id],
-  async ([has, id]) => {
-    // Necesitamos ruta con pedidos y que aún no se haya inicializado
-    if (!has || !id || autoRouteInitialized.value) return
+  [() => hasAssigned.value, () => rutaSel.value?.id, () => mapReady.value],
+  async ([has, id, ready]) => {
+    // Necesitamos ruta con pedidos, mapa listo y que aún no se haya inicializado
+    if (!has || !id || !ready || autoRouteInitialized.value) return
 
     autoRouteInitialized.value = true
     await initAutoRoute()
   },
   { immediate: true }
 )
-
 </script>
 
 <template>
@@ -693,15 +795,6 @@ watch(
                 <span class="font-semibold">✓ Detección automática:</span>
                 Se agregaron {{ autoDetectedStops.length }} comunidades de paso
               </div>
-            </div>
-
-            <div class="flex gap-2 mb-2">
-              <button class="rounded-full bg-white/10 px-3 py-1 text-sm hover:bg-white/20" @click="selectAllStops">
-                Seleccionar todo
-              </button>
-              <button class="rounded-full bg-white/10 px-3 py-1 text-sm hover:bg-white/20" @click="clearStops">
-                Ninguna
-              </button>
             </div>
 
             <div class="max-h-60 overflow-y-auto space-y-2 pr-1">

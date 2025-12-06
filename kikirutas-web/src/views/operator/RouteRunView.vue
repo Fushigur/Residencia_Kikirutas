@@ -133,7 +133,7 @@ function marcarEntregado(pid: string)  { pedidos.setEstado(pid, 'entregado') }
                 {{ p.solicitanteNombre || '—' }}
               </div>
               <div class="text-sm text-white/70">
-                Comunidad: <b>{{ p.solicitanteComunidad || '—' }}</b>
+                Localidad: <b>{{ p.solicitanteComunidad || '—' }}</b>
               </div>
               <div class="text-sm">
                 Producto: <b>{{ p.producto }}</b> · Cant: <b>{{ p.cantidad }}</b>

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pedido;
-use App\Models\Ruta; 
+use App\Models\Ruta;
 use Illuminate\Http\Request;
 
 class PedidoController extends Controller
@@ -16,7 +16,7 @@ class PedidoController extends Controller
      */
     public function index(Request $req)
     {
-        $q    = Pedido::query();
+        $q = Pedido::query();
         $user = $req->user();
 
         // Si viene ?mine=1 → sólo pedidos de la usuaria actual
@@ -44,10 +44,10 @@ class PedidoController extends Controller
 
         $perPage = (int) $req->query('per_page', 20);
 
-        return $q->orderByDesc('id')->paginate($perPage);
+        return $q->with('rutas:id,fecha,estado,nombre')->orderByDesc('id')->paginate($perPage);
     }
 
-        /**
+    /**
      * Resumen para el panel de la usuaria:
      * - Últimos pedidos de la beneficiaria autenticada
      * - Próxima ruta donde tenga algún pedido pendiente/en_ruta
@@ -75,7 +75,7 @@ class PedidoController extends Controller
         $ruta = Ruta::with('chofer:id,name')
             ->whereHas('pedidos', function ($q) use ($nombre) {
                 $q->where('solicitante_nombre', $nombre)
-                  ->whereIn('estado', ['pendiente', 'en_ruta']);
+                    ->whereIn('estado', ['pendiente', 'en_ruta']);
             })
             ->whereDate('fecha', '>=', $hoy)
             ->orderBy('fecha')
@@ -85,17 +85,17 @@ class PedidoController extends Controller
         return response()->json([
             'pedidos_recientes' => $recientes->map(function (Pedido $p) {
                 return [
-                    'id'       => $p->id,
+                    'id' => $p->id,
                     'producto' => $p->producto,
                     'cantidad' => $p->cantidad,
-                    'estado'   => $p->estado,
-                    'fecha'    => $p->fecha?->toDateString(),
+                    'estado' => $p->estado,
+                    'fecha' => $p->fecha?->toDateString(),
                 ];
             }),
             'proxima_ruta' => $ruta ? [
-                'id'            => $ruta->id,
-                'fecha'         => $ruta->fecha?->toDateString(),
-                'estado'        => $ruta->estado,
+                'id' => $ruta->id,
+                'fecha' => $ruta->fecha?->toDateString(),
+                'estado' => $ruta->estado,
                 'chofer_nombre' => $ruta->chofer?->name,
             ] : null,
         ]);
@@ -109,13 +109,14 @@ class PedidoController extends Controller
     public function store(Request $req)
     {
         $data = $req->validate([
-            'producto'              => 'required|string|max:120',
-            'cantidad'              => 'nullable|integer|min:1',
-            'fecha'                 => 'nullable|date',
-            'solicitante_nombre'    => 'nullable|string|max:120',
+            'producto' => 'required|string|max:120',
+            'cantidad' => 'nullable|integer|min:1',
+            'fecha' => 'nullable|date',
+            'solicitante_nombre' => 'nullable|string|max:120',
             'solicitante_comunidad' => 'nullable|string|max:120',
-            'telefono'              => 'nullable|string|max:30',
-            'notas'                 => 'nullable|string',
+            'solicitante_municipio' => 'nullable|string|max:120',
+            'telefono' => 'nullable|string|max:30',
+            'notas' => 'nullable|string',
         ]);
 
         $user = $req->user();
@@ -125,20 +126,24 @@ class PedidoController extends Controller
             $data['solicitante_nombre'] = $user->name ?? null;
         }
 
-        // Rellenar comunidad desde el usuario autenticado si no viene
+        // Rellenar comunidad y municipio desde el usuario autenticado si no viene
         if (empty($data['solicitante_comunidad']) && $user) {
             $data['solicitante_comunidad'] = $user->comunidad ?? null;
         }
+        if (empty($data['solicitante_municipio']) && $user) {
+            $data['solicitante_municipio'] = $user->municipio ?? null;
+        }
 
-        $pedido                        = new Pedido();
-        $pedido->producto              = $data['producto'];
-        $pedido->cantidad              = $data['cantidad'] ?? 1;
-        $pedido->fecha                 = $data['fecha'] ?? now()->toDateTimeString();
-        $pedido->solicitante_nombre    = $data['solicitante_nombre'] ?? null;
+        $pedido = new Pedido();
+        $pedido->producto = $data['producto'];
+        $pedido->cantidad = $data['cantidad'] ?? 1;
+        $pedido->fecha = $data['fecha'] ?? now()->toDateTimeString();
+        $pedido->solicitante_nombre = $data['solicitante_nombre'] ?? null;
         $pedido->solicitante_comunidad = $data['solicitante_comunidad'] ?? null;
-        $pedido->telefono              = $data['telefono'] ?? null;
-        $pedido->notas                 = $data['notas'] ?? null;
-        $pedido->estado                = 'pendiente';
+        $pedido->solicitante_municipio = $data['solicitante_municipio'] ?? null;
+        $pedido->telefono = $data['telefono'] ?? null;
+        $pedido->notas = $data['notas'] ?? null;
+        $pedido->estado = 'pendiente';
 
         $pedido->save();
 
@@ -169,14 +174,14 @@ class PedidoController extends Controller
         $p = Pedido::findOrFail($id);
 
         $data = $req->validate([
-            'producto'              => 'sometimes|string|max:120',
-            'cantidad'              => 'sometimes|integer|min:1',
-            'estado'                => 'sometimes|in:pendiente,en_ruta,entregado,cancelado',
-            'fecha'                 => 'sometimes|date|nullable',
-            'solicitante_nombre'    => 'sometimes|string|max:120|nullable',
+            'producto' => 'sometimes|string|max:120',
+            'cantidad' => 'sometimes|integer|min:1',
+            'estado' => 'sometimes|in:pendiente,en_ruta,entregado,cancelado',
+            'fecha' => 'sometimes|date|nullable',
+            'solicitante_nombre' => 'sometimes|string|max:120|nullable',
             'solicitante_comunidad' => 'sometimes|string|max:120|nullable',
-            'telefono'              => 'sometimes|string|max:30|nullable',
-            'notas'                 => 'sometimes|string|nullable',
+            'telefono' => 'sometimes|string|max:30|nullable',
+            'notas' => 'sometimes|string|nullable',
         ]);
 
         $p->update($data);
