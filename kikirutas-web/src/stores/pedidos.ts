@@ -19,6 +19,7 @@ export interface Pedido {
   // Snapshot del solicitante (se usa en Admin/Reportes/Operador)
   solicitanteNombre?: string
   solicitanteComunidad?: string
+  solicitanteMunicipio?: string
 }
 
 type State = { items: Pedido[] }
@@ -59,6 +60,7 @@ function mapFromApi(p: any): Pedido {
     observaciones: p.notas ?? '',
     solicitanteNombre: p.solicitante_nombre ?? '—',
     solicitanteComunidad: p.solicitante_comunidad ?? '—',
+    solicitanteMunicipio: p.solicitante_municipio ?? '—',
   }
 }
 

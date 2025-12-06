@@ -21,12 +21,19 @@ type Pedido = {
 // Si no existe en STATIC_COORDS, se deja el string para que Google lo resuelva.
 function asDirectionsLocation(addr: string): any {
   if (!addr) return addr
-  const c = STATIC_COORDS[addr]
+
+  // Usar versión canónica para que funcione aunque cambien acentos / guiones
+  const canon = canonAddr(addr)
+  const c = STATIC_COORDS_CANON[canon]
+
   if (c && window.google?.maps) {
     return new window.google.maps.LatLng(c.lat, c.lng)
   }
+
+  // Si no hay coord fija, que Google la resuelva con el string
   return addr
 }
+
 
 
 type LatLng = { lat: number, lng: number }
@@ -306,30 +313,22 @@ function fillFromAssigned() {
   waypointsText.value = addresses.length > 2 ? addresses.slice(1, addresses.length - 1).join('|') : ''
 }
 
-/** Desde UI manual CON detección automática */
-async function fillFromUI(reverse = false) {
+/** Desde UI manual SIN detección automática */
+function fillFromUI(reverse = false) {
   const o = uiOrigin.value
   const d = uiDest.value || o
 
-  // Detectar paradas automáticas (SOLO comunidades de la base seleccionada)
-  const candidates = filteredCommunities.value.filter(c => c !== o && c !== d)
-  const autoStops = await detectStopsAlongPath(o, d, candidates)
-
-  // Combinar paradas manuales + automáticas (sin duplicados)
-  const allStops = [
-    ...uiStops.value,
-    ...autoStops.filter(a => !uiStops.value.includes(a))
-  ]
-
-  // Marcar automáticas en UI
-  markAutoStopsInUI(autoStops)
+  // Paradas: las seleccionadas, evitando duplicar origen/destino
+  const stops = uiStops.value.filter(s => s !== o && s !== d)
 
   originText.value = reverse ? d : o
   destinationText.value = reverse ? o : d
-  waypointsText.value = allStops.join('|')
+  waypointsText.value = stops.join('|')
 
-  return autoStops.length
+  // Opcional: limpiar indicadores de auto-detección
+  autoDetectedStops.value = []
 }
+
 
 /* ===================== Google Maps ===================== */
 const mapEl = ref<HTMLElement | null>(null)
@@ -591,26 +590,20 @@ const emprPorLocalidad = computed(() => {
 })
 
 /* ===================== Acciones UI ===================== */
-async function trazadoOptimizado() {
-  const autoCount = await fillFromUI(false)
+function trazadoOptimizado() {
+  // Origen -> Destino con las paradas seleccionadas
+  fillFromUI(false)
   drawRouteDebounced()
   computeNearbyToDestination()
-
-  // Mostrar mensaje informativo
-  if (autoCount > 0) {
-    console.log(`Se agregaron ${autoCount} comunidades de paso automáticamente`)
-  }
 }
-async function trazadoRegreso() {
-  const autoCount = await fillFromUI(true)
+
+function trazadoRegreso() {
+  // Destino -> Origen con las mismas paradas
+  fillFromUI(true)
   drawRouteDebounced()
   computeNearbyToDestination()
-
-  // Mostrar mensaje informativo
-  if (autoCount > 0) {
-    console.log(`Se agregaron ${autoCount} comunidades de paso automáticamente`)
-  }
 }
+
 function limpiarRuta() {
   clearStops()
   autoDetectedStops.value = []

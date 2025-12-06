@@ -390,6 +390,7 @@ async function eliminarRutaForzada() {
                       <th class="w-24 text-right"> Cantidad </th>
                       <th class="w-48 text-left"> Solicitante </th>
                       <th class="w-48 text-left"> Comunidad </th>
+                      <th class="w-48 text-left"> Municipio </th>
                       <th class="w-36 text-left"> Fecha </th>
                     </tr>
                   </thead>
@@ -404,6 +405,7 @@ async function eliminarRutaForzada() {
                       <td class="text-right"> {{ p.cantidad }}</td>
                       <td class="truncate"> {{ p.solicitanteNombre || '—' }}</td>
                       <td class="truncate"> {{ p.solicitanteComunidad || '—' }}</td>
+                      <td class="truncate"> {{ p.solicitanteMunicipio || '—' }}</td>
                       <td class="whitespace-nowrap"> {{ formatFechaCorta(p.fechaISO) }}</td>
                     </tr>
                     <tr v-if="pendientes.length === 0">
@@ -486,6 +488,7 @@ async function eliminarRutaForzada() {
                         <th class="w-24 text-right"> Cantidad </th>
                         <th class="w-48 text-left"> Solicitante </th>
                         <th class="w-48 text-left"> Comunidad </th>
+                        <th class="w-48 text-left"> Municipio </th>
                         <th class="w-40 text-left"> Estado </th>
                         <th class="w-64 text-left"> Acciones </th>
                       </tr>
@@ -497,6 +500,7 @@ async function eliminarRutaForzada() {
                         <td class="text-right"> {{ p.cantidad }}</td>
                         <td class="truncate"> {{ p.solicitanteNombre || '—' }}</td>
                         <td class="truncate"> {{ p.solicitanteComunidad || '—' }}</td>
+                        <td class="truncate"> {{ p.solicitanteMunicipio || '—' }}</td>
                         <td>
                           <span class="px-2 py-1 rounded text-xs font-medium" :class="{
                             'bg-amber-500/15 text-amber-300 border border-amber-500/30': p.estado === 'pendiente',
