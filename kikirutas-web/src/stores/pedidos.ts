@@ -38,6 +38,13 @@ function todayISO() {
 function mapFromApi(p: any): Pedido {
   const fecha = (p.fecha ?? p.created_at ?? new Date().toISOString()).slice(0, 10)
 
+  // DEBUG: Check if 'rutas' is present
+  if (p.rutas && Array.isArray(p.rutas) && p.rutas.length > 0) {
+    // console.log(`[DEBUG] Pedido ${p.id} tiene ruta:`, p.rutas[0].id)
+  } else {
+    // console.log(`[DEBUG] Pedido ${p.id} NO trae rutas del API`)
+  }
+
   return {
     id: String(p.id),
     folio: p.folio ? String(p.folio) : `KIK-${String(p.id).padStart(3, '0')}`,
@@ -65,7 +72,7 @@ export const usePedidosStore = defineStore('pedidos', {
         const byDate = b.fechaISO.localeCompare(a.fechaISO)
         return byDate !== 0 ? byDate : b.folio.localeCompare(a.folio)
       }),
-    pendientes: (s) => s.items.filter((p) => p.estado === 'pendiente'),
+    pendientes: (s) => s.items.filter((p) => p.estado === 'pendiente' && !p.routeId),
     byId: (s) => (id: string) => s.items.find((p) => p.id === id),
   },
 
@@ -93,9 +100,10 @@ export const usePedidosStore = defineStore('pedidos', {
         const data = Array.isArray(payload?.data)
           ? payload.data // respuesta paginada { data, links, meta }
           : Array.isArray(payload)
-          ? payload // o array plano
-          : []
+            ? payload // o array plano
+            : []
 
+        // console.log('[DEBUG] Pedidos cargados API:', data.length)  
         this.items = data.map(mapFromApi)
         this.persist()
       } catch (error) {
@@ -193,9 +201,18 @@ export const usePedidosStore = defineStore('pedidos', {
     /* --------- Helpers para rutas/admin ---------- */
 
     assignToRoute(routeId: string, pedidoId: string) {
+      console.log(`[DEBUG] assignToRoute called for pedido ${pedidoId} -> ruta ${routeId}`)
       const p = this.items.find((i) => i.id === pedidoId)
-      if (!p || p.estado !== 'pendiente') return false
+      if (!p) {
+        console.warn(`[DEBUG] Pedido ${pedidoId} not found`)
+        return false
+      }
+      if (p.estado !== 'pendiente') {
+        console.warn(`[DEBUG] Pedido ${pedidoId} no está pendiente (${p.estado})`)
+        return false
+      }
       p.routeId = routeId
+      console.log(`[DEBUG] Pedido ${pedidoId} assigned cleanly to ${routeId}`)
       this.persist()
       return true
     },
