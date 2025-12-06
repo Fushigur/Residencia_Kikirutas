@@ -18,6 +18,7 @@ class Pedido extends Model
         'fecha',               // DATETIME/DATE
         'solicitante_nombre',
         'solicitante_comunidad',
+        'solicitante_municipio',
         'telefono',
         'notas',
     ];
