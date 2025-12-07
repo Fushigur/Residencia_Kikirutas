@@ -201,6 +201,9 @@ class PedidoController extends Controller
     /**
      * Cambiar sólo el estado del pedido
      */
+    /**
+     * Cambiar sólo el estado del pedido
+     */
     public function setEstado(Request $req, $id)
     {
         $p = Pedido::findOrFail($id);
@@ -209,10 +212,58 @@ class PedidoController extends Controller
             'estado' => 'required|in:pendiente,en_ruta,entregado,cancelado',
         ]);
 
+        $oldState = $p->estado;
         $p->estado = $data['estado'];
         $p->save();
 
+        if ($oldState !== $p->estado) {
+            $this->notifyOrderStatusChange($p);
+        }
+
         return $p;
+    }
+
+    protected function notifyOrderStatusChange(Pedido $p)
+    {
+        // Buscar usuaria por nombre (si existe)
+        if (!$p->solicitante_nombre)
+            return;
+
+        $user = \App\Models\User::where('name', $p->solicitante_nombre)->first();
+        if (!$user)
+            return;
+
+        $titulo = 'Actualización de Pedido';
+        $mensaje = "Tu pedido de {$p->producto} ha cambiado a: {$p->estado}";
+        $tipo = 'pedido';
+        $severidad = 'info';
+        // Ajusta la ruta a donde quieras dirigir al usuario
+        $cta = ['label' => 'Ver historial', 'routeName' => 'u.historial'];
+
+        if ($p->estado === 'en_ruta') {
+            $titulo = '¡Tu pedido va en camino!';
+            $mensaje = "El pedido {$p->producto} (x{$p->cantidad}) va en camino a tu comunidad.";
+            $tipo = 'entrega';
+        } elseif ($p->estado === 'entregado') {
+            $titulo = 'Pedido Entregado';
+            $mensaje = "Tu pedido de {$p->producto} ha sido marcado como entregado. ¡Gracias!";
+            $tipo = 'pedido';
+            // Podrías poner success, pero tu front usa info/warning/urgent
+            // 'info' o 'warning' para resaltar
+        } elseif ($p->estado === 'cancelado') {
+            $titulo = 'Pedido Cancelado';
+            $mensaje = "Lamentamos informarte que tu pedido de {$p->producto} fue cancelado.";
+            $severidad = 'urgent';
+        }
+
+        $user->notify(new \App\Notifications\OrderNotification([
+            'titulo' => $titulo,
+            'mensaje' => $mensaje,
+            'tipo' => $tipo,
+            'severidad' => $severidad,
+            'ctaPrimaria' => $cta,
+            'meta' => ['pedido_id' => $p->id]
+        ]));
     }
 
     /**

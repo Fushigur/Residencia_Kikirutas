@@ -234,17 +234,27 @@ class AuthController extends Controller
     public function forgotPassword(Request $request)
     {
         $request->validate([
-            'email' => ['required', 'email', 'exists:users,email'],
+            'email' => ['required', 'email'],
+        ], [
+            'email.required' => 'El correo es obligatorio.',
+            'email.email' => 'Ingresa un correo válido.',
         ]);
+
+        // Verificar si el correo existe antes de intentar enviar
+        // (Laravel por defecto lo hace con exists:users,email pero queremos mensaje custom)
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            // Por seguridad a veces no se dice, pero para UX de tu cliente sí:
+            return response()->json(['message' => 'El correo no está registrado.'], 422);
+        }
 
         $status = Password::sendResetLink($request->only('email'));
 
         if ($status === Password::RESET_LINK_SENT) {
-            // En desarrollo, con MAIL_MAILER=log, el enlace se verá en storage/logs/laravel.log
-            return response()->json(['message' => __($status)], 200);
+            return response()->json(['message' => '¡Enlace enviado! Revisa tu correo.'], 200);
         }
 
-        return response()->json(['message' => __($status)], 422);
+        return response()->json(['message' => 'No se pudo enviar el correo. Inténtalo de nuevo.'], 422);
     }
 
     /* ==================== RESET PASSWORD ==================== */
@@ -254,6 +264,12 @@ class AuthController extends Controller
             'token' => ['required', 'string'],
             'email' => ['required', 'email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ], [
+            'token.required' => 'El token es inválido.',
+            'email.required' => 'El correo es obligatorio.',
+            'password.required' => 'La contraseña es obligatoria.',
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
+            'password.confirmed' => 'Las contraseñas no coinciden.',
         ]);
 
         $status = Password::reset(
@@ -264,18 +280,24 @@ class AuthController extends Controller
                     'password' => Hash::make($request->password),
                 ])->save();
 
-                // Invalida tokens anteriores por seguridad
                 $user->tokens()->delete();
-
                 event(new PasswordReset($user));
             }
         );
 
         if ($status === Password::PASSWORD_RESET) {
-            return response()->json(['message' => __($status)], 200);
+            return response()->json(['message' => 'Contraseña restablecida correctamente.'], 200);
         }
 
-        return response()->json(['message' => __($status)], 422);
+        // Mapeo de errores comunes
+        $msg = match ($status) {
+            Password::INVALID_USER => 'No encontramos un usuario con ese correo.',
+                // Password::INVALID_PASSWORD => 'Las contraseñas deben coincidir y tener al menos 8 caracteres.',
+            Password::INVALID_TOKEN => 'El enlace de restablecimiento es inválido o ha expirado.',
+            default => 'No se pudo restablecer la contraseña.',
+        };
+
+        return response()->json(['message' => $msg], 422);
     }
 
     /* ==================== Helpers ==================== */

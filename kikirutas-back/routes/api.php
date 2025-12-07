@@ -44,6 +44,8 @@ Route::prefix('auth')->group(function () {
 
 // ---------- Rutas protegidas ----------
 Route::middleware(['auth:sanctum', 'active'])->group(function () {
+    
+    // Dashboard
     Route::get('usuario/dashboard', [PedidoController::class, 'dashboardUsuario'])
         ->name('usuario.dashboard');
 
@@ -86,6 +88,14 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::put('/usuarios/{id}', [UsuarioController::class, 'update']);
     Route::delete('/usuarios/{id}', [UsuarioController::class, 'destroy']);
 
+
+    // === NOTIFICACIONES ===
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\NotificationController::class, 'index']);
+        Route::put('read-all', [App\Http\Controllers\Api\NotificationController::class, 'markAllRead']);
+        Route::put('{id}/read', [App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
+        Route::delete('{id}', [App\Http\Controllers\Api\NotificationController::class, 'destroy']);
+    });
 });
 
 
