@@ -54,6 +54,10 @@
                 <path d="M12 19a2 2 0 0 0 2-2H10a2 2 0 0 0 2 2zm6-6V9a6 6 0 1 0-12 0v4L4 17h16l-2-4z" />
               </svg>
               Alertas
+              <span v-if="alertasStore.noLeidasCount > 0"
+                class="ml-auto bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                {{ alertasStore.noLeidasCount }}
+              </span>
             </RouterLink>
 
             <RouterLink :to="{ name: 'u.perfil' }" class="link" :class="{ active: isActive('/usuario/perfil') }">
@@ -80,7 +84,18 @@
             <img :src="logoUrl" alt="KikiRutas" class="h-12 w-12 rounded-full bg-white/10 p-1" />
             <span class="font-semibold">KikiRutas</span>
           </div>
-          <button class="btn-danger" @click="onLogout">Salir</button>
+
+          <div class="flex items-center gap-4">
+            <RouterLink :to="{ name: 'u.alertas' }" class="relative text-white/80 hover:text-white transition-colors">
+              <svg viewBox="0 0 24 24" class="w-6 h-6 fill-current">
+                <path d="M12 19a2 2 0 0 0 2-2H10a2 2 0 0 0 2 2zm6-6V9a6 6 0 1 0-12 0v4L4 17h16l-2-4z" />
+              </svg>
+              <span v-if="alertasStore.noLeidasCount > 0"
+                class="absolute -top-1 -right-1 bg-rose-500 w-2.5 h-2.5 rounded-full border border-[#121212]"></span>
+            </RouterLink>
+
+            <button class="btn-danger text-xs px-3" @click="onLogout">Salir</button>
+          </div>
         </div>
       </header>
 
@@ -142,6 +157,14 @@ import logoUrl from '@/assets/img/Logo.png'
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+import { useAlertasStore } from '@/stores/alertas'
+import { onMounted } from 'vue'
+
+const alertasStore = useAlertasStore()
+
+onMounted(() => {
+  alertasStore.load()
+})
 
 const isActive = (prefix: string) => route.path.startsWith(prefix)
 

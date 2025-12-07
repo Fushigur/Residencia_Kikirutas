@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { useInventarioStore } from './inventario';
+import api from '@/api';
 
 export type AlertaTipo = 'entrega' | 'inventario' | 'pedido' | 'convocatoria' | 'asesor';
 export type AlertaSeveridad = 'info' | 'warning' | 'urgent';
@@ -64,20 +65,36 @@ export const useAlertasStore = defineStore('alertas', {
     persist() {
       sessionStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ items: this.items, filtros: this.filtros })
+        JSON.stringify({ filtros: this.filtros })
       );
     },
-    load() {
+
+    async load() {
+      // 1. Cargar filtros guardados
       const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
+      if (raw) {
+        try {
+          const data = JSON.parse(raw);
+          this.filtros = data.filtros ?? this.filtros;
+        } catch { }
+      }
+
+      // 2. Cargar notificaciones del backend
       try {
-        const data = JSON.parse(raw);
-        this.items = data.items ?? [];
-        this.filtros = data.filtros ?? this.filtros;
-      } catch {}
+        const { data } = await api.get('/notifications');
+        // Backend devuelve array de objetos con estructura compatible
+        // Aseguramos que se mezclen o reemplacen
+        this.items = data;
+      } catch (e) {
+        console.error('Error cargando notificaciones:', e);
+      }
+
+      // 3. Refrescar alertas locales del sistema (inventario, etc)
+      this.refreshSystemAlerts();
     },
 
-    add(alerta: Omit<Alerta, 'id' | 'createdAt' | 'leida'>) {
+    // Añadir alerta local (sin guardar en backend)
+    addLocal(alerta: Omit<Alerta, 'id' | 'createdAt' | 'leida'>) {
       const item: Alerta = {
         id: newId(),
         createdAt: Date.now(),
@@ -85,13 +102,14 @@ export const useAlertasStore = defineStore('alertas', {
         ...alerta,
       };
       this.items.unshift(item);
-      this.persist();
       return item.id;
     },
 
     upsertByKey(key: string, alerta: Omit<Alerta, 'id' | 'createdAt' | 'leida' | 'key'>) {
       const idx = this.items.findIndex((a) => a.key === key);
-      if (idx === -1) return this.add({ ...alerta, key });
+      if (idx === -1) return this.addLocal({ ...alerta, key });
+
+      // Si existe, actualizamos
       const prev = this.items[idx];
       this.items[idx] = {
         ...prev,
@@ -100,35 +118,60 @@ export const useAlertasStore = defineStore('alertas', {
         leida: prev.leida,
         createdAt: Date.now(),
       };
-      this.persist();
       return this.items[idx].id;
     },
 
-    // Eliminar usando splice para reactividad garantizada
-    // Eliminar usando splice, y solo si está leída (a menos que force=true)
-    remove(id: string, { force = false }: { force?: boolean } = {}) {
-    const idx = this.items.findIndex(a => a.id === id);
-    if (idx === -1) return false;
+    async remove(id: string, { force = false }: { force?: boolean } = {}) {
+      const idx = this.items.findIndex(a => a.id === id);
+      if (idx === -1) return false;
 
-    if (!force && !this.items[idx].leida) {
-        // seguridad extra: no eliminar si no está leída
+      const item = this.items[idx];
+      if (!force && !item.leida) {
         return false;
-    }
+      }
 
-    this.items.splice(idx, 1);
-    this.persist();
-    return true;
+      // Si es una alerta local (tiene key o ID generado por nosotros que no es UUID v4 estricto... 
+      // pero Laravel usa UUID. Asumiremos que si tiene 'key' es local, o si falla la API es local)
+      if (item.key) {
+        this.items.splice(idx, 1);
+        return true;
+      }
+
+      // Backend
+      try {
+        await api.delete(`/notifications/${id}`);
+        this.items.splice(idx, 1);
+        return true;
+      } catch (e) {
+        console.error('Error eliminando notificación:', e);
+        return false;
+      }
     },
 
-    markRead(id: string, value = true) {
-      const it = this.items.find((a) => a.id === id);
-      if (!it) return;
-      it.leida = value;
-      this.persist();
+    async markRead(id: string, value = true) {
+      const idx = this.items.findIndex((a) => a.id === id);
+      if (idx === -1) return;
+
+      const item = this.items[idx];
+      item.leida = value; // Optimistic update
+
+      if (item.key) return; // Local, no call API
+
+      try {
+        await api.put(`/notifications/${id}/read`);
+      } catch (e) {
+        console.error('Error marcando lectura:', e);
+        // revertir si falla?
+      }
     },
-    markAllRead() {
-      this.items.forEach((a) => { a.leida = true; });
-      this.persist();
+
+    async markAllRead() {
+      this.items.forEach((a) => { a.leida = true; }); // Optimistic
+      try {
+        await api.put('/notifications/read-all');
+      } catch (e) {
+        console.error('Error marcando todo leído:', e);
+      }
     },
 
     setCategoria(categoria: Filtros['categoria']) {
@@ -141,19 +184,11 @@ export const useAlertasStore = defineStore('alertas', {
     },
 
     seedDemo() {
-      if (this.items.length) return;
-      this.add({
-        titulo: 'Entrega programada',
-        mensaje: 'Tu entrega está prevista para mañana 10:00–12:00.',
-        tipo: 'entrega',
-        severidad: 'info',
-        ctaPrimaria: { label: 'Ver ruta', routeName: 'u.alertas' },
-      });
+      // Deprecated in favor of real backend data
     },
 
     refreshSystemAlerts() {
       const inv = useInventarioStore();
-
       const key = 'inventario-bajo';
       const dias = inv.diasCobertura;
       const sugeridos = inv.sugerirSacos;
@@ -161,7 +196,7 @@ export const useAlertasStore = defineStore('alertas', {
       if (dias > 0 && dias <= 4) {
         this.upsertByKey(key, {
           titulo: 'Inventario bajo',
-          mensaje: `Te quedan ${dias} día(s) de alimento. Sugerimos pedir ${sugeridos} saco(s) para cubrir 2 semanas.`,
+          mensaje: `Te quedan ${dias} día(s) de alimento. Sugerimos pedir ${sugeridos} saco(s).`,
           tipo: 'inventario',
           severidad: dias <= 2 ? 'urgent' : 'warning',
           ctaPrimaria: { label: 'Pedir ahora', routeName: 'u.pedido.nuevo' },
@@ -170,7 +205,10 @@ export const useAlertasStore = defineStore('alertas', {
         });
       } else {
         const idx = this.items.findIndex(a => a.key === key);
-        if (idx !== -1) this.remove(this.items[idx].id);
+        if (idx !== -1) {
+          // Es local, hacemos splice directo
+          this.items.splice(idx, 1);
+        }
       }
     },
   },
