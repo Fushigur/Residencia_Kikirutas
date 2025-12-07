@@ -26,12 +26,12 @@ class UsersTableSeeder extends Seeder
                 'created_at' => $now,
                 'updated_at' => $now,
             ],
-            // Operador → operador@gmail.com / Skrillex289
+            // Operador → operador@gmail.com / Operador123*
             [
                 'id'         => 2,
                 'name'       => 'Operador',
                 'email'      => 'operador@gmail.com',
-                'password'   => Hash::make('Skrillex289'),
+                'password'   => Hash::make('Operador123*'),
                 'role_id'    => 2,
                 'created_at' => $now,
                 'updated_at' => $now,
