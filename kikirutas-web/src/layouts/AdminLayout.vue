@@ -53,11 +53,20 @@
       </RouterLink>
 
       <RouterLink :to="{ name: 'a.pedidos' }" class="tab" :class="{ active: isActive('a.pedidos') }">
-        <svg viewBox="0 0 24 24" class="icon">
-          <path d="M3 6h18M3 12h18M3 18h18" />
-        </svg>
-        <span class="tab-label">Pedidos</span>
-      </RouterLink>
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    stroke-width="2" 
+    stroke-linecap="round" 
+    stroke-linejoin="round" 
+    class="icon text-white"
+  >
+    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+  </svg>
+  <span class="tab-label">Pedidos</span>
+</RouterLink>
 
       <RouterLink :to="{ name: 'a.rutas' }" class="tab" :class="{ active: isActive('a.rutas') }">
         <svg viewBox="0 0 24 24" class="icon">
