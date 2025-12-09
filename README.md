@@ -31,8 +31,8 @@ Rutas de reparto
 INSTALACIÓN LOCAL
 
 1. Clonar el repositorio
-git clone https://github.com/tu_usuario/kikirutas-web.git
-cd kikirutas-web
+git clone https://github.com/Fushigur/Residencia_Kikirutas.git
+cd Residencia_Kikirutas
 
 2. Configurar el backend (Laravel)
 cd backend
