@@ -4,7 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Pedido;
 use App\Models\Ruta;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\OrderNotification;
 
 class PedidoController extends Controller
 {
@@ -115,6 +119,9 @@ class PedidoController extends Controller
             'solicitante_nombre' => 'nullable|string|max:120',
             'solicitante_comunidad' => 'nullable|string|max:120',
             'solicitante_municipio' => 'nullable|string|max:120',
+            'direccion_entrega' => 'nullable|string|max:255',
+            'lat' => 'nullable|numeric',
+            'lng' => 'nullable|numeric',
             'telefono' => 'nullable|string|max:30',
             'notas' => 'nullable|string',
         ]);
@@ -134,6 +141,14 @@ class PedidoController extends Controller
             $data['solicitante_municipio'] = $user->municipio ?? null;
         }
 
+        // Rellenar lat/lng desde el usuario si no vienen
+        if (empty($data['lat']) && $user) {
+            $data['lat'] = $user->lat ?? null;
+        }
+        if (empty($data['lng']) && $user) {
+            $data['lng'] = $user->lng ?? null;
+        }
+
         $pedido = new Pedido();
         $pedido->producto = $data['producto'];
         $pedido->cantidad = $data['cantidad'] ?? 1;
@@ -141,14 +156,43 @@ class PedidoController extends Controller
         $pedido->solicitante_nombre = $data['solicitante_nombre'] ?? null;
         $pedido->solicitante_comunidad = $data['solicitante_comunidad'] ?? null;
         $pedido->solicitante_municipio = $data['solicitante_municipio'] ?? null;
+        $pedido->direccion_entrega = $data['direccion_entrega'] ?? null;
+        $pedido->lat = $data['lat'] ?? null;
+        $pedido->lng = $data['lng'] ?? null;
         $pedido->telefono = $data['telefono'] ?? null;
         $pedido->notas = $data['notas'] ?? null;
         $pedido->estado = 'pendiente';
 
         $pedido->save();
 
+        if ($user) {
+            $user->notify(new OrderNotification([
+                'titulo' => 'Pedido Creado',
+                'mensaje' => "Tu pedido de {$pedido->cantidad} saco(s) de {$pedido->producto} fue registrado.",
+                'tipo' => 'pedido',
+                'severidad' => 'info',
+                'ctaPrimaria' => ['label' => 'Ver historial', 'routeName' => 'u.historial'],
+                'meta' => ['pedido_id' => $pedido->id]
+            ]));
+        }
+
+        // --- NOTIFICAR A LOS ADMINISTRADORES ---
+        $admins = User::where('role_id', 1)->get();
+        Notification::send($admins, new OrderNotification([
+            'titulo' => '¡Nuevo Pedido!',
+            'mensaje' => "{$pedido->solicitante_nombre} ha solicitado {$pedido->cantidad} de {$pedido->producto}.",
+            'tipo' => 'pedido',
+            'severidad' => 'info',
+            'ctaPrimaria' => ['label' => 'Ver pedidos', 'routeName' => 'a.pedidos'],
+            'meta' => ['pedido_id' => $pedido->id]
+        ]));
+
         // Intentar asignar automáticamente este pedido a una ruta existente
-        $this->autoAssignToNearestRuta($pedido);
+        try {
+            $this->autoAssignToNearestRuta($pedido);
+        } catch (\Exception $e) {
+            \Log::error("Error en autoasignación de ruta: " . $e->getMessage());
+        }
 
         // Devolvemos el pedido con sus rutas cargadas (si se asignó)
         return response()->json(
@@ -180,6 +224,8 @@ class PedidoController extends Controller
             'fecha' => 'sometimes|date|nullable',
             'solicitante_nombre' => 'sometimes|string|max:120|nullable',
             'solicitante_comunidad' => 'sometimes|string|max:120|nullable',
+            'solicitante_municipio' => 'sometimes|string|max:120|nullable',
+            'direccion_entrega' => 'sometimes|string|max:255|nullable',
             'telefono' => 'sometimes|string|max:30|nullable',
             'notas' => 'sometimes|string|nullable',
         ]);
@@ -192,9 +238,35 @@ class PedidoController extends Controller
     /**
      * Eliminar un pedido
      */
-    public function destroy($id)
+    public function destroy(Request $req, $id)
     {
-        Pedido::findOrFail($id)->delete();
+        $p = Pedido::findOrFail($id);
+        $user = $req->user();
+
+        // Si no es admin, validar propiedad y estado
+        if ($user && $user->role_id !== 1) { // 1 = Admin
+            // 1. Validar que el pedido sea suyo
+            if ($p->solicitante_nombre !== $user->name) {
+                return response()->json(['message' => 'No tienes permiso para eliminar este pedido.'], 403);
+            }
+
+            // 2. Validar que no esté entregado o en ruta (solo borrar si está pendiente)
+        }
+
+        // --- LIMPIEZA TOTAL ("de todooooo") ---
+
+        // 1. Desvincular de rutas
+        $p->rutas()->detach();
+
+        // 2. Borrar notificaciones relacionadas (de cualquier usuario)
+        // Buscamos en el JSON de la columna 'data'
+        DB::table('notifications')
+            ->where('data', 'like', '%"pedido_id":' . $p->id . '%')
+            ->delete();
+
+        // 3. Borrar el pedido
+        $p->delete();
+
         return response()->noContent();
     }
 
@@ -284,7 +356,7 @@ class PedidoController extends Controller
         // Base: rutas del mismo día y en estado válido
         $baseQuery = Ruta::query()
             ->whereDate('fecha', $fechaPedido)
-            ->whereIn('estado', ['planificada', 'en_ruta']);
+            ->whereIn('estado', ['borrador', 'en_curso']);
 
         $ruta = null;
 
@@ -316,7 +388,7 @@ class PedidoController extends Controller
         $ruta->pedidos()->syncWithoutDetaching([$pedido->id]);
 
         // Si la ruta ya está en curso → el pedido pasa a "en_ruta"
-        if ($ruta->estado === 'en_ruta') {
+        if ($ruta->estado === 'en_curso') {
             $pedido->estado = 'en_ruta';
             $pedido->save();
         }

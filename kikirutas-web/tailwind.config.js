@@ -4,11 +4,12 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        brand:  { DEFAULT: '#5B2A3C' }, // vino
-        maiz:   { DEFAULT: '#D1A116' },
-        chile:  { DEFAULT: '#E23A2B' },
-        crema:  { DEFAULT: '#F8F5F0' },
-        humo:   { DEFAULT: '#1A1217' },
+        brand: { DEFAULT: '#7F1D1D' }, // Vino intenso premium
+        maiz: { DEFAULT: '#F59E0B' }, // Ambar vibrante
+        chile: { DEFAULT: '#EF4444' }, // Rojo vibrante
+        crema: { DEFAULT: '#F9FAFB' }, // Gray-50 (Casi blanco)
+        humo: { DEFAULT: '#374151' }, // Gray-700 (Texto secundario)
+        surface: { DEFAULT: '#FFFFFF' }, // Blanco puro para tarjetas
       },
       fontFamily: {
         sans: ['Montserrat', 'ui-sans-serif', 'system-ui'],

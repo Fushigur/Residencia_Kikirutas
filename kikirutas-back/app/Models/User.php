@@ -21,6 +21,9 @@ class User extends Authenticatable
         'edad',
         'comunidad',
         'municipio',
+        'direccion',
+        'lat',
+        'lng',
         'estado',
         'activo',
     ];

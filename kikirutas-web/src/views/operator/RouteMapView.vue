@@ -16,6 +16,8 @@ type Pedido = {
   estado: PedidoEstado
   solicitanteNombre?: string
   solicitanteComunidad?: string
+  lat?: number
+  lng?: number
 }
 // Convierte una dirección de catálogo a LatLng fijo para Directions.
 // Si no existe en STATIC_COORDS, se deja el string para que Google lo resuelva.
@@ -28,6 +30,11 @@ function asDirectionsLocation(addr: string): any {
 
   if (c && window.google?.maps) {
     return new window.google.maps.LatLng(c.lat, c.lng)
+  }
+
+  // 🔹 NUEVO: Si la "dirección" parece ser un objeto de coordenadas {lat, lng}
+  if (typeof addr === 'object' && (addr as any).lat) {
+    return new window.google.maps.LatLng((addr as any).lat, (addr as any).lng)
   }
 
   // Si no hay coord fija, que Google la resuelva con el string
@@ -118,6 +125,7 @@ const originOptions = ['José María Morelos, Quintana Roo', 'Felipe Carrillo Pu
 
 /** catálogo base de localidades (separadas por base) */
 const jmmCommunities = [
+  'José María Morelos', // Cabecera
   'Candelaria', 'Dziuché', 'La Presumida', 'Santa Gertrudis', 'Kancabchén',
   'Cafetalito', 'Cafetal Grande', 'Benito Juárez', 'Pozo Pirata', 'San Carlos',
   'Chunhuhub', 'Polyuc', 'Dos Aguadas', 'El Naranjal', 'Othón P. Blanco',
@@ -125,6 +133,7 @@ const jmmCommunities = [
 ].map(c => `${c}, Quintana Roo`)
 
 const fcpCommunities = [
+  'Felipe Carrillo Puerto', // Cabecera
   'Dzulá', 'X-Yatil', 'El Señor', 'Tihosuco',
 ].map(c => `${c}, Quintana Roo`)
 
@@ -411,6 +420,21 @@ function showCommunityMarkersFromPedidos() {
     const addr = toAddress(comunidadLimpia)      // "Dzula" -> "Dzula, Quintana Roo"
     const canon = canonAddr(addr)               // "dzula quintana roo"
 
+    // 🔻 NUEVO: Si el pedido tiene coordenadas exactas (PIN), las usamos
+    if (pedido.lat && pedido.lng) {
+      const pinMarker = new window.google.maps.Marker({
+        map,
+        position: { lat: Number(pedido.lat), lng: Number(pedido.lng) },
+        title: `${pedido.solicitanteNombre || 'Usuaria'} - ${comunidadLimpia}`,
+        icon: {
+          url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' // Color distinto para PIN exacto
+        }
+      })
+      communityMarkers.push(pinMarker)
+      bounds.extend(pinMarker.getPosition()!)
+      continue
+    }
+
     if (canonSet.has(canon)) continue           // ya dibujamos esta comunidad
     canonSet.add(canon)
 
@@ -435,45 +459,103 @@ function showCommunityMarkersFromPedidos() {
   }
 }
 
+function openExternalMap(p: Pedido) {
+  let url = ''
+  if (p.lat && p.lng) {
+    url = `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`
+  } else {
+    const addr = toAddress(cleanCommunity(p.solicitanteComunidad))
+    url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`
+  }
+  window.open(url, '_blank')
+}
+
 function drawRoute() {
   if (!map || !dirSrv || !dirRnd) return
 
-  // Waypoints en texto crudo (para el "signature")
-  const rawWps = waypointsText.value
-    ? waypointsText.value.split('|').filter(Boolean)
-    : []
-
-  // Waypoints para Directions: usar LatLng fijo si existe
-  const wps = rawWps.map((a: string) => ({
-    location: asDirectionsLocation(a),
-    stopover: true,
-  }))
-
   const originAddr = originText.value || originOptions[0]
   const destAddr = destinationText.value || originText.value || originOptions[0]
+  const rawWps = waypointsText.value ? waypointsText.value.split('|').filter(Boolean) : []
 
-  // Para evitar recalcular la misma ruta usamos una firma basada en los STRINGS,
-  // no en los LatLng de Google (que no se serializan bien).
+  // 🔹 Resolver Origen
+  const resolvedOrigin = asDirectionsLocation(originAddr)
+
+  // 🔹 Resolver Destino y Waypoints proactivamente usando PINs si existen
+  // Queremos llegar a CADA pedido asignado que pertenezca a las comunidades seleccionadas
+  const communitiesInRoute = new Set([canonAddr(destAddr), ...rawWps.map(canonAddr)])
+  const relevantPedidos = pedidosRuta.value.filter(p => {
+    const c = cleanCommunity(p.solicitanteComunidad)
+    return communitiesInRoute.has(canonAddr(toAddress(c)))
+  })
+
+  // Agrupamos pedidos por comunidad para mantener un orden lógico base
+  const pedidosPorComunidad: Record<string, Pedido[]> = {}
+  relevantPedidos.forEach(p => {
+    const canon = canonAddr(toAddress(cleanCommunity(p.solicitanteComunidad)))
+    if (!pedidosPorComunidad[canon]) pedidosPorComunidad[canon] = []
+    pedidosPorComunidad[canon].push(p)
+  })
+
+  const waypoints: any[] = []
+  let finalDest: any = asDirectionsLocation(destAddr)
+
+  // Recorremos la secuencia (paradas -> destino final)
+  const fullSequence = [...rawWps, destAddr]
+  
+  fullSequence.forEach((addr, sIdx) => {
+    const canon = canonAddr(addr)
+    const peds = pedidosPorComunidad[canon] || []
+    const pins = peds.filter(p => p.lat && p.lng)
+
+    if (pins.length > 0) {
+      // Si hay PINs exactos, los agregamos como puntos obligatorios
+      pins.forEach((p, pIdx) => {
+        const coord = new window.google.maps.LatLng(Number(p.lat), Number(p.lng))
+        // Si es el último pedido de la última comunidad, es el destino final de la línea
+        if (sIdx === fullSequence.length - 1 && pIdx === pins.length - 1) {
+          finalDest = coord
+        } else {
+          waypoints.push({ location: coord, stopover: true })
+        }
+      })
+    } else {
+      // Si no hay PINs, usamos el centro de la comunidad (estático)
+      const coord = asDirectionsLocation(addr)
+      if (sIdx === fullSequence.length - 1) {
+        finalDest = coord
+      } else {
+        waypoints.push({ location: coord, stopover: true })
+      }
+    }
+  })
+
+  // Waypoints en texto para el signature (mantenemos compatibilidad con strings para el cache)
   const sigPayload = {
     origin: originAddr,
     destination: destAddr,
     waypoints: rawWps,
+    hasPins: relevantPedidos.some(p => p.lat && p.lng) // para que el cache se invalide si hay pines
   }
   const sig = JSON.stringify(sigPayload)
   if (sig === lastSig) return
   lastSig = sig
 
   const req: any = {
-    origin: asDirectionsLocation(originAddr),
-    destination: asDirectionsLocation(destAddr),
+    origin: resolvedOrigin,
+    destination: finalDest,
     travelMode: window.google.maps.TravelMode.DRIVING,
     optimizeWaypoints: true,
     language: 'es',
+    region: 'MX'
   }
-  if (wps.length) req.waypoints = wps
+  if (waypoints.length) req.waypoints = waypoints.slice(0, 25) // Límite de Google
 
   dirSrv.route(req, (res: any, status: string) => {
-    if (status !== 'OK' || !res?.routes?.[0]) { legs.value = []; return }
+    if (status !== 'OK' || !res?.routes?.[0]) { 
+      legs.value = []
+      console.warn('[drawRoute] Error:', status)
+      return 
+    }
     clearDefaultMarkers()
     dirRnd.setDirections(res)
     const r = res.routes[0]
@@ -727,43 +809,49 @@ watch(
 </script>
 
 <template>
-  <section class="space-y-5">
+  <section class="space-y-5 pb-20">
     <!-- Topbar -->
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-semibold">Mapa de ruta</h1>
+      <h1 class="text-2xl font-bold text-gray-900">Mapa de ruta</h1>
       <div class="flex gap-2">
-        <button class="rounded-xl bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
+        <button
+          class="rounded-xl bg-gray-100 px-3 py-2 text-sm font-bold text-gray-700 hover:bg-gray-200 transition-colors"
           @click="router.push({ name: 'op.ruta', params: { id: route.params.id } })">
           Volver a la ruta
         </button>
-        <button class="rounded-xl bg-white/10 px-3 py-2 text-sm hover:bg-white/20" @click="resetView">Reiniciar
-          vista</button>
-        <button class="rounded-xl bg-white/10 px-3 py-2 text-sm hover:bg-white/20" @click="limpiarRuta">Limpiar
-          todo</button>
+        <button
+          class="rounded-xl bg-gray-100 px-3 py-2 text-sm font-bold text-gray-700 hover:bg-gray-200 transition-colors"
+          @click="resetView">
+          Reiniciar vista
+        </button>
+        <button
+          class="rounded-xl bg-gray-100 px-3 py-2 text-sm font-bold text-gray-700 hover:bg-gray-200 transition-colors"
+          @click="limpiarRuta">
+          Limpiar todo
+        </button>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
       <!-- Lado izquierdo (solo si hay ruta asignada) -->
       <aside v-if="hasAssigned" class="lg:col-span-4 space-y-4">
         <!-- Origen / Destino / Paradas -->
-        <div class="rounded-2xl bg-neutral-900/80 border border-white/10 p-4">
-          <h3 class="font-semibold mb-3">Origen y paradas</h3>
+        <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5">
+          <h3 class="font-bold text-gray-900 mb-4">Origen y paradas</h3>
 
-          <div class="mb-3">
-            <div class="text-sm text-white/70 mb-1">Origen</div>
+          <div class="mb-4">
+            <div class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Origen</div>
             <select v-model="uiOrigin"
-              class="w-full rounded-xl bg-neutral-800 border border-neutral-600 text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 hover:bg-neutral-700 transition-colors cursor-pointer">
-              <option v-for="o in originOptions" :key="o" :value="o" class="bg-neutral-800 text-white">{{ o }}</option>
+              class="w-full rounded-xl bg-gray-50 border border-gray-200 text-gray-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all cursor-pointer">
+              <option v-for="o in originOptions" :key="o" :value="o">{{ o }}</option>
             </select>
           </div>
 
-          <div class="mb-3">
-            <div class="text-sm text-white/70 mb-1">Destino</div>
-            <select v-model="uiDest" class="w-full rounded-xl bg-neutral-800 border border-neutral-600 text-white px-3 py-2
-                    focus:outline-none focus:ring-2 focus:ring-emerald-500 hover:bg-neutral-700
-                    transition-colors cursor-pointer">
-              <option v-for="c in filteredCommunities" :key="c" :value="c" class="bg-neutral-800 text-white">
+          <div class="mb-4">
+            <div class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Destino</div>
+            <select v-model="uiDest"
+              class="w-full rounded-xl bg-gray-50 border border-gray-200 text-gray-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all cursor-pointer">
+              <option v-for="c in filteredCommunities" :key="c" :value="c">
                 {{ c }}
               </option>
             </select>
@@ -772,69 +860,72 @@ watch(
 
           <div>
             <div class="flex items-center justify-between mb-2">
-              <span class="text-sm">Paradas</span>
-              <span class="text-xs text-white/60">{{ uiStops.length }} seleccionadas</span>
+              <span class="text-sm font-bold text-gray-700">Paradas Intermedias</span>
+              <span class="text-xs text-gray-500 font-medium">{{ uiStops.length }} seleccionadas</span>
             </div>
 
-            <div class="flex gap-2 mb-2">
-              <button class="rounded-full bg-white/10 px-3 py-1 text-sm hover:bg-white/20"
-                @click="selectAllStops">Seleccionar todo</button>
-              <button class="rounded-full bg-white/10 px-3 py-1 text-sm hover:bg-white/20"
+            <div class="flex gap-2 mb-3">
+              <button
+                class="rounded-lg bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-colors"
+                @click="selectAllStops">Todas</button>
+              <button
+                class="rounded-lg bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-colors"
                 @click="clearStops">Ninguna</button>
-            </div>
-            <!-- desde aqui -->
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm">Paradas</span>
-              <span class="text-xs text-white/60">{{ uiStops.length }} seleccionadas</span>
             </div>
 
             <!-- Indicador de paradas automáticas -->
             <div v-if="autoDetectedStops.length > 0"
-              class="mb-2 p-2 bg-blue-900/30 border border-blue-500/50 rounded-lg">
-              <div class="text-xs text-blue-300">
-                <span class="font-semibold">✓ Detección automática:</span>
-                Se agregaron {{ autoDetectedStops.length }} comunidades de paso
+              class="mb-3 p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-2">
+              <svg class="w-4 h-4 text-blue-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div class="text-xs text-blue-700">
+                <span class="font-bold">Detección automática:</span><br>
+                Se agregaron {{ autoDetectedStops.length }} comunidades de paso.
               </div>
             </div>
 
-            <div class="max-h-60 overflow-y-auto space-y-2 pr-1">
+            <div class="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
               <label v-for="c in filteredCommunities" :key="c" :class="[
-                'flex items-center justify-between rounded-xl border px-3 py-2 text-sm transition-colors cursor-pointer',
+                'flex items-center justify-between rounded-xl border px-3 py-2 text-sm transition-all cursor-pointer',
                 autoDetectedStops.includes(c)
-                  ? 'border-blue-500/50 bg-blue-900/20 hover:bg-blue-900/30'
-                  : 'border-white/10 bg-white/5 hover:bg-white/10'
+                  ? 'border-blue-200 bg-blue-50 text-blue-900'
+                  : 'border-gray-100 bg-white hover:bg-gray-50 text-gray-700'
               ]">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-3">
                   <input type="checkbox" :checked="uiStops.includes(c)" @change="toggleStop(c)"
-                    class="rounded border-neutral-400 text-emerald-500 focus:ring-emerald-500 cursor-pointer">
-                  <span>{{ c }}</span>
+                    class="rounded border-gray-300 text-brand focus:ring-brand w-4 h-4 cursor-pointer">
+                  <span class="font-medium">{{ c }}</span>
                 </div>
                 <div class="flex items-center gap-1">
-                  <span v-if="autoDetectedStops.includes(c)" class="text-xs text-blue-300">
-                    automática
-                  </span>
-                  <span v-else class="text-xs text-white/60">
-                    parada
+                  <span v-if="autoDetectedStops.includes(c)"
+                    class="text-[10px] font-bold uppercase tracking-wider text-blue-600">
+                    Auto
                   </span>
                 </div>
               </label>
             </div>
 
-            <p class="text-xs text-white/60 mt-2">
-              Sugerencia: marca solo las paradas que realmente visitarás; el orden se optimiza automáticamente.
-              <br>Las paradas <span class="text-blue-300">azules</span> se detectaron automáticamente en el camino.
+            <p class="text-xs text-gray-500 mt-3 leading-relaxed">
+              <span class="font-bold">Nota:</span> Marca solo las paradas que visitarás. El orden de la ruta se optimiza
+              automáticamente.
             </p>
 
-            <div class="mt-3 flex gap-2">
-              <button class="rounded-xl bg-emerald-600 px-3 py-2 hover:bg-emerald-500 transition-colors"
+            <div class="mt-4 grid grid-cols-2 gap-2">
+              <button
+                class="rounded-xl bg-brand text-white font-bold px-3 py-2.5 hover:bg-red-800 shadow-md shadow-brand/20 transition-all hover:-translate-y-0.5 text-sm"
                 @click="trazadoOptimizado">
-                Trazar ruta optimizada
+                Optimizar Ruta
               </button>
-              <button class="rounded-xl bg-white/10 px-3 py-2 hover:bg-white/20 transition-colors" @click="limpiarRuta">
-                Limpiar ruta
+              <button
+                class="rounded-xl bg-gray-100 text-gray-700 font-bold px-3 py-2.5 hover:bg-gray-200 transition-colors text-sm"
+                @click="limpiarRuta">
+                Limpiar
               </button>
             </div>
-            <button class="mt-2 w-full rounded-xl bg-indigo-600 px-3 py-2 hover:bg-indigo-500 transition-colors"
+            <button
+              class="mt-2 w-full rounded-xl bg-indigo-600 text-white font-bold px-3 py-2.5 hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all text-sm"
               @click="trazadoRegreso">
               Trazar ruta de regreso
             </button>
@@ -843,161 +934,200 @@ watch(
         </div>
 
         <!-- Cercanas al destino (radio fijo 1km) -->
-        <div class="rounded-2xl bg-neutral-900/80 border border-white/10 p-4">
-          <div class="flex items-center justify-between mb-1">
-            <h3 class="font-semibold">Comunidades cercanas con pedido</h3>
-            <span class="text-xs text-white/60">Radio fijo: 1 km</span>
+        <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-gray-900">Cercanas con pedido</h3>
+            <span class="text-xs font-medium bg-gray-100 px-2 py-0.5 rounded text-gray-600">Radio: 1 km</span>
           </div>
-          <div v-if="!nearby.length" class="text-sm text-white/60 mt-2">No hay cercanas dentro del radio.</div>
+          <div v-if="!nearby.length" class="text-sm text-gray-400 italic mt-2">No hay comunidades cercanas dentro del
+            radio.</div>
           <div v-else class="mt-3 space-y-2">
             <div v-for="n in nearby" :key="n.comunidad"
-              class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm flex items-center justify-between hover:bg-white/10 transition-colors">
+              class="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5 flex items-center justify-between hover:bg-white hover:shadow-sm transition-all">
               <div>
-                <div class="font-medium">{{ n.comunidad }}</div>
-                <div class="text-white/60 text-xs">{{ n.km.toFixed(2) }} km · {{ n.total }} pedido(s)</div>
+                <div class="font-bold text-gray-900 text-sm">{{ n.comunidad }}</div>
+                <div class="text-gray-500 text-xs">{{ n.km.toFixed(2) }} km · <span class="font-medium text-gray-700">{{
+                    n.total }} pedido(s)</span></div>
               </div>
-              <a class="text-xs rounded bg-white/10 px-2 py-1 hover:bg-white/20 transition-colors"
+              <a class="text-xs font-bold text-brand hover:underline"
                 :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(n.comunidad + ', Quintana Roo')}`"
-                target="_blank">Ver</a>
+                target="_blank">Ver Mapa</a>
             </div>
           </div>
         </div>
       </aside>
 
       <!-- Mapa + tablas -->
-      <div class="lg:col-span-8">
-        <div class="bg-neutral-900/80 rounded-2xl border border-white/10 p-3 shadow">
-          <div class="text-sm text-white/70 mb-2">Previsualización</div>
-
+      <div class="lg:col-span-8 space-y-6">
+        <div class="bg-white rounded-2xl border border-gray-100 p-1.5 shadow-sm">
           <!-- 🔹 Mapa siempre renderizado + overlay cuando no hay ruta -->
-          <div class="relative">
-            <div ref="mapEl" class="w-full h-[420px] rounded-xl border border-white/10"></div>
+          <div class="relative rounded-xl overflow-hidden shadow-inner">
+            <div ref="mapEl" class="w-full h-[500px] bg-gray-100"></div>
 
-            <div v-if="!hasAssigned && !legs.length" class="absolute inset-0 grid place-items-center text-white/60 text-sm
-                     bg-neutral-900/70 pointer-events-none rounded-xl">
+            <div v-if="!hasAssigned && !legs.length"
+              class="absolute inset-0 grid place-items-center text-gray-500 text-sm font-medium bg-white/80 backdrop-blur-sm p-6 text-center">
               Asigna pedidos a la ruta o usa el planificador para generar el mapa.
             </div>
           </div>
+        </div>
 
-          <!-- Resumen -->
-          <div v-if="legs.length" class="mt-4 rounded-2xl bg-white/5 border border-white/10 p-4">
-            <h3 class="font-semibold mb-3">Resumen del recorrido</h3>
-            <div class="flex flex-wrap gap-2 mb-3">
-              <span class="px-2 py-1 rounded text-xs bg-white/10 border border-white/10">
-                Total: {{ totalKm.toFixed(1) }} km
+        <!-- Resumen -->
+        <div v-if="legs.length" class="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-gray-100 bg-gray-50 flex flex-wrap items-center justify-between gap-3">
+            <h3 class="font-bold text-gray-900">Resumen del recorrido</h3>
+            <div class="flex flex-wrap gap-2">
+              <span
+                class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white border border-gray-200 text-gray-700 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                {{ totalKm.toFixed(1) }} km
               </span>
-              <span class="px-2 py-1 rounded text-xs bg-white/10 border border-white/10">
-                Tiempo total: {{ totalMin }} min
+              <span
+                class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white border border-gray-200 text-gray-700 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {{ totalMin }} min
               </span>
-              <span class="px-2 py-1 rounded text-xs bg-white/10 border border-white/10">
+              <span
+                class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white border border-gray-200 text-gray-700 truncate max-w-[200px]"
+                :title="originText + ' → ' + destinationText">
                 {{ originText || uiOrigin }} → {{ destinationText || uiDest }}
               </span>
             </div>
-
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm">
-                <thead class="text-white/70">
-                  <tr class="border-b border-white/10">
-                    <th class="text-left py-2 pr-4">#</th>
-                    <th class="text-left py-2 pr-4">De</th>
-                    <th class="text-left py-2 pr-4">Hacia</th>
-                    <th class="text-left py-2 pr-4">Distancia</th>
-                    <th class="text-left py-2">Tiempo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(l, i) in legs" :key="i" class="border-b border-white/5">
-                    <td class="py-2 pr-4">{{ i + 1 }}</td>
-                    <td class="py-2 pr-4">{{ l.from }}</td>
-                    <td class="py-2 pr-4">{{ l.to }}</td>
-                    <td class="py-2 pr-4">{{ l.km.toFixed(1) }} km</td>
-                    <td class="py-2">{{ l.min }} min</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
           </div>
 
-          <!-- Pedidos seleccionados (nombre, comunidad, producto, cantidad) -->
-          <div v-if="pedidosRuta.length" class="mt-4 rounded-2xl bg-white/5 border border-white/10 p-4">
-            <h3 class="font-semibold mb-3">Pedidos seleccionados (ruta actual)</h3>
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm">
-                <thead class="text-white/70">
-                  <tr class="border-b border-white/10">
-                    <th class="text-left py-2 pr-4">Nombre</th>
-                    <th class="text-left py-2 pr-4">Localidad</th>
-                    <th class="text-left py-2 pr-4">Producto</th>
-                    <th class="text-left py-2">Cantidad</th>
-                    <th class="text-left py-2">Estado</th>
-                    <th class="text-left py-2">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="p in pedidosRuta" :key="p.id" class="border-b border-white/5">
-                    <td class="py-2 pr-4">{{ p.solicitanteNombre || 'Usuaria' }}</td>
-                    <td class="py-2 pr-4">{{ cleanCommunity(p.solicitanteComunidad) || '—' }}</td>
-                    <td class="py-2 pr-4">{{ p.producto }}</td>
-                    <td class="py-2">{{ p.cantidad }}</td>
-
-                    <!-- Estado visual -->
-                    <td class="py-2">
-                      <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" :class="{
-                        'bg-yellow-500/20 text-yellow-300': p.estado === 'pendiente',
-                        'bg-sky-500/20 text-sky-300': p.estado === 'en_ruta',
-                        'bg-emerald-500/20 text-emerald-300': p.estado === 'entregado',
-                        'bg-rose-500/20 text-rose-300': p.estado === 'cancelado',
-                      }">
-                        {{ formatEstado(p.estado) }}
-                      </span>
-                    </td>
-
-                    <!-- Acción Entregada -->
-                    <td class="py-2">
-                      <button v-if="p.estado !== 'entregado'" type="button"
-                        class="text-xs rounded-full bg-emerald-600 hover:bg-emerald-500 px-3 py-1"
-                        @click="marcarEntregado(p.id)">
-                        Entregada
-                      </button>
-                      <span v-else class="text-xs text-white/60">Completado</span>
-                    </td>
-                  </tr>
-                </tbody>
-
-              </table>
-            </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+              <thead class="bg-gray-50 text-gray-500 font-semibold border-b border-gray-100">
+                <tr>
+                  <th class="py-2 px-4 w-10">#</th>
+                  <th class="py-2 px-4">De</th>
+                  <th class="py-2 px-4">Hacia</th>
+                  <th class="py-2 px-4">Distancia</th>
+                  <th class="py-2 px-4">Tiempo</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="(l, i) in legs" :key="i" class="hover:bg-gray-50 text-gray-700">
+                  <td class="py-2 px-4 font-bold text-gray-400">{{ i + 1 }}</td>
+                  <td class="py-2 px-4 font-medium text-gray-900">{{ l.from }}</td>
+                  <td class="py-2 px-4 font-medium text-gray-900">{{ l.to }}</td>
+                  <td class="py-2 px-4 text-gray-500">{{ l.km.toFixed(1) }} km</td>
+                  <td class="py-2 px-4 text-gray-500">{{ l.min }} min</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-
-          <!-- Emprendedoras -->
-          <div v-if="emprPorLocalidad.length" class="mt-4 rounded-2xl bg-white/5 border border-white/10 p-4">
-            <h3 class="font-semibold mb-3">Emprendedoras (ruta actual)</h3>
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm">
-                <thead class="text-white/70">
-                  <tr class="border-b border-white/10">
-                    <th class="text-left py-2 pr-4">#</th>
-                    <th class="text-left py-2 pr-4">Localidad</th>
-                    <th class="text-left py-2 pr-4">Nombres</th>
-                    <th class="text-left py-2"># Emprendedoras</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(row, i) in emprPorLocalidad" :key="i" class="border-b border-white/5 align-top">
-                    <td class="py-2 pr-4">{{ i + 1 }}</td>
-                    <td class="py-2 pr-4">{{ row.localidad }}</td>
-                    <td class="py-2">
-                      <ul class="list-disc pl-4">
-                        <li v-for="(n, idx) in row.nombres" :key="idx">{{ n }}</li>
-                      </ul>
-                    </td>
-                    <td class="py-2 text-center">{{ row.total }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
         </div>
+
+        <!-- Pedidos seleccionados (nombre, comunidad, producto, cantidad) -->
+        <div v-if="pedidosRuta.length" class="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-gray-100 bg-gray-50">
+            <h3 class="font-bold text-gray-900">Pedidos seleccionados <span
+                class="font-normal text-gray-500 text-sm">({{ pedidosRuta.length }})</span></h3>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+              <thead class="bg-white text-gray-500 font-semibold border-b border-gray-100">
+                <tr>
+                  <th class="py-2 px-4">Nombre</th>
+                  <th class="py-2 px-4">Localidad</th>
+                  <th class="py-2 px-4">Producto</th>
+                  <th class="py-2 px-4 text-right">Cant</th>
+                  <th class="py-2 px-4 text-center">Estado</th>
+                  <th class="py-2 px-4 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="p in pedidosRuta" :key="p.id" class="hover:bg-gray-50 text-gray-700">
+                  <td class="py-2 px-4 font-medium text-gray-900">{{ p.solicitanteNombre || 'Usuaria' }}</td>
+                  <td class="py-2 px-4 text-gray-600">{{ cleanCommunity(p.solicitanteComunidad) || '—' }}</td>
+                  <td class="py-2 px-4 text-gray-600">{{ p.producto }}</td>
+                  <td class="py-2 px-4 text-right font-medium">{{ p.cantidad }}</td>
+
+                  <!-- Estado visual -->
+                  <td class="py-2 px-4 text-center">
+                    <span
+                      class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase border"
+                      :class="{
+                        'bg-amber-50 text-amber-700 border-amber-200': p.estado === 'pendiente',
+                        'bg-blue-50 text-blue-700 border-blue-200': p.estado === 'en_ruta',
+                        'bg-emerald-50 text-emerald-700 border-emerald-200': p.estado === 'entregado',
+                        'bg-red-50 text-red-700 border-red-200': p.estado === 'cancelado',
+                      }">
+                      {{ formatEstado(p.estado) }}
+                    </span>
+                  </td>
+
+                  <!-- Acción Entregada -->
+                  <td class="py-2 px-4 text-right flex items-center justify-end gap-2">
+                    <button type="button" 
+                      class="p-1.5 rounded-lg bg-gray-100 text-blue-600 hover:bg-blue-50 transition-colors"
+                      title="Navegar al punto"
+                      @click="openExternalMap(p)">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </button>
+
+                    <button v-if="p.estado !== 'entregado'" type="button"
+                      class="text-xs rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-500 px-3 py-1.5 transition-colors shadow-sm shadow-emerald-200"
+                      @click="marcarEntregado(p.id)">
+                      Entregar
+                    </button>
+                    <span v-else class="text-xs font-bold text-emerald-600 flex items-center justify-end gap-1">
+                      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Listo
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+
+            </table>
+          </div>
+        </div>
+
+        <!-- Emprendedoras -->
+        <div v-if="emprPorLocalidad.length"
+          class="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-gray-100 bg-gray-50">
+            <h3 class="font-bold text-gray-900">Emprendedoras por localidad</h3>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+              <thead class="bg-white text-gray-500 font-semibold border-b border-gray-100">
+                <tr>
+                  <th class="py-2 px-4 w-10 text-gray-400">#</th>
+                  <th class="py-2 px-4">Localidad</th>
+                  <th class="py-2 px-4">Nombres</th>
+                  <th class="py-2 px-4 text-center">Total</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="(row, i) in emprPorLocalidad" :key="i" class="hover:bg-gray-50 text-gray-700 align-top">
+                  <td class="py-3 px-4 font-bold text-gray-400">{{ i + 1 }}</td>
+                  <td class="py-3 px-4 font-bold text-gray-900">{{ row.localidad }}</td>
+                  <td class="py-3 px-4">
+                    <ul class="list-disc pl-4 text-gray-600 space-y-0.5">
+                      <li v-for="(n, idx) in row.nombres" :key="idx">{{ n }}</li>
+                    </ul>
+                  </td>
+                  <td class="py-3 px-4 text-center font-bold text-gray-900">{{ row.total }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
 
     </div>
@@ -1005,61 +1135,23 @@ watch(
 </template>
 
 <style scoped>
-/* Estilos mejorados para los selects */
-select {
-  background-color: #1f2937;
-  /* neutral-800 */
-  border-color: #4b5563;
-  /* neutral-600 */
-  color: white;
-  cursor: pointer;
-}
-
-select:hover {
-  background-color: #374151;
-  /* neutral-700 */
-}
-
-select option {
-  background-color: #1f2937;
-  /* neutral-800 */
-  color: white;
-}
-
-select option:hover {
-  background-color: #374151;
-  /* neutral-700 */
-}
-
-/* Mejora para los checkboxes */
-input[type="checkbox"] {
-  border-color: #9ca3af;
-  /* neutral-400 */
-}
-
-input[type="checkbox"]:checked {
-  background-color: #10b981;
-  /* emerald-500 */
-  border-color: #10b981;
-  /* emerald-500 */
-}
-
 /* Scrollbar personalizado para la lista de paradas */
-.max-h-60::-webkit-scrollbar {
-  width: 6px;
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
 }
 
-.max-h-60::-webkit-scrollbar-track {
-  background: #1f2937;
-  border-radius: 3px;
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.max-h-60::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 3px;
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  /* slate-300 */
+  border-radius: 99px;
 }
 
-.max-h-60::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+  /* slate-400 */
 }
 </style>

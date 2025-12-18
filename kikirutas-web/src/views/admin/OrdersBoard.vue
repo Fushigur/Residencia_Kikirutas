@@ -129,31 +129,41 @@ function borrarPedido(id: string, folio: string) {
 /* Helpers UI */
 function estadoChipClasses(e: Pedido['estado']) {
   return {
-    'px-2 py-1 rounded text-xs font-medium border': true,
-    'bg-amber-500/15 text-amber-300 border-amber-500/30': e === 'pendiente',
-    'bg-blue-500/15 text-blue-300 border-blue-500/30': e === 'en_ruta',
-    'bg-emerald-500/15 text-emerald-300 border-emerald-500/30': e === 'entregado',
-    'bg-rose-500/15 text-rose-300 border-rose-500/30': e === 'cancelado',
+    'px-2.5 py-0.5 rounded-full text-xs font-bold border': true,
+    'bg-amber-50 text-amber-700 border-amber-200': e === 'pendiente',
+    'bg-blue-50 text-blue-700 border-blue-200': e === 'en_ruta',
+    'bg-emerald-50 text-emerald-700 border-emerald-200': e === 'entregado',
+    'bg-red-50 text-red-700 border-red-200': e === 'cancelado',
   }
 }
 </script>
 
 <template>
-  <section class="space-y-4">
-    <h1 class="text-2xl font-semibold">Pedidos</h1>
+  <section class="space-y-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Pedidos</h1>
+        <p class="text-gray-500 text-sm mt-1">Gestión y seguimiento de solicitudes</p>
+      </div>
+    </div>
 
     <!-- Filtros -->
-    <div class="rounded-xl bg-white/5 border border-white/10 p-4">
-      <div class="grid md:grid-cols-5 gap-3">
+    <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5">
+      <div class="grid md:grid-cols-5 gap-4">
         <div class="md:col-span-2">
-          <label class="block text-sm mb-1">Buscar</label>
-          <input v-model="q" type="text" class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2"
-            placeholder="Folio, producto, solicitante, comunidad o ruta…" />
+          <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Buscar</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </span>
+            <input v-model="q" type="text" class="w-full rounded-xl border-gray-200 bg-gray-50 pl-10 pr-4 py-2.5 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
+            placeholder="Folio, producto, solicitante..." />
+          </div>
         </div>
 
         <div>
-          <label class="block text-sm mb-1">Estado</label>
-          <select v-model="estado" class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2">
+          <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Estado</label>
+          <select v-model="estado" class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all">
             <option value="todos">Todos</option>
             <option value="pendiente">Pendiente</option>
             <option value="en_ruta">En ruta</option>
@@ -163,122 +173,131 @@ function estadoChipClasses(e: Pedido['estado']) {
         </div>
 
         <div>
-          <label class="block text-sm mb-1">Desde</label>
+           <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Desde</label>
           <input v-model="fechaIni" type="date"
-            class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2" />
+            class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all" />
         </div>
 
         <div>
-          <label class="block text-sm mb-1">Hasta</label>
+           <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Hasta</label>
           <input v-model="fechaFin" type="date"
-            class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2" />
+            class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all" />
         </div>
       </div>
     </div>
 
     <!-- Tabla -->
-    <div class="rounded-xl bg-white/5 border border-white/10 p-0 overflow-x-auto">
-      <!-- ancho mínimo para que no se achoche -->
-      <table class="w-full min-w-[1150px] table-fixed text-sm">
-        <thead class="sticky top-0 z-10 bg-neutral-950/80 backdrop-blur border-b border-white/10 text-white/60">
-          <tr>
-            <th class="text-left py-3 px-3 w-[90px]">Folio</th>
-            <th class="text-left px-3 w-[220px]">Producto</th>
-            <th class="text-left px-3 w-[180px]">Solicitante</th>
-            <th class="text-left px-3 w-[160px]">Comunidad</th>
-            <th class="text-right px-3 w-[80px]">Cant.</th>
-            <th class="text-right px-3 w-[110px]">Precio</th>
-            <th class="text-right px-3 w-[120px]">Subtotal</th>
-            <th class="text-left px-3 w-[120px]">Fecha</th>
-            <th class="text-left px-3 w-[110px]">Estado</th>
-            <th class="text-left px-3 w-[150px]">Ruta</th>
-            <th class="text-left px-3 w-[260px]">Acciones</th>
-          </tr>
-        </thead>
+    <div class="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[1150px] text-sm text-left">
+          <thead class="bg-gray-50 text-gray-500 font-semibold border-b border-gray-100">
+            <tr>
+              <th class="py-3 px-4 w-[90px]">Folio</th>
+              <th class="px-4 w-[220px]">Producto</th>
+              <th class="px-4 w-[180px]">Solicitante</th>
+              <th class="px-4 w-[160px]">Comunidad</th>
+              <th class="text-right px-4 w-[80px]">Cant.</th>
+              <th class="text-right px-4 w-[110px]">Precio</th>
+              <th class="text-right px-4 w-[120px]">Subtotal</th>
+              <th class="px-4 w-[120px]">Fecha</th>
+              <th class="px-4 w-[120px]">Estado</th>
+              <th class="px-4 w-[150px]">Ruta</th>
+              <th class="px-4 w-[260px]">Acciones</th>
+            </tr>
+          </thead>
 
-        <tbody>
-          <tr v-for="p in list" :key="p.id" class="border-b border-white/10 hover:bg-white/5 transition-colors">
-            <!-- Folio -->
-            <td class="py-3 px-3 font-medium">{{ p.folio }}</td>
+          <tbody class="divide-y divide-gray-100">
+            <tr v-for="p in list" :key="p.id" class="hover:bg-gray-50 transition-colors group">
+              <!-- Folio -->
+              <td class="py-3 px-4 font-bold text-gray-900">{{ p.folio }}</td>
 
-            <!-- Producto (truncate) -->
-            <td class="px-3">
-              <div class="truncate max-w-[210px]" :title="p.producto">{{ p.producto }}</div>
-            </td>
+              <!-- Producto -->
+              <td class="px-4 text-gray-700">
+                <div class="truncate max-w-[210px]" :title="p.producto">{{ p.producto }}</div>
+              </td>
 
-            <!-- Solicitante / Comunidad -->
-            <td class="px-3">
-              <div class="truncate max-w-[170px]" :title="p.solicitanteNombre || '—'">
-                {{ p.solicitanteNombre || '—' }}
-              </div>
-            </td>
-            <td class="px-3">
-              <div class="truncate max-w-[150px]" :title="p.solicitanteComunidad || '—'">
-                {{ p.solicitanteComunidad || '—' }}
-              </div>
-            </td>
+              <!-- Solicitante / Comunidad -->
+              <td class="px-4 text-gray-600">
+                <div class="truncate max-w-[170px]" :title="p.solicitanteNombre || '—'">
+                  {{ p.solicitanteNombre || '—' }}
+                </div>
+              </td>
+              <td class="px-4 text-gray-500">
+                <div class="truncate max-w-[150px]" :title="p.solicitanteComunidad || '—'">
+                  {{ p.solicitanteComunidad || '—' }}
+                </div>
+              </td>
 
-            <!-- Cantidad / Precio / Subtotal -->
-            <td class="px-3 text-right tabular-nums">{{ p.cantidad }}</td>
-            <td class="px-3 text-right tabular-nums">${{ precio(p.producto).toFixed(2) }}</td>
-            <td class="px-3 text-right tabular-nums">${{ (precio(p.producto) * p.cantidad).toFixed(2) }}</td>
+              <!-- Cantidad / Precio / Subtotal -->
+              <td class="px-4 text-right tabular-nums font-medium text-gray-900">{{ p.cantidad }}</td>
+              <td class="px-4 text-right tabular-nums text-gray-500">${{ precio(p.producto).toFixed(2) }}</td>
+              <td class="px-4 text-right tabular-nums font-bold text-gray-900">${{ (precio(p.producto) * p.cantidad).toFixed(2) }}</td>
 
-            <!-- Fecha -->
-            <td class="px-3 whitespace-nowrap">{{ formatFechaCorta(p.fechaISO) }}</td>
+              <!-- Fecha -->
+              <td class="px-4 whitespace-nowrap text-gray-500">{{ formatFechaCorta(p.fechaISO) }}</td>
 
-            <!-- Estado -->
-            <td class="px-3">
-              <span :class="estadoChipClasses(p.estado)">{{ p.estado }}</span>
-              <div v-if="p.observaciones" class="text-[11px] text-white/60 mt-1 max-w-[180px] truncate"
-                :title="p.observaciones">
-                {{ p.observaciones }}
-              </div>
-            </td>
+              <!-- Estado -->
+              <td class="px-4">
+                <span :class="estadoChipClasses(p.estado)">{{ p.estado }}</span>
+                <div v-if="p.observaciones" class="text-[10px] text-gray-400 mt-1 max-w-[180px] truncate" :title="p.observaciones">
+                  {{ p.observaciones }}
+                </div>
+              </td>
 
-            <!-- Ruta (click para ver) -->
-            <td class="px-3">
-              <button v-if="p.routeId" class="text-emerald-300 hover:text-emerald-200 underline underline-offset-4"
-                @click="goVerRuta(p)">
-                {{ rutas.byId(p.routeId)?.nombre ?? 'Ruta' }}
-              </button>
-              <span v-else>—</span>
-            </td>
-
-            <!-- Acciones (mínimas y contextuales) -->
-            <td class="px-3">
-              <div class="flex flex-wrap gap-2">
-                <!-- Pendiente: Asignar (navega a /admin/rutas) -->
-                <!-- antes abría el panel inline; ahora navega a Rutas con query -->
-                <button class="btn-ghost mt-2 hover:bg-blue-500/20 rounded bg-blue-600 px-3 py-1 text-white"
-                  @click="$router.push({ name: 'a.rutas', query: { select: p.id } })">
-                  Asignar ruta
+              <!-- Ruta -->
+              <td class="px-4">
+                <button v-if="p.routeId" class="text-brand font-medium hover:underline decoration-2 underline-offset-2"
+                  @click="goVerRuta(p)">
+                  {{ rutas.byId(p.routeId)?.nombre ?? 'Ver Ruta' }}
                 </button>
+                <span v-else class="text-gray-300">—</span>
+              </td>
 
-                <!-- En ruta: marcar entregado -->
-                <button v-if="p.estado === 'en_ruta'" class="rounded bg-emerald-600 px-3 py-1 hover:bg-emerald-500">
-                  <span @click="marcarEntregado(p.id)">Marcar entregado</span>
-                </button>
+              <!-- Acciones -->
+              <td class="px-4">
+                <div class="flex flex-wrap gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                   <!-- Pendiente: Asignar -->
+                  <button v-if="!p.routeId && p.estado === 'pendiente'" 
+                    class="inline-flex items-center rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 transition-colors"
+                    @click="$router.push({ name: 'a.rutas', query: { select: p.id } })">
+                    Asignar
+                  </button>
 
-                <!-- Cancelar si no está entregado -->
-                <button v-if="p.estado !== 'entregado' && p.estado !== 'cancelado'"
-                  class="inline-flex items-center rounded bg-amber-500 px-3 py-4 text-xs font-medium text-gray-900 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300"
-                  @click="cancelarPedido(p.id)">
-                  Cancelar
-                </button>
-                <!-- Borrar: solo pendiente y sin ruta -->
-                <button v-if="p.estado === 'pendiente' && !p.routeId"
-                  class="rounded bg-rose-700 px-3 py-1 hover:bg-rose-600" @click="borrarPedido(p.id, p.folio)">
-                  Borrar
-                </button>
-              </div>
-            </td>
-          </tr>
+                  <!-- En ruta: marcar entregado -->
+                  <button v-if="p.estado === 'en_ruta'" 
+                    class="inline-flex items-center rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-colors"
+                    @click="marcarEntregado(p.id)">
+                    Entregar
+                  </button>
 
-          <tr v-if="list.length === 0">
-            <td colspan="11" class="py-8 text-center text-white/60">No hay pedidos con esos filtros.</td>
-          </tr>
-        </tbody>
-      </table>
+                  <!-- Cancelar -->
+                  <button v-if="p.estado !== 'entregado' && p.estado !== 'cancelado'"
+                    class="inline-flex items-center rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-bold text-amber-700 hover:bg-amber-100 transition-colors"
+                    @click="cancelarPedido(p.id)">
+                    Cancelar
+                  </button>
+                  
+                  <!-- Borrar -->
+                  <button v-if="p.estado === 'pendiente' && !p.routeId"
+                    class="inline-flex items-center rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-bold text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
+                    @click="borrarPedido(p.id, p.folio)">
+                    Borrar
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <tr v-if="list.length === 0">
+              <td colspan="11" class="py-12 text-center text-gray-400">
+                <div class="flex flex-col items-center justify-center">
+                   <svg class="h-10 w-10 text-gray-200 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                   No se encontraron pedidos con estos filtros.
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <CancellationModal :show="showCancelModal" title="Cancelar pedido"
@@ -288,7 +307,6 @@ function estadoChipClasses(e: Pedido['estado']) {
 </template>
 
 <style scoped>
-/* Para números alineados bonitos */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }

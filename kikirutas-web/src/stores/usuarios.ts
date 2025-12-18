@@ -10,6 +10,7 @@ export interface Usuario {
   email: string
   telefono?: string | null
   comunidad?: string | null
+  municipio?: string | null
   rol: RolUsuario
   activo: boolean
   createdAt: number
@@ -62,6 +63,7 @@ function mapFromApi(u: any): Usuario {
     email: String(u.email ?? ''),
     telefono: u.telefono ?? u.phone ?? null,
     comunidad: u.comunidad ?? null,
+    municipio: u.municipio ?? null,
     rol,
     activo,
     createdAt,
