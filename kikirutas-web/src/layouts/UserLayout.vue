@@ -152,6 +152,36 @@
         <span class="tab-label">Perfil</span>
       </RouterLink>
     </nav>
+
+    <!-- Toasts Container -->
+    <div class="fixed top-6 right-6 z-[60] flex flex-col gap-3 pointer-events-none w-full max-w-sm">
+      <transition-group enter-active-class="animate-fade-in-down" leave-active-class="animate-fade-out">
+        <div v-for="t in alertasStore.toasts" :key="t.id"
+          class="pointer-events-auto px-5 py-4 rounded-2xl shadow-2xl border flex items-center gap-3 backdrop-blur-md" :class="[
+            t.tipo === 'success' ? 'bg-emerald-500/95 text-white border-emerald-400' :
+              t.tipo === 'error' ? 'bg-rose-600/95 text-white border-rose-500' :
+                'bg-blue-600/95 text-white border-blue-500'
+          ]">
+          <div class="shrink-0">
+            <svg v-if="t.tipo === 'success'" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <svg v-else-if="t.tipo === 'error'" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <svg v-else class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p class="text-sm font-bold tracking-tight">{{ t.msg }}</p>
+        </div>
+      </transition-group>
+    </div>
+
+    <!-- Confirm Dialog -->
+    <ConfirmModal />
   </div>
 </template>
 
@@ -160,6 +190,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import logoUrl from '@/assets/img/Logo_letras.png'
 import { useAlertasStore } from '@/stores/alertas'
+import { RouterLink, RouterView } from 'vue-router'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 import { onMounted } from 'vue'
 
 const route = useRoute()

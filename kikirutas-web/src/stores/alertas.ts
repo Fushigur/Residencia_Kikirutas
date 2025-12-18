@@ -34,6 +34,7 @@ type Filtros = {
 type State = {
   items: Alerta[];
   filtros: Filtros;
+  toasts: { id: number; msg: string; tipo: 'success' | 'info' | 'error' }[];
 };
 
 const STORAGE_KEY = 'alertas_agroconecta';
@@ -46,6 +47,7 @@ export const useAlertasStore = defineStore('alertas', {
   state: (): State => ({
     items: [],
     filtros: { categoria: 'todos', soloNoLeidas: false },
+    toasts: [],
   }),
 
   getters: {
@@ -82,15 +84,25 @@ export const useAlertasStore = defineStore('alertas', {
       // 2. Cargar notificaciones del backend
       try {
         const { data } = await api.get('/notifications');
-        // Backend devuelve array de objetos con estructura compatible
-        // Aseguramos que se mezclen o reemplacen
+        const countBefore = this.items.length;
         this.items = data;
+
+        // Si hay nuevas alertas y no es la primera carga, podríamos avisar
+        // Pero mejor lo dejamos para acciones específicas o polling
       } catch (e) {
         console.error('Error cargando notificaciones:', e);
       }
 
       // 3. Refrescar alertas locales del sistema (inventario, etc)
       this.refreshSystemAlerts();
+    },
+
+    pushToast(msg: string, tipo: 'success' | 'info' | 'error' = 'success', duration = 3000) {
+      const id = Date.now();
+      this.toasts.push({ id, msg, tipo });
+      setTimeout(() => {
+        this.toasts = this.toasts.filter((t) => t.id !== id);
+      }, duration);
     },
 
     // Añadir alerta local (sin guardar en backend)

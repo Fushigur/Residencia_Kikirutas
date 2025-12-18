@@ -16,6 +16,8 @@ type Pedido = {
   estado: PedidoEstado
   solicitanteNombre?: string
   solicitanteComunidad?: string
+  lat?: number
+  lng?: number
 }
 // Convierte una dirección de catálogo a LatLng fijo para Directions.
 // Si no existe en STATIC_COORDS, se deja el string para que Google lo resuelva.
@@ -28,6 +30,11 @@ function asDirectionsLocation(addr: string): any {
 
   if (c && window.google?.maps) {
     return new window.google.maps.LatLng(c.lat, c.lng)
+  }
+
+  // 🔹 NUEVO: Si la "dirección" parece ser un objeto de coordenadas {lat, lng}
+  if (typeof addr === 'object' && (addr as any).lat) {
+    return new window.google.maps.LatLng((addr as any).lat, (addr as any).lng)
   }
 
   // Si no hay coord fija, que Google la resuelva con el string
@@ -413,6 +420,21 @@ function showCommunityMarkersFromPedidos() {
     const addr = toAddress(comunidadLimpia)      // "Dzula" -> "Dzula, Quintana Roo"
     const canon = canonAddr(addr)               // "dzula quintana roo"
 
+    // 🔻 NUEVO: Si el pedido tiene coordenadas exactas (PIN), las usamos
+    if (pedido.lat && pedido.lng) {
+      const pinMarker = new window.google.maps.Marker({
+        map,
+        position: { lat: Number(pedido.lat), lng: Number(pedido.lng) },
+        title: `${pedido.solicitanteNombre || 'Usuaria'} - ${comunidadLimpia}`,
+        icon: {
+          url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' // Color distinto para PIN exacto
+        }
+      })
+      communityMarkers.push(pinMarker)
+      bounds.extend(pinMarker.getPosition()!)
+      continue
+    }
+
     if (canonSet.has(canon)) continue           // ya dibujamos esta comunidad
     canonSet.add(canon)
 
@@ -437,45 +459,103 @@ function showCommunityMarkersFromPedidos() {
   }
 }
 
+function openExternalMap(p: Pedido) {
+  let url = ''
+  if (p.lat && p.lng) {
+    url = `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`
+  } else {
+    const addr = toAddress(cleanCommunity(p.solicitanteComunidad))
+    url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`
+  }
+  window.open(url, '_blank')
+}
+
 function drawRoute() {
   if (!map || !dirSrv || !dirRnd) return
 
-  // Waypoints en texto crudo (para el "signature")
-  const rawWps = waypointsText.value
-    ? waypointsText.value.split('|').filter(Boolean)
-    : []
-
-  // Waypoints para Directions: usar LatLng fijo si existe
-  const wps = rawWps.map((a: string) => ({
-    location: asDirectionsLocation(a),
-    stopover: true,
-  }))
-
   const originAddr = originText.value || originOptions[0]
   const destAddr = destinationText.value || originText.value || originOptions[0]
+  const rawWps = waypointsText.value ? waypointsText.value.split('|').filter(Boolean) : []
 
-  // Para evitar recalcular la misma ruta usamos una firma basada en los STRINGS,
-  // no en los LatLng de Google (que no se serializan bien).
+  // 🔹 Resolver Origen
+  const resolvedOrigin = asDirectionsLocation(originAddr)
+
+  // 🔹 Resolver Destino y Waypoints proactivamente usando PINs si existen
+  // Queremos llegar a CADA pedido asignado que pertenezca a las comunidades seleccionadas
+  const communitiesInRoute = new Set([canonAddr(destAddr), ...rawWps.map(canonAddr)])
+  const relevantPedidos = pedidosRuta.value.filter(p => {
+    const c = cleanCommunity(p.solicitanteComunidad)
+    return communitiesInRoute.has(canonAddr(toAddress(c)))
+  })
+
+  // Agrupamos pedidos por comunidad para mantener un orden lógico base
+  const pedidosPorComunidad: Record<string, Pedido[]> = {}
+  relevantPedidos.forEach(p => {
+    const canon = canonAddr(toAddress(cleanCommunity(p.solicitanteComunidad)))
+    if (!pedidosPorComunidad[canon]) pedidosPorComunidad[canon] = []
+    pedidosPorComunidad[canon].push(p)
+  })
+
+  const waypoints: any[] = []
+  let finalDest: any = asDirectionsLocation(destAddr)
+
+  // Recorremos la secuencia (paradas -> destino final)
+  const fullSequence = [...rawWps, destAddr]
+  
+  fullSequence.forEach((addr, sIdx) => {
+    const canon = canonAddr(addr)
+    const peds = pedidosPorComunidad[canon] || []
+    const pins = peds.filter(p => p.lat && p.lng)
+
+    if (pins.length > 0) {
+      // Si hay PINs exactos, los agregamos como puntos obligatorios
+      pins.forEach((p, pIdx) => {
+        const coord = new window.google.maps.LatLng(Number(p.lat), Number(p.lng))
+        // Si es el último pedido de la última comunidad, es el destino final de la línea
+        if (sIdx === fullSequence.length - 1 && pIdx === pins.length - 1) {
+          finalDest = coord
+        } else {
+          waypoints.push({ location: coord, stopover: true })
+        }
+      })
+    } else {
+      // Si no hay PINs, usamos el centro de la comunidad (estático)
+      const coord = asDirectionsLocation(addr)
+      if (sIdx === fullSequence.length - 1) {
+        finalDest = coord
+      } else {
+        waypoints.push({ location: coord, stopover: true })
+      }
+    }
+  })
+
+  // Waypoints en texto para el signature (mantenemos compatibilidad con strings para el cache)
   const sigPayload = {
     origin: originAddr,
     destination: destAddr,
     waypoints: rawWps,
+    hasPins: relevantPedidos.some(p => p.lat && p.lng) // para que el cache se invalide si hay pines
   }
   const sig = JSON.stringify(sigPayload)
   if (sig === lastSig) return
   lastSig = sig
 
   const req: any = {
-    origin: asDirectionsLocation(originAddr),
-    destination: asDirectionsLocation(destAddr),
+    origin: resolvedOrigin,
+    destination: finalDest,
     travelMode: window.google.maps.TravelMode.DRIVING,
     optimizeWaypoints: true,
     language: 'es',
+    region: 'MX'
   }
-  if (wps.length) req.waypoints = wps
+  if (waypoints.length) req.waypoints = waypoints.slice(0, 25) // Límite de Google
 
   dirSrv.route(req, (res: any, status: string) => {
-    if (status !== 'OK' || !res?.routes?.[0]) { legs.value = []; return }
+    if (status !== 'OK' || !res?.routes?.[0]) { 
+      legs.value = []
+      console.warn('[drawRoute] Error:', status)
+      return 
+    }
     clearDefaultMarkers()
     dirRnd.setDirections(res)
     const r = res.routes[0]
@@ -985,7 +1065,17 @@ watch(
                   </td>
 
                   <!-- Acción Entregada -->
-                  <td class="py-2 px-4 text-right">
+                  <td class="py-2 px-4 text-right flex items-center justify-end gap-2">
+                    <button type="button" 
+                      class="p-1.5 rounded-lg bg-gray-100 text-blue-600 hover:bg-blue-50 transition-colors"
+                      title="Navegar al punto"
+                      @click="openExternalMap(p)">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </button>
+
                     <button v-if="p.estado !== 'entregado'" type="button"
                       class="text-xs rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-500 px-3 py-1.5 transition-colors shadow-sm shadow-emerald-200"
                       @click="marcarEntregado(p.id)">

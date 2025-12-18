@@ -42,6 +42,9 @@ type UserPayload = {
   telefono?: string
   sexo?: string
   edad?: number | null
+  direccion?: string
+  lat?: number | null
+  lng?: number | null
 }
 
 type UpdateProfilePayload = {
@@ -49,6 +52,9 @@ type UpdateProfilePayload = {
   telefono?: string | null
   sexo?: string | null
   edad?: number | null
+  direccion?: string | null
+  lat?: number | null
+  lng?: number | null
 }
 
 
@@ -140,6 +146,9 @@ function buildUserFromMe(data: any): UserPayload | null {
       typeof src?.edad !== 'undefined' && src?.edad !== null
         ? Number(src.edad)
         : null,
+    direccion: src?.direccion,
+    lat: src?.lat ? Number(src.lat) : null,
+    lng: src?.lng ? Number(src.lng) : null,
   }
 
   return user
@@ -275,6 +284,9 @@ export const useAuthStore = defineStore('auth', {
       edad?: number | null
       comunidad?: string
       municipio?: string
+      direccion?: string
+      lat?: number | null
+      lng?: number | null
     }): Promise<ExplicitRole> {
 
       this.error = null
@@ -327,6 +339,9 @@ export const useAuthStore = defineStore('auth', {
       if (payload.edad !== undefined && payload.edad !== null) {
         body.edad = payload.edad
       }
+      if (payload.direccion !== undefined) body.direccion = payload.direccion
+      if (payload.lat !== undefined) body.lat = payload.lat
+      if (payload.lng !== undefined) body.lng = payload.lng
 
       const { data } = await api.put('/auth/profile', body)
       const updated = buildUserFromMe(data)

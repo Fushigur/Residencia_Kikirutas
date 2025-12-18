@@ -277,7 +277,8 @@ function getSolicitante() {
   let nombre: string | null = partesNombre.length ? partesNombre.join(' ') : null
   if (!nombre && user.name) nombre = String(user.name)
   const comunidad: string | null = user.comunidad ?? user.municipio ?? a.comunidad ?? null
-  return { nombre, comunidad }
+  const direccion: string | null = user.direccion ?? null
+  return { nombre, comunidad, direccion }
 }
 
 async function onSubmit() {
@@ -293,11 +294,14 @@ async function onSubmit() {
       fecha: new Date().toISOString().slice(0, 10),
       solicitante_nombre: solicitante.nombre ?? undefined,
       solicitante_comunidad: solicitante.comunidad ?? undefined,
+      direccion_entrega: solicitante.direccion ?? undefined,
       notas: (observaciones.value || '').trim(),
     }
 
     await api.post('/pedidos', body)
     await pedidos.load({ mine: true })
+    await alertas.load()
+    alertas.pushToast('¡Pedido registrado con éxito!', 'success')
 
     producto.value = ''
     cantidad.value = null

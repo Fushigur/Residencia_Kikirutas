@@ -20,6 +20,8 @@ export interface Pedido {
   solicitanteNombre?: string
   solicitanteComunidad?: string
   solicitanteMunicipio?: string
+  lat?: number | null
+  lng?: number | null
 }
 
 type State = { items: Pedido[] }
@@ -61,6 +63,8 @@ function mapFromApi(p: any): Pedido {
     solicitanteNombre: p.solicitante_nombre ?? '—',
     solicitanteComunidad: p.solicitante_comunidad ?? '—',
     solicitanteMunicipio: p.solicitante_municipio ?? '—',
+    lat: p.lat ? Number(p.lat) : null,
+    lng: p.lng ? Number(p.lng) : null,
   }
 }
 
@@ -111,6 +115,19 @@ export const usePedidosStore = defineStore('pedidos', {
       } catch (error) {
         console.error('Error cargando pedidos desde API', error)
         this.items = []
+      }
+    },
+
+    /* Eliminar pedido */
+    async delete(id: string) {
+      try {
+        await api.delete(`/pedidos/${id}`)
+        this.items = this.items.filter((i) => i.id !== id)
+        this.persist()
+        return true
+      } catch (error) {
+        console.error('No se pudo eliminar el pedido', error)
+        return false
       }
     },
 
@@ -175,7 +192,7 @@ export const usePedidosStore = defineStore('pedidos', {
           mensaje: string,
           severidad: AlertaSeveridad = 'info'
         ) =>
-          alertas.add({
+          alertas.addLocal({
             titulo,
             mensaje,
             tipo: 'pedido',

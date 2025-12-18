@@ -85,7 +85,7 @@
                   class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2 pt-2">
                   <span class="w-1.5 h-1.5 rounded-full bg-blue-400/40"></span> Ubicación
                 </h3>
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-2 gap-3 pb-2">
                   <div class="group">
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1 ml-1">Municipio</label>
                     <select v-model="municipio" class="form-select">
@@ -104,7 +104,28 @@
                     <FormError :msg="serverErrs.comunidad" />
                   </div>
                 </div>
+
+                <div class="group">
+                  <div class="flex justify-between items-center mb-1 ml-1">
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase">Dirección de casa</label>
+                    <button type="button" @click="showMap = true"
+                      class="text-[10px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                          d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                          clip-rule="evenodd" />
+                      </svg>
+                      {{ lat ? 'PIN Seleccionado' : 'Marcar PIN exacto' }}
+                    </button>
+                  </div>
+                  <input v-model.trim="direccion" type="text" :class="inputClass(!direccion && tried)"
+                    class="form-input" placeholder="Calle, número, referencias..." />
+                  <FormError :msg="serverErrs.direccion" />
+                </div>
               </section>
+
+              <!-- Modal de Mapa -->
+              <MapPicker v-if="showMap" v-model="location" @close="showMap = false" />
 
             </div>
 
@@ -225,8 +246,10 @@
 <script setup lang="ts">
 import { computed, ref, watch, defineComponent } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore, type ExplicitRole } from '@/stores/auth'
+import { useAlertasStore } from '@/stores/alertas'
 import { getErrorMessage, getFieldErrors } from '@/api'
+import MapPicker from '@/components/MapPicker.vue'
 
 // Componente local simple para errores
 const FormError = defineComponent({
@@ -234,13 +257,12 @@ const FormError = defineComponent({
   template: `<p v-if="msg" class="text-red-500 text-[10px] mt-1 ml-1 font-bold">{{ msg }}</p>`
 })
 
-type ExplicitRole = 'user' | 'operator'
-
 /* State */
 const nombres = ref('')
 const apellidos = ref('')
 const municipio = ref('')
 const comunidad = ref('')
+const direccion = ref('')
 const telefono = ref('')
 const email = ref('')
 const sexo = ref('')
@@ -253,6 +275,18 @@ const accept = ref(false)
 const role = ref<ExplicitRole>('user')
 const loading = ref(false)
 const tried = ref(false)
+const showMap = ref(false)
+
+const lat = ref<number | null>(null)
+const lng = ref<number | null>(null)
+
+const location = computed({
+  get: () => (lat.value && lng.value) ? { lat: lat.value, lng: lng.value } : null,
+  set: (val) => {
+    lat.value = val?.lat || null
+    lng.value = val?.lng || null
+  }
+})
 
 /* Data */
 const municipios = ['José María Morelos', 'Felipe Carrillo Puerto']
@@ -274,7 +308,7 @@ const passwordsMatch = computed(() => password.value === confirm.value)
 const edadValida = computed(() => !!edad.value && edad.value >= 18 && edad.value <= 100)
 
 const isValid = computed(() =>
-  nombres.value && apellidos.value && municipio.value && comunidad.value &&
+  nombres.value && apellidos.value && municipio.value && comunidad.value && direccion.value &&
   telefonoValido.value && emailValido.value && sexo.value && edadValida.value &&
   passwordFuerte.value && passwordsMatch.value && accept.value
 )
@@ -287,6 +321,7 @@ const formError = ref('')
 
 /* API */
 const auth = useAuthStore()
+const alertas = useAlertasStore()
 const router = useRouter()
 
 async function onSubmit() {
@@ -312,8 +347,12 @@ async function onSubmit() {
       sexo: sexo.value,
       edad: edad.value || undefined,
       comunidad: comunidad.value,
-      municipio: municipio.value
+      municipio: municipio.value,
+      direccion: direccion.value,
+      lat: lat.value,
+      lng: lng.value
     })
+    alertas.pushToast('¡Bienvenida a KikiRutas!', 'success')
     const r = returnedRole === 'operator' ? 'operator' : 'user'
     router.push(r === 'operator' ? { name: 'op.hoy' } : { name: 'u.inicio' })
   } catch (e: any) {

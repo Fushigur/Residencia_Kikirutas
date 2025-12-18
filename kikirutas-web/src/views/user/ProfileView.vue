@@ -104,6 +104,31 @@
               Mis pedidos
             </RouterLink>
           </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Dirección de casa</label>
+              <button v-if="editando" type="button" @click="showMap = true"
+                class="text-[10px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                    clip-rule="evenodd" />
+                </svg>
+                {{ form.lat ? 'PIN Seleccionado' : 'Marcar PIN exacto' }}
+              </button>
+            </div>
+            <input
+              v-model="form.direccion"
+              :disabled="!editando"
+              type="text"
+              class="w-full rounded-xl bg-gray-50 border border-gray-200 px-4 py-2.5 text-gray-900 focus:bg-white focus:border-brand focus:ring-2 focus:ring-brand/20 transition-all outline-none"
+              placeholder="Calle, número, referencias..."
+            />
+          </div>
+
+          <!-- Modal de Mapa -->
+          <MapPicker v-if="showMap" v-model="location" @close="showMap = false" />
         </div>
       </section>
 
@@ -167,9 +192,13 @@ import { RouterLink } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
 import { usePerfilStore } from '@/stores/perfil'
+import { useAlertasStore } from '@/stores/alertas'
+import { useRouter } from 'vue-router'
+import MapPicker from '@/components/MapPicker.vue'
 
 const auth = useAuthStore()
 const perfil = usePerfilStore()
+const alertas = useAlertasStore()
 
 // Rol para mostrar "Rol: Usuaria / Operador / Admin"
 const role = computed(() => auth.role)
@@ -196,6 +225,9 @@ onMounted(() => {
 
   perfil.comunidad = u.comunidad ?? perfil.comunidad
   perfil.municipio = u.municipio ?? perfil.municipio
+  perfil.direccion = u.direccion ?? perfil.direccion
+  perfil.lat = u.lat ?? perfil.lat
+  perfil.lng = u.lng ?? perfil.lng
 
   if (u.avatar) {
     perfil.avatar = u.avatar
@@ -205,6 +237,7 @@ onMounted(() => {
 
 // Estado local de edición
 const editando = ref(false)
+const showMap = ref(false)
 
 // Form inicial (perfil + datos del auth si existen)
 const u = computed(() => auth.user as any || {})
@@ -216,6 +249,17 @@ const form = reactive({
   email: perfil.email || u.value.email || '',
   sexo: perfil.sexo || u.value.sexo || '',
   edad: perfil.edad || (u.value.edad != null ? String(u.value.edad) : ''),
+  direccion: perfil.direccion || u.value.direccion || '',
+  lat: perfil.lat || u.value.lat || null,
+  lng: perfil.lng || u.value.lng || null,
+})
+
+const location = computed({
+  get: () => (form.lat && form.lng) ? { lat: Number(form.lat), lng: Number(form.lng) } : null,
+  set: (val) => {
+    form.lat = val?.lat || null
+    form.lng = val?.lng || null
+  }
 })
 
 
@@ -240,6 +284,9 @@ function activarEdicion() {
   form.nombre = perfil.nombre || displayNameFromAuth.value || ''
   form.telefono = perfil.telefono || ((auth.user as any)?.telefono ?? '')
   form.email = perfil.email || ((auth.user as any)?.email ?? '')
+  form.direccion = perfil.direccion
+  form.lat = perfil.lat ?? ((auth.user as any)?.lat ?? null)
+  form.lng = perfil.lng ?? ((auth.user as any)?.lng ?? null)
   editando.value = true
 }
 
@@ -250,35 +297,47 @@ function cancelar() {
   form.email = perfil.email
   form.sexo = perfil.sexo
   form.edad = perfil.edad
+  form.direccion = perfil.direccion
+  form.lat = perfil.lat
+  form.lng = perfil.lng
   editando.value = false
 }
 
 
 
-  function guardar() {
+  async function guardar() {
     if (!valido.value) return
 
-  perfil.set({
-    avatar: form.avatar,
-    nombre: form.nombre.trim(),
-    telefono: form.telefono.trim(),
-    email: form.email.trim(),
-    sexo: form.sexo,
-    edad: form.edad.trim(),
-  })
+  try {
+    // Sincronizar con el backend vía auth store
+    await auth.updateProfile({
+      name: form.nombre.trim(),
+      telefono: form.telefono.trim(),
+      sexo: form.sexo,
+      edad: form.edad ? Number(form.edad) : null,
+      direccion: form.direccion.trim(),
+      lat: form.lat,
+      lng: form.lng
+    })
 
-  // Opcional: sincronizar también lo que vemos en auth.user (solo front)
-  if (auth.user) {
-    const u: any = auth.user
-    u.name = form.nombre.trim()
-    u.telefono = form.telefono.trim()
-    u.email = form.email.trim()
-    u.sexo = form.sexo
-    u.edad = form.edad.trim()
-    ;(auth as any).persist?.()
+    // Actualizar store local de perfil
+    perfil.set({
+      avatar: form.avatar,
+      nombre: form.nombre.trim(),
+      telefono: form.telefono.trim(),
+      email: form.email.trim(),
+      sexo: form.sexo,
+      edad: form.edad.trim(),
+      direccion: form.direccion.trim(),
+      lat: form.lat,
+      lng: form.lng
+    })
+
+    alertas.pushToast('¡Perfil actualizado con éxito!', 'success')
+    editando.value = false
+  } catch (e) {
+    alertas.pushToast('Error al actualizar el perfil', 'error')
   }
-
-  editando.value = false
 }
 
 // Carga de avatar
