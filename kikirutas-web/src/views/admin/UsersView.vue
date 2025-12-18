@@ -1,12 +1,79 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { useUsuariosStore, type RolUsuario } from '@/stores/usuarios';
+import { useUsuariosStore, type RolUsuario, type Usuario } from '@/stores/usuarios';
+import { useProductosStore } from '@/stores/productos';
+import api from '@/api';
 
 const store = useUsuariosStore();
+const productos = useProductosStore();
 
 onMounted(() => {
   store.load();
+  productos.load();
 });
+
+
+/* -----------------------
+   Modal Crear Pedido
+------------------------*/
+const showModalPedido = ref(false)
+const usuarioPedido = ref<Usuario | null>(null)
+const formPedido = ref({
+  producto: '',
+  cantidad: 1,
+  notas: ''
+})
+const pedidoMsg = ref('')
+const pedidoErr = ref('')
+const isSavingPedido = ref(false)
+
+function abrirModalPedido(u: Usuario) {
+  usuarioPedido.value = u
+  formPedido.value = { producto: '', cantidad: 1, notas: '' }
+  pedidoMsg.value = ''
+  pedidoErr.value = ''
+  showModalPedido.value = true
+}
+
+async function guardarPedido() {
+  if (!formPedido.value.producto) {
+    pedidoErr.value = 'Selecciona un producto'
+    return
+  }
+  if (formPedido.value.cantidad < 1) {
+    pedidoErr.value = 'Cantidad inválida'
+    return
+  }
+
+  isSavingPedido.value = true
+  pedidoMsg.value = ''
+  pedidoErr.value = ''
+
+  try {
+    const body = {
+      producto: formPedido.value.producto,
+      cantidad: formPedido.value.cantidad,
+      fecha: new Date().toISOString().slice(0, 10),
+      solicitante_nombre: usuarioPedido.value?.nombre,
+      solicitante_comunidad: usuarioPedido.value?.comunidad,
+      solicitante_municipio: usuarioPedido.value?.municipio,
+      telefono: usuarioPedido.value?.telefono,
+      notas: formPedido.value.notas
+    }
+
+    await api.post('/pedidos', body)
+
+    pedidoMsg.value = 'Pedido creado exitosamente'
+    setTimeout(() => {
+      showModalPedido.value = false
+    }, 1500)
+  } catch (e: any) {
+    console.error(e)
+    pedidoErr.value = 'Error al crear pedido'
+  } finally {
+    isSavingPedido.value = false
+  }
+}
 
 
 /* -----------------------
@@ -166,16 +233,21 @@ function fmtFecha(ts: number) {
         <div class="flex-1 min-w-[220px]">
           <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Buscar</label>
           <div class="relative">
-             <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-             </span>
-             <input v-model="q" type="text" class="w-full rounded-xl border-gray-200 bg-gray-50 pl-10 pr-4 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
-             placeholder="Nombre, correo, comunidad..." />
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </span>
+            <input v-model="q" type="text"
+              class="w-full rounded-xl border-gray-200 bg-gray-50 pl-10 pr-4 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
+              placeholder="Nombre, correo, comunidad..." />
           </div>
         </div>
         <div>
           <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Rol</label>
-          <select v-model="filRol" class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all">
+          <select v-model="filRol"
+            class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all">
             <option value="todos">Todos</option>
             <option value="user">Usuarias</option>
             <option value="operador">Operadores</option>
@@ -183,8 +255,9 @@ function fmtFecha(ts: number) {
           </select>
         </div>
         <div>
-           <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Estado</label>
-          <select v-model="filEstado" class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all">
+          <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Estado</label>
+          <select v-model="filEstado"
+            class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all">
             <option value="todos">Todos</option>
             <option value="activos">Activos</option>
             <option value="inactivos">Inactivos</option>
@@ -196,29 +269,36 @@ function fmtFecha(ts: number) {
     <!-- Alta -->
     <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5">
       <h3 class="font-bold text-gray-900 mb-4 flex items-center gap-2">
-         <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-         Nueva cuenta
+        <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Nueva cuenta
       </h3>
       <div class="grid md:grid-cols-5 gap-4">
         <label class="block">
           <span class="text-xs font-bold text-gray-500 uppercase">Nombre</span>
-          <input v-model.trim="nuevo.nombre" type="text" class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5" />
+          <input v-model.trim="nuevo.nombre" type="text"
+            class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5" />
         </label>
         <label class="block">
           <span class="text-xs font-bold text-gray-500 uppercase">Correo</span>
-          <input v-model.trim="nuevo.email" type="email" class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5" />
+          <input v-model.trim="nuevo.email" type="email"
+            class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5" />
         </label>
         <label class="block">
           <span class="text-xs font-bold text-gray-500 uppercase">Teléfono</span>
-          <input v-model.trim="nuevo.telefono" type="text" class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5" />
+          <input v-model.trim="nuevo.telefono" type="text"
+            class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5" />
         </label>
         <label class="block">
           <span class="text-xs font-bold text-gray-500 uppercase">Comunidad</span>
-          <input v-model.trim="nuevo.comunidad" type="text" class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5" />
+          <input v-model.trim="nuevo.comunidad" type="text"
+            class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5" />
         </label>
         <label class="block">
           <span class="text-xs font-bold text-gray-500 uppercase">Rol</span>
-          <select v-model="nuevo.rol" class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5">
+          <select v-model="nuevo.rol"
+            class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5">
             <option value="user">Usuaria</option>
             <option value="operador">Operador</option>
             <option value="admin">Administrador</option>
@@ -226,8 +306,11 @@ function fmtFecha(ts: number) {
         </label>
       </div>
       <div class="flex items-center gap-3 mt-4">
-        <button class="rounded-xl bg-brand font-bold text-white px-5 py-2 hover:bg-red-800 shadow-md shadow-brand/20 transition-all" @click="crear">Crear Miembra</button>
-        <span v-if="altaMsg" class="text-sm font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded">{{ altaMsg }}</span>
+        <button
+          class="rounded-xl bg-brand font-bold text-white px-5 py-2 hover:bg-red-800 shadow-md shadow-brand/20 transition-all"
+          @click="crear">Crear Miembra</button>
+        <span v-if="altaMsg" class="text-sm font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded">{{ altaMsg
+        }}</span>
         <span v-if="altaErr" class="text-sm font-medium text-red-600 bg-red-50 px-2 py-1 rounded">{{ altaErr }}</span>
       </div>
     </div>
@@ -235,7 +318,7 @@ function fmtFecha(ts: number) {
     <!-- Tabla -->
     <div class="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden flex flex-col">
       <div class="p-5 border-b border-gray-100">
-         <h3 class="font-bold text-gray-900">Listado ({{ lista.length }})</h3>
+        <h3 class="font-bold text-gray-900">Listado ({{ lista.length }})</h3>
       </div>
       <div v-if="lista.length" class="overflow-x-auto">
         <table class="w-full text-sm text-left">
@@ -350,14 +433,20 @@ function fmtFecha(ts: number) {
                 <!-- MODO NORMAL -->
                 <template v-else>
                   <div class="flex flex-wrap gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                    <button v-if="u.rol === 'user'"
+                      class="inline-flex items-center rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
+                      title="Crear Pedido" @click="abrirModalPedido(u)">
+                      + Pedido
+                    </button>
                     <button
                       class="inline-flex items-center rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
                       @click="startEdit(u.id)">
                       Editar
                     </button>
 
-                    <button class="inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors"
-                      :class="u.activo ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'" 
+                    <button
+                      class="inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors"
+                      :class="u.activo ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'"
                       @click="toggleActivo(u.id)">
                       {{ u.activo ? 'Desactivar' : 'Activar' }}
                     </button>
@@ -403,8 +492,117 @@ function fmtFecha(ts: number) {
       </div>
     </div>
   </section>
+
+  <!-- Modal Crear Pedido -->
+  <div v-if="showModalPedido"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm p-4">
+    <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-gray-100">
+      <h3 class="text-xl font-bold text-gray-900 mb-2">Nuevo Pedido</h3>
+      <p class="text-sm text-gray-500 mb-4">
+        Creando pedido para <span class="font-bold text-gray-800">{{ usuarioPedido?.nombre }}</span>
+      </p>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Producto</label>
+          <select v-model="formPedido.producto"
+            class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5">
+            <option disabled value="">Selecciona un producto...</option>
+            <option v-for="p in productos.activos" :key="p.id" :value="p.nombre">{{ p.nombre }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Cantidad (Sacos)</label>
+          <input v-model.number="formPedido.cantidad" type="number" min="1"
+            class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Notas (Opcional)</label>
+          <textarea v-model="formPedido.notas" rows="2"
+            class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5"></textarea>
+        </div>
+
+        <div v-if="pedidoMsg" class="p-2 rounded bg-emerald-50 text-emerald-700 text-sm font-bold text-center">
+          {{ pedidoMsg }}
+        </div>
+        <div v-if="pedidoErr" class="p-2 rounded bg-red-50 text-red-700 text-sm font-bold text-center">
+          {{ pedidoErr }}
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 mt-6">
+        <button class="rounded-xl px-4 py-2 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+          @click="showModalPedido = false">
+          Cancelar
+        </button>
+        <button
+          class="rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-red-800 transition-colors shadow-lg shadow-brand/20 disabled:opacity-50"
+          :disabled="isSavingPedido" @click="guardarPedido">
+          {{ isSavingPedido ? 'Guardando...' : 'Crear Pedido' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Crear Pedido -->
+  <div v-if="showModalPedido"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm p-4">
+    <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-gray-100">
+      <h3 class="text-xl font-bold text-gray-900 mb-2">Nuevo Pedido</h3>
+      <p class="text-sm text-gray-500 mb-4">
+        Creando pedido para <span class="font-bold text-gray-800">{{ usuarioPedido?.nombre }}</span>
+      </p>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Producto</label>
+          <select v-model="formPedido.producto"
+            class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5">
+            <option disabled value="">Selecciona un producto...</option>
+            <option v-for="p in productos.activos" :key="p.id" :value="p.nombre">{{ p.nombre }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Cantidad (Sacos)</label>
+          <input v-model.number="formPedido.cantidad" type="number" min="1"
+            class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Notas (Opcional)</label>
+          <textarea v-model="formPedido.notas" rows="2"
+            class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5"></textarea>
+        </div>
+
+        <div v-if="pedidoMsg" class="p-2 rounded bg-emerald-50 text-emerald-700 text-sm font-bold text-center">
+          {{ pedidoMsg }}
+        </div>
+        <div v-if="pedidoErr" class="p-2 rounded bg-red-50 text-red-700 text-sm font-bold text-center">
+          {{ pedidoErr }}
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 mt-6">
+        <button class="rounded-xl px-4 py-2 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+          @click="showModalPedido = false">
+          Cancelar
+        </button>
+        <button
+          class="rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-red-800 transition-colors shadow-lg shadow-brand/20 disabled:opacity-50"
+          :disabled="isSavingPedido" @click="guardarPedido">
+          {{ isSavingPedido ? 'Guardando...' : 'Crear Pedido' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>
-td, th { font-size: 0.85rem; }
+td,
+th {
+  font-size: 0.85rem;
+}
 </style>

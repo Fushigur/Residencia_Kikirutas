@@ -13,7 +13,7 @@
           class="flex flex-col md:flex-row items-center md:items-start justify-between mb-6 gap-4 border-b border-gray-100 pb-4">
           <div class="flex items-center gap-3">
             <div class="p-2 bg-brand/5 rounded-xl">
-              <img src="@/assets/img/Logo.png" alt="KikiRutas" class="h-8 w-8 object-contain" />
+              <img src="@/assets/img/Logo_letras.png" alt="KikiRutas" class="h-8 w-8 object-contain" />
             </div>
             <div>
               <h2 class="text-xl font-bold text-gray-900 leading-tight">Crear nueva cuenta</h2>

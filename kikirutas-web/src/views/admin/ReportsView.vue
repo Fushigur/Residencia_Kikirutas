@@ -4,7 +4,7 @@ import { usePedidosStore } from '@/stores/pedidos';
 import { useProductosStore } from '@/stores/productos';
 import { useRutasStore } from '@/stores/rutas';
 import { formatFechaLarga, formatFechaCorta } from '@/utils/dateFormat'
-import logoUrl from '@/assets/img/Logo.png'
+import logoUrl from '@/assets/img/Logo_letras.png'
 import * as XLSX from 'xlsx'
 
 

@@ -8,7 +8,7 @@ import { useProductosStore } from '@/stores/productos'
 import { useAlertasStore } from '@/stores/alertas'
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
 import { formatFechaLarga, formatFechaCorta } from '@/utils/dateFormat'
-import logoUrl from '@/assets/img/Logo.png'
+import logoUrl from '@/assets/img/Logo_letras.png'
 
 type OperadorOption = {
   id: number

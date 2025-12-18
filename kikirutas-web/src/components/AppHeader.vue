@@ -2,7 +2,7 @@
   <header class="w-full border-b border-brand/40 bg-humo/70 backdrop-blur">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <img src="@/assets/img/Logo.png" alt="Kikibá" class="h-9 w-auto" />
+        <img src="@/assets/img/Logo_letras.png" alt="Kikibá" class="h-9 w-auto" />
         <span class="text-crema font-semibold tracking-wide">KikiRutas — Plataforma</span>
       </div>
 

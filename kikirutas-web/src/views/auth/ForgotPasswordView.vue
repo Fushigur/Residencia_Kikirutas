@@ -5,7 +5,7 @@
 
       <div class="text-center mb-8">
         <div class="inline-flex items-center justify-center p-3 bg-brand/5 rounded-2xl mb-4">
-          <img src="@/assets/img/Logo.png" alt="KikiRutas" class="h-12 w-12 object-contain" />
+          <img src="@/assets/img/Logo_letras.png" alt="KikiRutas" class="h-12 w-12 object-contain" />
         </div>
         <h1 class="text-2xl font-bold text-gray-900">Recuperar contraseña</h1>
         <p class="text-gray-500 text-sm mt-2">

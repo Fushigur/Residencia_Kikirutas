@@ -6,7 +6,7 @@
         <!-- Logo -->
         <router-link :to="{ name: 'a.resumen' }" class="flex items-center gap-3 hover:opacity-90 transition-opacity">
           <div class="bg-brand/5 p-1.5 rounded-full">
-            <img src="@/assets/img/Logo.png" alt="KikiRutas" class="h-10 w-10 object-contain logo" />
+            <img src="@/assets/img/Logo_letras.png" alt="KikiRutas" class="h-10 w-10 object-contain logo" />
           </div>
           <div class="leading-tight hidden sm:block">
             <p class="font-bold text-gray-900">KikiRutas</p>
