@@ -1,3 +1,4 @@
+<!-- Este es un nuevo mapa incorporado en el proyecto -->
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 
