@@ -3,17 +3,17 @@
     
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 py-4">
       <div>
-        <h1 class="text-3xl font-bold text-white">
-          Hola, <span class="text-emerald-400">{{ displayName || 'Bienvenida' }}</span>
+        <h1 class="text-3xl font-bold text-gray-900">
+          Hola, <span class="text-brand">{{ displayName || 'Bienvenida' }}</span>
         </h1>
-        <p class="text-white/60 text-sm mt-1">
+        <p class="text-gray-500 text-sm mt-1">
           Administra tus pedidos y revisa las alertas de entrega.
         </p>
       </div>
       
       <RouterLink 
         :to="{name:'u.historial'}" 
-        class="text-sm font-medium text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors"
+        class="text-sm font-bold text-brand hover:text-red-800 flex items-center gap-1 transition-colors"
       >
         Ver historial completo
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
@@ -22,14 +22,14 @@
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-      <article class="bg-white/5 border border-white/10 rounded-xl p-6 flex flex-col justify-between">
+      <article class="bg-white border border-gray-100 rounded-2xl p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-all">
         <div>
-          <h3 class="font-semibold text-white mb-4">Acciones rápidas</h3>
+          <h3 class="font-bold text-gray-900 mb-4">Acciones rápidas</h3>
           
           <div class="space-y-3">
             <RouterLink 
               :to="{name:'u.pedido.nuevo'}" 
-              class="flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 px-4 rounded-lg transition-colors"
+              class="flex items-center justify-center gap-2 w-full bg-brand hover:bg-red-800 text-white font-bold py-2.5 px-4 rounded-xl transition-all shadow-md shadow-brand/20 hover:-translate-y-0.5"
             >
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
               Hacer Nuevo Pedido
@@ -38,13 +38,13 @@
             <div class="flex gap-3">
               <RouterLink 
                 :to="{name:'u.alertas'}" 
-                class="flex-1 text-center py-2 px-3 rounded-lg border border-white/20 text-sm text-white hover:bg-white/5 transition-colors"
+                class="flex-1 text-center py-2 px-3 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Ver alertas
               </RouterLink>
               <RouterLink 
                 :to="{name:'u.perfil'}" 
-                class="flex-1 text-center py-2 px-3 rounded-lg border border-white/20 text-sm text-white hover:bg-white/5 transition-colors"
+                class="flex-1 text-center py-2 px-3 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Editar perfil
               </RouterLink>
@@ -53,66 +53,66 @@
         </div>
       </article>
 
-      <article class="bg-white/5 border border-white/10 rounded-xl p-6 flex flex-col">
-        <h3 class="font-semibold text-white mb-1">Estado de tus pedidos</h3>
-        <p class="text-xs text-white/50 mb-4">Mostrando el último movimiento.</p>
+      <article class="bg-white border border-gray-100 rounded-2xl p-6 flex flex-col shadow-sm hover:shadow-md transition-all">
+        <h3 class="font-bold text-gray-900 mb-1">Estado de tus pedidos</h3>
+        <p class="text-xs text-gray-400 mb-4 font-medium">Mostrando el último movimiento.</p>
 
         <div v-if="hasPedidos" class="flex-1 flex flex-col justify-center">
-          <div class="bg-black/20 rounded-lg p-4 border border-white/5">
+          <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
             <div class="flex justify-between items-start mb-2">
-              <span class="font-medium text-emerald-100 text-sm line-clamp-2">
+              <span class="font-bold text-gray-900 text-sm line-clamp-2">
                 {{ ultimosPedidos[0].producto || 'Pedido' }}
               </span>
               <span 
-                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border"
                 :class="estadoBadgeClass(ultimosPedidos[0].estado)"
               >
                 {{ labelEstado(ultimosPedidos[0].estado) }}
               </span>
             </div>
-            <p class="text-xs text-white/40">
+            <p class="text-xs text-gray-500 font-medium">
               {{ formatFechaLarga(ultimosPedidos[0].fechaISO || '') }}
             </p>
           </div>
         </div>
 
-        <div v-else class="flex-1 flex items-center justify-center text-white/30 text-sm italic">
+        <div v-else class="flex-1 flex items-center justify-center text-gray-400 text-sm italic">
           No hay pedidos recientes.
         </div>
       </article>
 
-      <article class="bg-white/5 border border-white/10 rounded-xl p-6">
-        <h3 class="font-semibold text-white mb-4">Próxima ruta</h3>
+      <article class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all">
+        <h3 class="font-bold text-gray-900 mb-4">Próxima ruta</h3>
         
         <div v-if="proximaRutaMensaje">
-          <p class="text-sm text-gray-300 leading-relaxed">
+          <p class="text-sm text-gray-600 leading-relaxed">
             {{ proximaRutaMensaje }}
           </p>
-          <p class="text-xs text-white/40 mt-4 pt-4 border-t border-white/5">
+          <p class="text-xs text-gray-400 mt-4 pt-4 border-t border-gray-100 font-medium">
             Esta información se actualiza cuando el administrador asigna rutas.
           </p>
         </div>
 
-        <div v-else class="text-sm text-white/40">
+        <div v-else class="text-sm text-gray-400 italic">
            Aún no hay una ruta asignada para tus pedidos pendientes.
         </div>
       </article>
 
     </div>
 
-    <article class="bg-white/5 border border-white/10 rounded-xl p-6">
-      <h3 class="font-semibold text-white mb-3 text-sm uppercase tracking-wide opacity-80">Consejos útiles</h3>
-      <ul class="space-y-2 text-sm text-gray-400">
+    <article class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all">
+      <h3 class="font-bold text-gray-900 mb-3 text-sm uppercase tracking-wide opacity-80">Consejos útiles</h3>
+      <ul class="space-y-2 text-sm text-gray-600">
         <li class="flex items-start gap-2">
-          <span class="text-emerald-500 mt-1">•</span>
+          <span class="text-brand mt-1 font-bold">•</span>
           <span>Para hacer un pedido rápido toca el botón <b>Nuevo pedido</b>.</span>
         </li>
         <li class="flex items-start gap-2">
-           <span class="text-emerald-500 mt-1">•</span>
+           <span class="text-brand mt-1 font-bold">•</span>
           <span>En <b>Alertas</b> verás avisos de entrega y cambios de ruta.</span>
         </li>
         <li class="flex items-start gap-2">
-           <span class="text-emerald-500 mt-1">•</span>
+           <span class="text-brand mt-1 font-bold">•</span>
           <span>Actualiza tu <b>Perfil</b> para recibir notificaciones correctas.</span>
         </li>
       </ul>
@@ -187,15 +187,15 @@ function labelEstado(e: PedidoEstado): string {
 function estadoBadgeClass(e: PedidoEstado): string {
   switch (e) {
     case 'pendiente':
-      return 'bg-yellow-500/20 text-yellow-500' // Solo amarillo, sin bordes raros
+      return 'bg-amber-50 text-amber-700 border-amber-200'
     case 'en_ruta':
-      return 'bg-blue-500/20 text-blue-400'
+      return 'bg-blue-50 text-blue-700 border-blue-200'
     case 'entregado':
-      return 'bg-emerald-500/20 text-emerald-500'
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200'
     case 'cancelado':
-      return 'bg-red-500/20 text-red-500'
+      return 'bg-red-50 text-red-700 border-red-200'
     default:
-      return 'bg-gray-500/20 text-gray-400'
+      return 'bg-gray-100 text-gray-500 border-gray-200'
   }
 }
 

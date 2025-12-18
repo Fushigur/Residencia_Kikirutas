@@ -61,6 +61,9 @@ class AuthController extends Controller
                 // Datos de ubicación (si existen en la tabla users)
                 'comunidad' => $user->comunidad,
                 'municipio' => $user->municipio,
+                'direccion' => $user->direccion,
+                'lat' => $user->lat,
+                'lng' => $user->lng,
                 'estado' => $user->estado,
             ],
         ]);
@@ -95,6 +98,9 @@ class AuthController extends Controller
             // Campos opcionales de ubicación
             'comunidad' => ['nullable', 'string', 'max:120'],
             'municipio' => ['nullable', 'string', 'max:120'],
+            'direccion' => ['nullable', 'string', 'max:255'],
+            'lat' => ['nullable', 'numeric'],
+            'lng' => ['nullable', 'numeric'],
             'estado' => ['nullable', 'string', 'max:120'],
         ]);
 
@@ -123,6 +129,9 @@ class AuthController extends Controller
             // ubicación
             'comunidad' => $validated['comunidad'] ?? null,
             'municipio' => $validated['municipio'] ?? null,
+            'direccion' => $validated['direccion'] ?? null,
+            'lat' => $validated['lat'] ?? null,
+            'lng' => $validated['lng'] ?? null,
             'estado' => $validated['estado'] ?? null,
         ]);
 
@@ -142,6 +151,9 @@ class AuthController extends Controller
                 'edad' => $user->edad,
                 'comunidad' => $user->comunidad,
                 'municipio' => $user->municipio,
+                'direccion' => $user->direccion,
+                'lat' => $user->lat,
+                'lng' => $user->lng,
                 'estado' => $user->estado,
             ],
         ], 201);
@@ -168,6 +180,9 @@ class AuthController extends Controller
 
             'comunidad' => $u->comunidad,
             'municipio' => $u->municipio,
+            'direccion' => $u->direccion,
+            'lat' => $u->lat,
+            'lng' => $u->lng,
             'estado' => $u->estado,
         ]);
     }
@@ -184,6 +199,9 @@ class AuthController extends Controller
             'telefono' => ['nullable', 'string', 'max:20'],
             'sexo' => ['nullable', 'string', 'max:20'],
             'edad' => ['nullable', 'integer', 'min:10', 'max:120'],
+            'direccion' => ['nullable', 'string', 'max:255'],
+            'lat' => ['nullable', 'numeric'],
+            'lng' => ['nullable', 'numeric'],
             // si en un futuro quieres permitir cambio de comunidad/municipio/estado,
             // los agregamos aquí y manejamos la lógica de aprobación aparte.
         ]);
@@ -199,6 +217,15 @@ class AuthController extends Controller
         }
         if (array_key_exists('edad', $data)) {
             $u->edad = $data['edad'];
+        }
+        if (array_key_exists('direccion', $data)) {
+            $u->direccion = $data['direccion'];
+        }
+        if (array_key_exists('lat', $data)) {
+            $u->lat = $data['lat'];
+        }
+        if (array_key_exists('lng', $data)) {
+            $u->lng = $data['lng'];
         }
 
         $u->save();
@@ -217,6 +244,9 @@ class AuthController extends Controller
             'edad' => $u->edad,
             'comunidad' => $u->comunidad,
             'municipio' => $u->municipio,
+            'direccion' => $u->direccion,
+            'lat' => $u->lat,
+            'lng' => $u->lng,
             'estado' => $u->estado,
         ]);
     }

@@ -19,6 +19,9 @@ class Pedido extends Model
         'solicitante_nombre',
         'solicitante_comunidad',
         'solicitante_municipio',
+        'direccion_entrega',
+        'lat',
+        'lng',
         'telefono',
         'notas',
     ];

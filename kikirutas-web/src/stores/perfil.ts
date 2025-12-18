@@ -12,23 +12,29 @@ export type PerfilState = {
   municipio: string          // solo lectura en perfil (viene del back)
   asesorNombre: string
   asesorTelefono: string
+  direccion: string          // nueva
+  lat: number | null
+  lng: number | null
 }
 
 const STORAGE_KEY = 'perfil_kikirutas'
 
 export const usePerfilStore = defineStore('perfil', {
   state: (): PerfilState => ({
-  avatar: null,          // se cargará desde auth.user en UserProfile
-  nombre: '',
-  telefono: '',
-  email: '',
-  sexo: '',
-  edad: '',
-  comunidad: '',
-  municipio: '',
-  asesorNombre: '',
-  asesorTelefono: '',
-}),
+    avatar: null,          // se cargará desde auth.user en UserProfile
+    nombre: '',
+    telefono: '',
+    email: '',
+    sexo: '',
+    edad: '',
+    comunidad: '',
+    municipio: '',
+    asesorNombre: '',
+    asesorTelefono: '',
+    direccion: '',
+    lat: null,
+    lng: null,
+  }),
 
 
   actions: {
@@ -70,6 +76,9 @@ export const usePerfilStore = defineStore('perfil', {
       this.municipio = ''
       this.asesorNombre = ''
       this.asesorTelefono = ''
+      this.direccion = ''
+      this.lat = null
+      this.lng = null
     },
   },
 })
