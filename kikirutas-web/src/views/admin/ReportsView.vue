@@ -312,13 +312,13 @@ function estadoEtiqueta(e: string) {
       <div class="flex flex-col md:flex-row md:items-end gap-4">
         <div>
           <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Fecha inicio</label>
-          <input v-model="fechaIni" type="date"
-            class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all" />
+          <input v-model="fechaIni" type="date" @click="($event.target as HTMLInputElement).showPicker()"
+            class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all cursor-pointer" />
         </div>
         <div>
           <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Fecha fin</label>
-          <input v-model="fechaFin" type="date"
-            class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all" />
+          <input v-model="fechaFin" type="date" @click="($event.target as HTMLInputElement).showPicker()"
+            class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all cursor-pointer" />
         </div>
 
         <div class="md:ml-auto flex gap-3">
