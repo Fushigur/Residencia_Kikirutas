@@ -147,6 +147,18 @@ class PedidoController extends Controller
 
         $pedido->save();
 
+        // Notificación persistente de "Pedido Creado"
+        if ($user) {
+            $user->notify(new \App\Notifications\OrderNotification([
+                'titulo' => 'Pedido Creado',
+                'mensaje' => "Tu pedido de {$pedido->cantidad} saco(s) de {$pedido->producto} fue registrado.",
+                'tipo' => 'pedido',
+                'severidad' => 'info',
+                'ctaPrimaria' => ['label' => 'Ver historial', 'routeName' => 'u.historial'],
+                'meta' => ['pedido_id' => $pedido->id]
+            ]));
+        }
+
         // Intentar asignar automáticamente este pedido a una ruta existente
         $this->autoAssignToNearestRuta($pedido);
 
