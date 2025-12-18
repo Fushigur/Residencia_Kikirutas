@@ -4,6 +4,7 @@ import { usePedidosStore } from '@/stores/pedidos';
 import { useProductosStore } from '@/stores/productos';
 import { useRutasStore } from '@/stores/rutas';
 import { formatFechaLarga, formatFechaCorta } from '@/utils/dateFormat'
+import logoUrl from '@/assets/img/Logo.png'
 
 
 const pedidos = usePedidosStore();
@@ -146,24 +147,55 @@ function exportCsv() {
 
 function printReport() {
   const head = `
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-      body { font-family: Arial, sans-serif; padding: 16px; font-size: 12px; }
-      h1,h2 { margin: 0 0 10px 0; }
-      .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0 16px; }
-      .card { border: 1px solid #ddd; padding: 8px; border-radius: 6px; }
-      table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-      th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
-      th { background: #f0f0f0; font-weight: bold; }
+      body { font-family: 'Inter', sans-serif; padding: 40px; color: #1f2937; -webkit-print-color-adjust: exact; }
+      
+      /* Header */
+      .header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 40px; border-bottom: 2px solid #f3f4f6; padding-bottom: 20px; }
+      .brand { display: flex; align-items: center; gap: 12px; }
+      .brand img { height: 48px; width: auto; }
+      .brand-text h1 { font-size: 24px; font-weight: 800; color: #7F1D1D; margin: 0; line-height: 1.2; }
+      .brand-text p { font-size: 12px; font-weight: 600; color: #9CA3AF; letter-spacing: 0.05em; text-transform: uppercase; margin: 0; }
+      
+      .meta { text-align: right; }
+      .meta h2 { font-size: 20px; font-weight: 700; margin: 0 0 4px; color: #111; }
+      .meta p { font-size: 14px; color: #6B7280; margin: 0; }
+
+      /* Summary Cards */
+      .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+      .card { background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px; }
+      .card-label { font-size: 11px; font-weight: 600; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+      .card-value { font-size: 20px; font-weight: 700; color: #111; }
+      .card-value small { font-size: 12px; color: #9CA3AF; font-weight: 500; }
+
+      /* Table */
+      h3 { font-size: 16px; font-weight: 700; color: #111; margin-bottom: 16px; margin-top: 0; }
+      table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px; }
+      th { background-color: #F3F4F6; color: #374151; font-weight: 600; text-align: left; padding: 10px 12px; border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; white-space: nowrap; }
+      th:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; border-left: 1px solid #E5E7EB; }
+      th:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; border-right: 1px solid #E5E7EB; }
+      
+      td { padding: 10px 12px; border-bottom: 1px solid #F3F4F6; color: #4B5563; vertical-align: top; }
+      tr:last-child td { border-bottom: none; }
+      
+      .product { font-weight: 600; color: #111; }
+      .folio { font-family: monospace; font-weight: 600; color: #6B7280; background: #F3F4F6; padding: 2px 6px; border-radius: 4px; }
+      .status { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; text-transform: uppercase; border: 1px solid transparent; }
+      .status-pendiente { background: #FFFBEB; color: #B45309; border-color: #FDE68A; }
+      .status-en_ruta { background: #EFF6FF; color: #1D4ED8; border-color: #BFDBFE; }
+      .status-entregado { background: #ECFDF5; color: #047857; border-color: #A7F3D0; }
+
+      .user-info div { margin-bottom: 2px; }
+      .user-name { font-weight: 600; color: #111; }
+      .location { font-size: 10px; }
+      
       .text-right { text-align: right; }
+      .text-center { text-align: center; }
+
+      /* Footer */
+      .footer { margin-top: 40px; pt-4; border-top: 2px solid #f3f4f6; display: flex; justify-content: space-between; font-size: 10px; color: #9CA3AF; }
     </style>
-  `;
-  const kpi = `
-    <div class="kpis">
-      <div class="card"><b>Pedidos:</b> ${totalPedidos.value}</div>
-      <div class="card"><b>Sacos:</b> ${totalSacos.value}</div>
-      <div class="card"><b>Ingresos est.:</b> $${ingresosTotales.value.toFixed(2)}</div>
-      <div class="card"><b>Ingresos reales:</b> $${ingresosEntregados.value.toFixed(2)}</div>
-    </div>
   `;
 
   const rows = pedidosFiltrados.value.map(p => {
@@ -171,44 +203,89 @@ function printReport() {
     const sub = prc * p.cantidad;
     const ruta = p.routeId ? (rutas.byId(p.routeId)?.nombre ?? '') : '';
     return `<tr>
-      <td>${p.folio}</td>
-      <td>${p.producto}</td>
-      <td>${p.cantidad}</td>
-      <td>$${prc.toFixed(2)}</td>
-      <td>$${sub.toFixed(2)}</td>
+      <td><span class="folio">${p.folio}</span></td>
+      <td>
+        <div class="product">${p.producto}</div>
+      </td>
+      <td class="text-right" style="font-weight: 600;">${p.cantidad}</td>
+      <td class="text-right">$${prc.toFixed(2)}</td>
+      <td class="text-right" style="font-weight: 700; color: #111;">$${sub.toFixed(2)}</td>
       <td>${formatFechaCorta(p.fechaISO)}</td>
-      <td>${p.estado}</td>
+      <td class="text-center">
+         <span class="status status-${p.estado}">${p.estado}</span>
+      </td>
       <td>${ruta}</td>
-      <td>${p.solicitanteNombre || '-'}</td>
-      <td>${p.solicitanteComunidad || '-'}</td>
-      <td>${p.solicitanteMunicipio || '-'}</td>
+      <td>
+        <div class="user-info">
+            <div class="user-name">${p.solicitanteNombre || '—'}</div>
+            <div class="location">📍 ${p.solicitanteComunidad || '—'}</div>
+            <div class="location" style="color: #9CA3AF">${p.solicitanteMunicipio || ''}</div>
+        </div>
+      </td>
     </tr>`;
   }).join('');
 
   const body = `
-    <h1>Reporte ${fechaIni.value} a ${fechaFin.value}</h1>
-    ${kpi}
-    <h2>Detalle de pedidos</h2>
+    <div class="header">
+        <div class="brand">
+            <img src="${window.location.origin}${logoUrl}" />
+            <div class="brand-text">
+                <h1>KikiRutas</h1>
+                <p>Reporte Financiero</p>
+            </div>
+        </div>
+        <div class="meta">
+            <h2>Resumen General</h2>
+            <p>${formatFechaLarga(fechaIni.value)} — ${formatFechaLarga(fechaFin.value)}</p>
+        </div>
+    </div>
+
+    <div class="summary">
+        <div class="card">
+            <div class="card-label">Pedidos</div>
+            <div class="card-value">${totalPedidos.value}</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Total Sacos</div>
+            <div class="card-value">${totalSacos.value}</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Ingresos Est.</div>
+            <div class="card-value">$${ingresosTotales.value.toFixed(2)}</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Ingresos Reales</div>
+            <div class="card-value" style="color: #059669;">$${ingresosEntregados.value.toFixed(2)}</div>
+        </div>
+    </div>
+
+    <h3>Detalle de Pedidos</h3>
     <table>
       <thead>
         <tr>
-          <th>Folio</th><th>Producto</th><th>Cant</th>
-          <th>Precio</th><th>Subtotal</th><th>Fecha</th><th>Estado</th><th>Ruta</th>
-          <th>Solicitante</th><th>Comunidad</th><th>Municipio</th>
+          <th>Folio</th><th>Producto</th><th class="text-right">Cant</th>
+          <th class="text-right">Precio</th><th class="text-right">Subtotal</th><th>Fecha</th><th class="text-center">Estado</th><th>Ruta</th>
+          <th>Destinatario</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>
+
+    <div class="footer">
+        <div>Generado el: ${new Date().toLocaleString()}</div>
+        <div>Reporte Administrativo - Uso Interno</div>
+    </div>
   `;
 
   const w = window.open('', '_blank');
   if (!w) return;
-  w.document.write(`<html><head><title>Reporte - KikiRutas</title>${head}</head><body>${body}</body></html>`);
+  w.document.write(`<html><head><title>Reporte Financiero</title>${head}</head><body>${body}</body></html>`);
   w.document.close();
   w.focus();
-  w.print();
-  w.close();
+  setTimeout(() => w.print(), 500);
 }
+
+
 
 /* -----------------------
    Helpers UI
