@@ -208,7 +208,7 @@
                       class="text-brand font-bold hover:underline">términos</a>.</label>
                 </div>
 
-                <button type="submit" :disabled="!isValid || loading"
+                <button type="submit" :disabled="loading"
                   class="w-full py-3 px-4 rounded-xl bg-brand text-white font-bold text-sm shadow-md shadow-brand/20 hover:bg-red-800 hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
                   {{ loading ? 'Creando...' : 'Completar registro' }}
                 </button>

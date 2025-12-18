@@ -1,6 +1,5 @@
 <template>
-  <div
-    class="relative overflow-hidden rounded-3xl bg-white border border-gray-100 shadow-xl max-w-4xl mx-auto">
+  <div class="relative overflow-hidden rounded-3xl bg-white border border-gray-100 shadow-xl max-w-4xl mx-auto">
 
     <div class="p-6 md:p-10">
 
@@ -8,11 +7,11 @@
         <div>
           <h2 class="text-3xl font-bold text-gray-900 flex items-center gap-2">
             <div class="p-2 bg-brand/10 rounded-lg">
-               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-brand" fill="none" viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-brand" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
             </div>
             Nuevo Pedido
           </h2>
@@ -32,7 +31,8 @@
             <div class="text-sm">
               <span class="text-blue-700 block text-xs font-bold uppercase tracking-wider mb-0.5">Sugerencia
                 Inteligente</span>
-              <span class="text-gray-700">Te recomendamos pedir <b class="text-gray-900">{{ sugerencia }}</b> sacos</span>
+              <span class="text-gray-700">Te recomendamos pedir <b class="text-gray-900">{{ sugerencia }}</b>
+                sacos</span>
             </div>
             <button type="button"
               class="ml-2 text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition-colors shadow-md shadow-blue-200"
@@ -50,8 +50,7 @@
           <div class="md:col-span-7 space-y-6">
 
             <div class="group">
-              <label
-                class="block text-xs font-bold text-gray-500 mb-2 ml-1 uppercase tracking-wide">Producto</label>
+              <label class="block text-xs font-bold text-gray-500 mb-2 ml-1 uppercase tracking-wide">Producto</label>
               <div class="relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg class="h-5 w-5 text-gray-400 group-focus-within:text-brand transition-colors" fill="none"
@@ -122,7 +121,8 @@
           </div>
 
           <div class="md:col-span-5">
-            <div class="h-full bg-gray-50 border border-gray-100 rounded-2xl p-6 flex flex-col justify-between shadow-inner">
+            <div
+              class="h-full bg-gray-50 border border-gray-100 rounded-2xl p-6 flex flex-col justify-between shadow-inner">
               <div>
                 <h3 class="text-gray-900 font-bold mb-5 border-b border-gray-200 pb-3 text-lg">Resumen</h3>
 
@@ -303,13 +303,7 @@ async function onSubmit() {
     cantidad.value = null
     observaciones.value = ''
 
-    alertas.addLocal({
-      titulo: 'Pedido creado',
-      mensaje: `Tu pedido de ${body.cantidad} saco(s) fue registrado.`,
-      tipo: 'pedido',
-      severidad: 'info',
-      ctaPrimaria: { label: 'Ver historial', routeName: 'u.historial' },
-    })
+    // alertas.addLocal(...) eliminada, ahora viene del backend
 
     formMsg.value = 'Pedido registrado. Puedes revisarlo en Historial.'
   } catch (e) {
