@@ -1,12 +1,11 @@
 <template>
   <section class="min-h-screen grid place-items-center px-4 bg-gray-50">
-    <div class="w-full max-w-md bg-white rounded-3xl shadow-card border border-gray-100 p-8 md:p-10 transition-all hover:shadow-xl">
-      
+    <div
+      class="w-full max-w-md bg-white rounded-3xl shadow-card border border-gray-100 p-8 md:p-10 transition-all hover:shadow-xl">
+
       <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand/10 text-brand mb-4">
-          <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11.536 9.464l-2.829 2.829a2 2 0 01-2.828 0 6 6 0 010-8.485l2.829-2.828-5.743-5.743A2.828 2.828 0 112 2h2m2 4h4m-4 4h4" />
-          </svg>
+        <div class="inline-flex items-center justify-center p-3 bg-brand/5 rounded-2xl mb-4">
+          <img src="@/assets/img/Logo.png" alt="KikiRutas" class="h-12 w-12 object-contain" />
         </div>
         <h1 class="text-2xl font-bold text-gray-900">Recuperar contraseña</h1>
         <p class="text-gray-500 text-sm mt-2">
@@ -15,42 +14,44 @@
       </div>
 
       <form class="space-y-6" @submit.prevent="onSubmit">
-        
+
         <label class="block space-y-1.5">
           <span class="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Correo Electrónico</span>
           <div class="relative group">
-            <input 
-              v-model.trim="email" 
-              type="email" 
-              required
+            <input v-model.trim="email" type="email" required
               class="w-full rounded-xl bg-gray-50 border border-gray-200 px-4 py-3 text-gray-900 outline-none transition-all focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 placeholder-gray-400"
-              placeholder="nombre@ejemplo.com"
-            >
+              placeholder="nombre@ejemplo.com">
           </div>
         </label>
 
-        <button 
-          :disabled="loading" 
-          class="w-full rounded-xl bg-brand font-bold text-white px-6 py-3.5 shadow-lg shadow-brand/20 hover:bg-red-900 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <button :disabled="loading"
+          class="w-full rounded-xl bg-brand font-bold text-white px-6 py-3.5 shadow-lg shadow-brand/20 hover:bg-red-900 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
           <span v-if="loading" class="flex justify-center items-center gap-2">
-             <svg class="animate-spin h-5 w-5 text-white/50" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-             Enviando...
+            <svg class="animate-spin h-5 w-5 text-white/50" xmlns="http://www.w3.org/2000/svg" fill="none"
+              viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+              </path>
+            </svg>
+            Enviando...
           </span>
           <span v-else>Enviar enlace de recuperación</span>
         </button>
 
-        <div v-if="msg" class="p-3 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm text-center">
-             {{ msg }}
+        <div v-if="msg"
+          class="p-3 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm text-center">
+          {{ msg }}
         </div>
 
         <div v-if="err" class="p-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-sm text-center">
-             {{ err }}
+          {{ err }}
         </div>
 
         <div class="text-center pt-2">
-          <RouterLink :to="{ name: 'login' }" class="text-sm font-semibold text-gray-500 hover:text-brand transition-colors">
-             &larr; Volver al inicio de sesión
+          <RouterLink :to="{ name: 'login' }"
+            class="text-sm font-semibold text-gray-500 hover:text-brand transition-colors">
+            &larr; Volver al inicio de sesión
           </RouterLink>
         </div>
 
@@ -69,7 +70,7 @@ const msg = ref('')
 const err = ref('')
 
 async function onSubmit() {
-  loading.value = true; msg.value=''; err.value=''
+  loading.value = true; msg.value = ''; err.value = ''
   try {
     await api.post('/auth/forgot-password', { email: email.value })
     msg.value = 'Correo enviado. Revisa tu bandeja de entrada.'

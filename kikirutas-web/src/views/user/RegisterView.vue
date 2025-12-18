@@ -1,202 +1,238 @@
-<!-- src/views/user/RegisterView.vue -->
 <template>
-  <section class="min-h-screen py-10 px-4 bg-gray-50 flex items-center justify-center">
-    <div class="w-full max-w-2xl bg-white rounded-3xl shadow-xl border border-gray-100 p-8 md:p-10">
-      
-      <div class="mb-8 text-center md:text-left">
-        <h2 class="text-3xl font-bold text-gray-900 mb-2">Crear cuenta</h2>
-        <p class="text-gray-500 text-sm">
-          Únete al ecosistema <span class="text-brand font-bold">KikiRutas</span>. Tu plataforma de gestión agrícola.
-        </p>
-      </div>
+  <section class="min-h-screen py-6 px-4 bg-gray-50 flex items-center justify-center">
+    <!-- Contenedor más ancho para acomodar 2 columnas -->
+    <div class="w-full max-w-5xl bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden relative">
 
-      <!-- Mensaje Global -->
-      <div v-if="formError" class="mb-6 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm font-medium flex gap-2 items-start">
-        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-        {{ formError }}
-      </div>
+      <!-- Decoración de fondo sutil -->
+      <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand to-red-600"></div>
 
-      <form class="grid gap-6" @submit.prevent="onSubmit">
-        <!-- Nombres y Apellidos -->
-        <div class="grid md:grid-cols-2 gap-5">
-          <label class="block">
-            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Nombres</span>
-            <input
-              v-model.trim="nombres"
-              type="text"
-              :class="inputClass(!nombres && tried)"
-              class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
-              placeholder="Ej. Juan"
-              autocomplete="given-name"
-            />
-            <p v-if="serverErrs.nombres" class="text-red-500 text-xs mt-1">{{ serverErrs.nombres }}</p>
-          </label>
+      <div class="p-6 lg:p-8">
 
-          <label class="block">
-            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Apellidos</span>
-            <input
-              v-model.trim="apellidos"
-              type="text"
-              :class="inputClass(!apellidos && tried)"
-              class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
-              placeholder="Ej. Pérez"
-              autocomplete="family-name"
-            />
-            <p v-if="serverErrs.apellidos" class="text-red-500 text-xs mt-1">{{ serverErrs.apellidos }}</p>
-          </label>
-        </div>
-
-        <!-- Ubicación -->
-        <div class="grid md:grid-cols-2 gap-5">
-          <label class="block">
-            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Municipio</span>
-            <div class="relative mt-1">
-              <select v-model="municipio" class="w-full appearance-none rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all">
-                <option value="" disabled>Selecciona...</option>
-                <option v-for="mun in municipios" :key="mun" :value="mun">{{ mun }}</option>
-              </select>
-              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-              </div>
+        <!-- Header Compacto -->
+        <div
+          class="flex flex-col md:flex-row items-center md:items-start justify-between mb-6 gap-4 border-b border-gray-100 pb-4">
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-brand/5 rounded-xl">
+              <img src="@/assets/img/Logo.png" alt="KikiRutas" class="h-8 w-8 object-contain" />
             </div>
-            <p v-if="serverErrs.municipio" class="text-red-500 text-xs mt-1">{{ serverErrs.municipio }}</p>
-          </label>
-
-          <label class="block">
-            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Comunidad</span>
-            <div class="relative mt-1">
-              <select v-model="comunidad" :disabled="!municipio" class="w-full appearance-none rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all disabled:opacity-50">
-                <option value="" disabled>Selecciona...</option>
-                <option v-for="com in comunidadesFiltradas" :key="com" :value="com">{{ com }}</option>
-              </select>
-               <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-              </div>
+            <div>
+              <h2 class="text-xl font-bold text-gray-900 leading-tight">Crear nueva cuenta</h2>
+              <p class="text-gray-500 text-xs">Únete al ecosistema <span class="text-brand font-bold">KikiRutas</span>.
+              </p>
             </div>
-             <p v-if="serverErrs.comunidad" class="text-red-500 text-xs mt-1">{{ serverErrs.comunidad }}</p>
-          </label>
+          </div>
+          <RouterLink :to="{ name: 'login' }"
+            class="text-xs font-bold text-brand hover:underline bg-brand/5 px-3 py-1.5 rounded-lg border border-brand/10">
+            ¿Ya tienes cuenta? Inicia sesión
+          </RouterLink>
         </div>
 
-        <!-- Contacto -->
-        <div class="grid md:grid-cols-2 gap-5">
-           <label class="block">
-            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Teléfono</span>
-            <input
-              v-model.trim="telefono"
-              type="tel"
-              maxlength="10"
-              class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
-              placeholder="10 dígitos"
-            />
-             <p v-if="serverErrs.telefono" class="text-red-500 text-xs mt-1">{{ serverErrs.telefono }}</p>
-          </label>
-
-           <label class="block">
-            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Correo</span>
-            <input
-              v-model.trim="email"
-              type="email"
-              class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
-              placeholder="ejemplo@kikirutas.com"
-            />
-             <p v-if="serverErrs.email" class="text-red-500 text-xs mt-1">{{ serverErrs.email }}</p>
-          </label>
+        <!-- Mensaje Error -->
+        <div v-if="formError"
+          class="mb-4 p-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-xs font-medium flex gap-2 items-center animate-pulse">
+          <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+              clip-rule="evenodd" />
+          </svg>
+          <div>{{ formError }}</div>
         </div>
 
-        <!-- Detalles personales -->
-        <div class="grid md:grid-cols-2 gap-5">
-           <label class="block">
-            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Sexo</span>
-             <div class="relative mt-1">
-              <select v-model="sexo" class="w-full appearance-none rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all">
-                <option value="" disabled>Selecciona...</option>
-                <option v-for="s in sexos" :key="s" :value="s">{{ s }}</option>
-              </select>
-               <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        <form @submit.prevent="onSubmit">
+
+          <div class="grid lg:grid-cols-2 gap-8">
+
+            <!-- COLUMNA IZQUIERDA: Personales y Ubicación -->
+            <div class="space-y-5">
+
+              <!-- Datos Personales -->
+              <section>
+                <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <span class="w-1.5 h-1.5 rounded-full bg-brand/40"></span> Datos Personales
+                </h3>
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="group">
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1 ml-1">Nombres</label>
+                    <input v-model.trim="nombres" type="text" :class="inputClass(!nombres && tried)" class="form-input"
+                      placeholder="Ej. Juan" autocomplete="given-name" />
+                    <FormError :msg="serverErrs.nombres" />
+                  </div>
+                  <div class="group">
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1 ml-1">Apellidos</label>
+                    <input v-model.trim="apellidos" type="text" :class="inputClass(!apellidos && tried)"
+                      class="form-input" placeholder="Ej. Pérez" autocomplete="family-name" />
+                    <FormError :msg="serverErrs.apellidos" />
+                  </div>
+
+                  <div class="group">
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1 ml-1">Sexo</label>
+                    <select v-model="sexo" class="form-select">
+                      <option value="" disabled>Selecciona...</option>
+                      <option v-for="s in sexos" :key="s" :value="s">{{ s }}</option>
+                    </select>
+                  </div>
+                  <div class="group">
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1 ml-1">Edad</label>
+                    <input v-model.number="edad" type="number" min="18" max="100" class="form-input"
+                      placeholder="Años" />
+                  </div>
+                </div>
+              </section>
+
+              <!-- Ubicación -->
+              <section>
+                <h3
+                  class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2 pt-2">
+                  <span class="w-1.5 h-1.5 rounded-full bg-blue-400/40"></span> Ubicación
+                </h3>
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="group">
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1 ml-1">Municipio</label>
+                    <select v-model="municipio" class="form-select">
+                      <option value="" disabled>Selecciona...</option>
+                      <option v-for="mun in municipios" :key="mun" :value="mun">{{ mun }}</option>
+                    </select>
+                    <FormError :msg="serverErrs.municipio" />
+                  </div>
+                  <div class="group">
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1 ml-1">Comunidad</label>
+                    <select v-model="comunidad" :disabled="!municipio"
+                      class="form-select disabled:bg-gray-100 disabled:opacity-60">
+                      <option value="" disabled>Selecciona...</option>
+                      <option v-for="com in comunidadesFiltradas" :key="com" :value="com">{{ com }}</option>
+                    </select>
+                    <FormError :msg="serverErrs.comunidad" />
+                  </div>
+                </div>
+              </section>
+
+            </div>
+
+            <!-- COLUMNA DERECHA: Contacto, Seguridad y Rol -->
+            <div class="space-y-5">
+
+              <!-- Contacto -->
+              <section>
+                <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400/40"></span> Contacto
+                </h3>
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="group">
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1 ml-1">Teléfono</label>
+                    <input v-model.trim="telefono" type="tel" maxlength="10" class="form-input font-mono text-sm"
+                      placeholder="10 dígitos" />
+                    <FormError :msg="serverErrs.telefono" />
+                  </div>
+                  <div class="group">
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1 ml-1">Correo</label>
+                    <input v-model.trim="email" type="email" class="form-input text-sm"
+                      placeholder="correo@ejemplo.com" />
+                    <FormError :msg="serverErrs.email" />
+                  </div>
+                </div>
+              </section>
+
+              <!-- Seguridad -->
+              <section>
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="group">
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1 ml-1">Contraseña</label>
+                    <div class="relative">
+                      <input v-model="password" :type="showPassword ? 'text' : 'password'" class="form-input pr-10"
+                        placeholder="••••••••" />
+                      <button type="button"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                        @click="showPassword = !showPassword" tabindex="-1">
+                        <svg v-if="!showPassword" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="group">
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1 ml-1">Confirmar</label>
+                    <div class="relative">
+                      <input v-model="confirm" :type="showConfirm ? 'text' : 'password'" class="form-input pr-10"
+                        placeholder="••••••••" />
+                      <button type="button"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                        @click="showConfirm = !showConfirm" tabindex="-1">
+                        <svg v-if="!showConfirm" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <!-- Mini helper de contraseña -->
+                <p v-if="!!password && !passwordFuerte"
+                  class="text-[10px] text-orange-500 mt-1.5 ml-1 font-medium flex items-center gap-1 bg-orange-50 p-1 rounded border border-orange-100 inline-block">
+                  <span class="font-bold">Nota:</span> Mín. 8 caracteres, 1 mayúscula, 1 número.
+                </p>
+              </section>
+
+              <!-- Rol y Submit -->
+              <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div class="flex items-center gap-4 mb-4">
+                  <span class="text-[10px] font-bold text-gray-500 uppercase">Rol:</span>
+                  <div class="flex gap-2 flex-1">
+                    <label v-for="opt in roleOptions" :key="opt.value" class="cursor-pointer relative flex-1">
+                      <input type="radio" v-model="role" :value="opt.value" class="peer sr-only">
+                      <div class="text-xs font-bold py-1.5 px-3 rounded-lg text-center border transition-all 
+                          peer-checked:bg-white peer-checked:border-brand peer-checked:text-brand peer-checked:shadow-sm
+                          bg-gray-200/50 border-transparent text-gray-500 hover:bg-gray-200">
+                        {{ opt.label }}
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2 mb-4">
+                  <input id="terms" type="checkbox" v-model="accept"
+                    class="w-4 h-4 text-brand rounded focus:ring-brand border-gray-300 cursor-pointer" />
+                  <label for="terms" class="text-xs text-gray-500 cursor-pointer select-none">Acepto los <a href="#"
+                      class="text-brand font-bold hover:underline">términos</a>.</label>
+                </div>
+
+                <button type="submit" :disabled="!isValid || loading"
+                  class="w-full py-3 px-4 rounded-xl bg-brand text-white font-bold text-sm shadow-md shadow-brand/20 hover:bg-red-800 hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
+                  {{ loading ? 'Creando...' : 'Completar registro' }}
+                </button>
               </div>
-             </div>
-          </label>
 
-          <label class="block">
-            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Edad</span>
-            <input
-              v-model.number="edad"
-              type="number"
-              min="18" max="100"
-              class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
-              placeholder="Años"
-            />
-          </label>
-        </div>
-
-        <!-- Seguridad -->
-         <div class="grid md:grid-cols-2 gap-5">
-           <label class="block">
-            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Contraseña</span>
-            <input
-              v-model="password"
-              type="password"
-              class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
-              placeholder="••••••••"
-            />
-             <p v-if="!!password && !passwordFuerte" class="text-xs text-gray-500 mt-1">Mín. 8 caracteres, 1 mayúscula, 1 número.</p>
-          </label>
-
-          <label class="block">
-            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Confirmar</span>
-            <input
-              v-model="confirm"
-              type="password"
-              class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
-              placeholder="••••••••"
-            />
-          </label>
-        </div>
-
-         <div class="grid gap-2">
-            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Rol en la plataforma</span>
-             <div class="flex gap-4">
-               <label v-for="opt in roleOptions" :key="opt.value" 
-                class="flex-1 cursor-pointer relative"
-               >
-                 <input type="radio" v-model="role" :value="opt.value" class="peer sr-only">
-                 <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center transition-all peer-checked:border-brand peer-checked:bg-red-50 peer-checked:text-brand font-medium hover:bg-gray-100">
-                    {{ opt.label }}
-                 </div>
-               </label>
-             </div>
-         </div>
-
-        <!-- Submit -->
-        <div class="flex items-center gap-2 mt-4">
-           <input id="terms" type="checkbox" v-model="accept" class="w-5 h-5 text-brand rounded focus:ring-brand border-gray-300" />
-           <label for="terms" class="text-sm text-gray-600">Acepto los <a href="#" class="text-brand hover:underline">términos y condiciones</a>.</label>
-        </div>
-
-        <div class="flex flex-col-reverse md:flex-row gap-4 pt-2">
-           <RouterLink :to="{ name: 'login' }" class="flex-1 text-center py-3.5 px-6 rounded-xl border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 hover:text-gray-900 transition-colors">
-             Ya tengo cuenta
-           </RouterLink>
-           <button 
-            type="submit" 
-            :disabled="!isValid || loading"
-            class="flex-[2] py-3.5 px-6 rounded-xl bg-brand text-white font-bold shadow-lg shadow-brand/20 hover:bg-red-900 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
-           >
-             {{ loading ? 'Creando cuenta...' : 'Completar registro' }}
-           </button>
-        </div>
-
-      </form>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, defineComponent } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { getErrorMessage, getFieldErrors } from '@/api'
+
+// Componente local simple para errores
+const FormError = defineComponent({
+  props: ['msg'],
+  template: `<p v-if="msg" class="text-red-500 text-[10px] mt-1 ml-1 font-bold">{{ msg }}</p>`
+})
 
 type ExplicitRole = 'user' | 'operator'
 
@@ -211,10 +247,12 @@ const sexo = ref('')
 const edad = ref<number | null>(null)
 const password = ref('')
 const confirm = ref('')
+const showPassword = ref(false)
+const showConfirm = ref(false)
 const accept = ref(false)
 const role = ref<ExplicitRole>('user')
 const loading = ref(false)
-const tried = ref(false) // If user tried to submit
+const tried = ref(false)
 
 /* Data */
 const municipios = ['José María Morelos', 'Felipe Carrillo Puerto']
@@ -241,7 +279,7 @@ const isValid = computed(() =>
   passwordFuerte.value && passwordsMatch.value && accept.value
 )
 
-const inputClass = (err: boolean) => err ? 'border-red-300 ring-2 ring-red-100' : ''
+const inputClass = (err: boolean) => err ? '!border-red-300 !bg-red-50' : ''
 
 /* Errors */
 const serverErrs = ref<Record<string, string>>({})
@@ -257,39 +295,56 @@ async function onSubmit() {
   formError.value = ''
 
   if (!isValid.value) {
-    formError.value = 'Por favor completa todos los campos requeridos.'
+    formError.value = 'Completa los campos requeridos.'
     return
   }
 
   loading.value = true
   try {
-     const fullName = `${nombres.value} ${apellidos.value}`.trim()
-     const returnedRole = await auth.register({
-       name: fullName,
-       email: email.value,
-       password: password.value,
-       password_confirmation: confirm.value,
-       role: role.value,
-       telefono: telefono.value,
-       sexo: sexo.value,
-       edad: edad.value || undefined,
-       comunidad: comunidad.value,
-       municipio: municipio.value
-     })
-      const r = returnedRole === 'operator' ? 'operator' : 'user'
-      router.push(r === 'operator' ? { name: 'op.hoy' } : { name: 'u.inicio' })
+    const fullName = `${nombres.value} ${apellidos.value}`.trim()
+    const returnedRole = await auth.register({
+      name: fullName,
+      email: email.value,
+      password: password.value,
+      password_confirmation: confirm.value,
+      role: role.value,
+      telefono: telefono.value,
+      sexo: sexo.value,
+      edad: edad.value || undefined,
+      comunidad: comunidad.value,
+      municipio: municipio.value
+    })
+    const r = returnedRole === 'operator' ? 'operator' : 'user'
+    router.push(r === 'operator' ? { name: 'op.hoy' } : { name: 'u.inicio' })
   } catch (e: any) {
     formError.value = getErrorMessage(e)
-    // Map Laravel errors
     const errs = getFieldErrors(e)
-    if(errs) {
-       Object.keys(errs).forEach(k => {
-         const msg = Array.isArray(errs[k]) ? errs[k][0] : errs[k]
-         serverErrs.value[k] = msg
-       })
+    if (errs) {
+      Object.keys(errs).forEach(k => {
+        const msg = Array.isArray(errs[k]) ? errs[k][0] : errs[k]
+        serverErrs.value[k] = msg
+      })
     }
   } finally {
     loading.value = false
   }
 }
 </script>
+
+<style scoped>
+.form-input,
+.form-select {
+  @apply w-full rounded-lg border-gray-200 bg-gray-50/50 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand focus:ring-2 focus:ring-brand/10 transition-all outline-none;
+}
+
+/* Remove spinners */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+}
+</style>
