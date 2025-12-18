@@ -77,6 +77,8 @@ const rutasProximas = computed<RutaItem[]>(() => {
       const choferId = (r as any).choferId ?? null
       return choferId === meId.value
     })
+    // 👉 Ordenar por fecha Ascendente (más cercana primero)
+    .sort((a, b) => (a.fechaISO || '').localeCompare(b.fechaISO || ''))
 })
 
 onMounted(async () => {
@@ -98,15 +100,15 @@ onMounted(async () => {
 
 <template>
   <section class="container mx-auto">
-    <h1 class="text-2xl font-bold mb-4">Rutas de hoy</h1>
+    <h1 class="text-2xl font-bold mb-4 text-gray-900">Rutas de hoy</h1>
 
-    <div v-if="loading" class="py-10 text-center opacity-80">
+    <div v-if="loading" class="py-10 text-center text-gray-500">
       Cargando rutas…
     </div>
 
     <div v-else>
       <!-- RUTAS DE HOY -->
-      <div v-if="rutasHoy.length === 0" class="mb-8 text-sm text-white/70">
+      <div v-if="rutasHoy.length === 0" class="mb-8 text-sm text-gray-500">
         No hay rutas asignadas hoy.
       </div>
 
@@ -114,25 +116,26 @@ onMounted(async () => {
         <article
           v-for="r in rutasHoy"
           :key="r.id"
-          class="rounded-xl border border-white/10 bg-white/5 p-4"
+          class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm hover:shadow-md transition-all"
         >
-          <h3 class="font-semibold mb-1">{{ r.nombre ?? ('Ruta ' + r.id) }}</h3>
-          <p class="text-sm opacity-80 mb-2">
-            {{ r.paradas?.length ?? 0 }} paradas · {{ (r.pedidos?.length ?? 0) }} pedidos
-            <span v-if="r.fechaISO" class="ms-2 opacity-70">• {{ formatFechaLarga(r.fechaISO) }}</span>
+          <h3 class="font-bold text-gray-900 mb-2 text-lg">{{ r.nombre ?? ('Ruta ' + r.id) }}</h3>
+          <p class="text-sm text-gray-600 mb-4">
+            <span class="font-medium text-gray-800">{{ r.paradas?.length ?? 0 }}</span> paradas · 
+            <span class="font-medium text-gray-800">{{ (r.pedidos?.length ?? 0) }}</span> pedidos
+            <span v-if="r.fechaISO" class="block mt-1 text-gray-400 text-xs uppercase font-bold tracking-wide">{{ formatFechaLarga(r.fechaISO) }}</span>
           </p>
 
           <div class="flex gap-2">
             <RouterLink
               :to="{ name: 'op.ruta', params: { id: r.id } }"
-              class="inline-flex items-center rounded bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              class="inline-flex items-center rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-brand/50 transition-colors shadow-sm shadow-brand/20"
             >
               Abrir
             </RouterLink>
 
             <RouterLink
               :to="{ name: 'op.ruta.mapa', params: { id: r.id } }"
-              class="inline-flex items-center rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              class="inline-flex items-center rounded-xl bg-white border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-colors"
             >
               Ver mapa
             </RouterLink>
@@ -141,12 +144,11 @@ onMounted(async () => {
       </div>
 
       <!-- PRÓXIMAS RUTAS -->
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-xl font-semibold">Próximas rutas (próximo mes)</h2>
-        
+      <div class="flex items-center justify-between mb-4 mt-8 pt-6 border-t border-gray-100">
+        <h2 class="text-xl font-bold text-gray-900">Próximas rutas (próximo mes)</h2>
       </div>
 
-      <div v-if="rutasProximas.length === 0" class="text-sm text-white/70">
+      <div v-if="rutasProximas.length === 0" class="text-sm text-gray-500">
         No tienes rutas programadas en los próximos 30 días.
       </div>
 
@@ -154,25 +156,26 @@ onMounted(async () => {
         <article
           v-for="r in rutasProximas"
           :key="r.id"
-          class="rounded-xl border border-white/10 bg-white/5 p-4"
+          class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm hover:shadow-md transition-all"
         >
-          <h3 class="font-semibold mb-1">{{ r.nombre ?? ('Ruta ' + r.id) }}</h3>
-          <p class="text-sm opacity-80 mb-2">
-            {{ r.paradas?.length ?? 0 }} paradas · {{ (r.pedidos?.length ?? 0) }} pedidos
-            <span v-if="r.fechaISO" class="ms-2 opacity-70">• {{ formatFechaLarga(r.fechaISO) }}</span>
+          <h3 class="font-bold text-gray-900 mb-2 text-lg">{{ r.nombre ?? ('Ruta ' + r.id) }}</h3>
+          <p class="text-sm text-gray-600 mb-4">
+             <span class="font-medium text-gray-800">{{ r.paradas?.length ?? 0 }}</span> paradas · 
+            <span class="font-medium text-gray-800">{{ (r.pedidos?.length ?? 0) }}</span> pedidos
+            <span v-if="r.fechaISO" class="block mt-1 text-gray-400 text-xs uppercase font-bold tracking-wide">{{ formatFechaLarga(r.fechaISO) }}</span>
           </p>
 
           <div class="flex gap-2">
             <RouterLink
               :to="{ name: 'op.ruta', params: { id: r.id } }"
-              class="inline-flex items-center rounded bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              class="inline-flex items-center rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-brand/50 transition-colors shadow-sm shadow-brand/20"
             >
               Abrir
             </RouterLink>
 
             <RouterLink
               :to="{ name: 'op.ruta.mapa', params: { id: r.id } }"
-              class="inline-flex items-center rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              class="inline-flex items-center rounded-xl bg-white border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-colors"
             >
               Ver mapa
             </RouterLink>
@@ -182,5 +185,3 @@ onMounted(async () => {
     </div>
   </section>
 </template>
-
-

@@ -1,12 +1,12 @@
 <template>
   <div class="max-w-5xl">
-    <div class="flex items-start justify-between mb-4">
-      <h2 class="text-2xl font-semibold">Perfil</h2>
+    <div class="flex items-start justify-between mb-6">
+      <h2 class="text-2xl font-bold text-gray-900">Perfil</h2>
 
-      <div class="flex gap-2">
+      <div class="flex gap-3">
         <button
           v-if="!editando"
-          class="rounded bg-emerald-600 px-4 py-2 hover:bg-emerald-500"
+          class="rounded-xl bg-brand px-5 py-2.5 text-white font-bold hover:bg-red-800 transition-colors shadow-sm shadow-brand/20"
           @click="activarEdicion"
         >
           Editar
@@ -14,14 +14,14 @@
 
         <template v-else>
           <button
-            class="rounded bg-emerald-600 px-4 py-2 hover:bg-emerald-500"
+            class="rounded-xl bg-brand px-5 py-2.5 text-white font-bold hover:bg-red-800 transition-colors shadow-sm shadow-brand/20 disabled:opacity-50"
             @click="guardar"
             :disabled="!valido"
           >
             Guardar
           </button>
           <button
-            class="rounded bg-white/10 border border-white/15 px-4 py-2 hover:bg-white/15"
+            class="rounded-xl bg-white border border-gray-200 px-5 py-2.5 text-gray-700 font-bold hover:bg-gray-50 transition-colors"
             @click="cancelar"
           >
             Cancelar
@@ -30,72 +30,77 @@
       </div>
     </div>
 
-    <div class="grid md:grid-cols-2 gap-4">
+    <div class="grid md:grid-cols-2 gap-6">
       <!-- Datos de la usuaria -->
-      <section class="rounded-xl border border-white/10 bg-white/5 p-4">
-        <h3 class="font-semibold mb-3">Datos de la usuaria</h3>
+      <section class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+        <h3 class="font-bold text-gray-900 mb-6 border-b border-gray-100 pb-2">Datos de la usuaria</h3>
 
-        <div class="flex items-center gap-4 mb-4">
-          <div class="relative">
+        <div class="flex items-center gap-5 mb-6">
+          <div class="relative group">
             <img
               :src="form.avatar || placeholder"
-              class="h-20 w-20 rounded-full object-cover border border-white/10 bg-neutral-900"
+              class="h-24 w-24 rounded-full object-cover border-4 border-gray-50 bg-gray-100 shadow-sm"
               alt="Avatar"
             />
             <label
               v-if="editando"
-              class="absolute -bottom-2 left-1/2 -translate-x-1/2 text-xs rounded bg-white/10 px-2 py-1 border border-white/15 cursor-pointer hover:bg-white/15"
+              class="absolute bottom-0 right-0 bg-white p-1.5 rounded-full border border-gray-200 shadow-sm cursor-pointer hover:bg-gray-50 transition-all"
+              title="Cambiar foto"
             >
-              Cambiar
+              <svg class="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
               <input type="file" class="hidden" accept="image/*" @change="onAvatarChange" />
             </label>
           </div>
 
-          <div class="text-sm text-white/70">
-            <p class="font-medium text-white">{{ form.nombre || 'Sin nombre' }}</p>
+          <div class="text-sm">
+             <p class="font-bold text-gray-900 text-lg">{{ form.nombre || 'Sin nombre' }}</p>
+             <p class="text-gray-500 font-medium">Rol: {{ role || 'Usuario' }}</p>
           </div>
         </div>
 
-        <div class="space-y-3">
+        <div class="space-y-4">
           <div>
-            <label class="block text-sm mb-1">Nombre</label>
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Nombre</label>
             
             <input
               v-model="form.nombre"
               :disabled="!editando"
               type="text"
-              class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2"
+              class="w-full rounded-xl bg-gray-50 border border-gray-200 px-4 py-2.5 text-gray-900 focus:bg-white focus:border-brand focus:ring-2 focus:ring-brand/20 transition-all outline-none"
             />
           </div>
 
           <div>
-            <label class="block text-sm mb-1">Teléfono (WhatsApp)</label>
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Teléfono (WhatsApp)</label>
             <input
               v-model="form.telefono"
               :disabled="!editando"
               type="tel"
               inputmode="numeric"
-              class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2"
+              class="w-full rounded-xl bg-gray-50 border border-gray-200 px-4 py-2.5 text-gray-900 focus:bg-white focus:border-brand focus:ring-2 focus:ring-brand/20 transition-all outline-none"
               placeholder="10 dígitos"
             />
           </div>
 
           <div>
-            <label class="block text-sm mb-1">Correo</label>
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Correo</label>
             <input
               v-model="form.email"
               :disabled="!editando"
               type="email"
-              class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2"
+              class="w-full rounded-xl bg-gray-50 border border-gray-200 px-4 py-2.5 text-gray-900 focus:bg-white focus:border-brand focus:ring-2 focus:ring-brand/20 transition-all outline-none"
               placeholder="correo@ejemplo.com"
             />
           </div>
 
-          <div class="flex flex-wrap gap-2 pt-1">
-            <RouterLink :to="{ name: 'u.inventario' }" class="rounded bg-emerald-800/40 border border-emerald-600/40 px-3 py-2 text-sm hover:bg-emerald-700/50">
+          <div class="flex flex-wrap gap-3 pt-4 border-t border-gray-100 mt-4">
+            <RouterLink :to="{ name: 'u.inventario' }" class="rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 px-4 py-2 text-sm font-bold hover:bg-emerald-100 transition-colors">
               Mi granja
             </RouterLink>
-            <RouterLink :to="{ name: 'u.historial' }" class="rounded bg-white/10 border border-white/15 px-3 py-2 text-sm hover:bg-white/15">
+            <RouterLink :to="{ name: 'u.historial' }" class="rounded-xl bg-blue-50 text-blue-700 border border-blue-100 px-4 py-2 text-sm font-bold hover:bg-blue-100 transition-colors">
               Mis pedidos
             </RouterLink>
           </div>
@@ -103,49 +108,49 @@
       </section>
 
       <!-- Ubicación y Asesor -->
-      <section class="space-y-4">
-        <div class="rounded-xl border border-white/10 bg-white/5 p-4">
-          <h3 class="font-semibold mb-3">Ubicación registrada</h3>
-          <p class="text-sm text-gray-300 mb-1">
-            Comunidad: <span class="text-gray-100 font-medium">{{ perfil.comunidad || '—' }}</span>
+      <section class="space-y-6">
+        <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <h3 class="font-bold text-gray-900 mb-4 border-b border-gray-100 pb-2">Ubicación registrada</h3>
+          <p class="text-sm text-gray-500 mb-2">
+            Comunidad: <span class="text-gray-900 font-bold ml-1 text-base">{{ perfil.comunidad || '—' }}</span>
           </p>
-          <p class="text-sm text-gray-300">
-            Municipio: <span class="text-gray-100 font-medium">{{ perfil.municipio || '—' }}</span>
+          <p class="text-sm text-gray-500">
+            Municipio: <span class="text-gray-900 font-bold ml-1 text-base">{{ perfil.municipio || '—' }}</span>
           </p>
 
           <button
-            class="mt-3 rounded bg-white/10 border border-white/15 px-3 py-2 text-sm hover:bg-white/15"
+            class="mt-6 w-full rounded-xl bg-white border border-gray-200 px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
             @click="solicitarCambioUbicacion"
           >
             Solicitar cambio de ubicación
           </button>
 
-          <p class="text-xs text-white/50 mt-2">
+          <p class="text-xs text-gray-400 mt-3 font-medium text-center">
             Los cambios de comunidad/municipio requieren aprobación del equipo.
           </p>
         </div>
 
-        <div class="rounded-xl border border-white/10 bg-white/5 p-4">
-          <h3 class="font-semibold mb-3">Asesor asignado</h3>
-          <p class="text-sm text-gray-300 mb-1">
-            Nombre: <span class="text-gray-100 font-medium">{{ perfil.asesorNombre || '—' }}</span>
+        <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <h3 class="font-bold text-gray-900 mb-4 border-b border-gray-100 pb-2">Asesor asignado</h3>
+          <p class="text-sm text-gray-500 mb-2">
+            Nombre: <span class="text-gray-900 font-bold ml-1">{{ perfil.asesorNombre || '—' }}</span>
           </p>
-          <p class="text-sm text-gray-300">
-            Teléfono: <span class="text-gray-100 font-medium">{{ perfil.asesorTelefono || '—' }}</span>
+          <p class="text-sm text-gray-500">
+            Teléfono: <span class="text-gray-900 font-bold ml-1">{{ perfil.asesorTelefono || '—' }}</span>
           </p>
 
-          <div class="flex gap-2 mt-3">
+          <div class="flex gap-3 mt-6">
             <a
               :href="whatsUrl"
               target="_blank"
               rel="noopener"
-              class="rounded bg-emerald-600 px-3 py-2 text-sm hover:bg-emerald-500"
+              class="flex-1 text-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 shadow-sm shadow-emerald-200 transition-colors"
             >
-              Chatear por WhatsApp
+              WhatsApp
             </a>
             <a
               :href="telUrl"
-              class="rounded bg-white/10 border border-white/15 px-3 py-2 text-sm hover:bg-white/15"
+              class="flex-1 text-center rounded-xl bg-white border border-gray-200 px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors"
             >
               Llamar
             </a>
@@ -215,11 +220,11 @@ const form = reactive({
 
 
 
-// Placeholder si no hay avatar
+// Placeholder si no hay avatar (LIGHT MODE)
 const placeholder =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160"><rect width="160" height="160" rx="80" fill="#111827"/><circle cx="80" cy="60" r="32" fill="#374151"/><rect x="35" y="98" width="90" height="40" rx="20" fill="#1F2933"/></svg>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160"><rect width="160" height="160" rx="80" fill="#F3F4F6"/><circle cx="80" cy="60" r="32" fill="#9CA3AF"/><rect x="35" y="98" width="90" height="40" rx="20" fill="#D1D5DB"/></svg>`,
   )
 
 // Validación mínima
@@ -320,4 +325,3 @@ function solicitarCambioUbicacion() {
   // perfil.enviarSolicitudCambioUbicacion?.(nuevaComunidad, nuevoMunicipio)
 }
 </script>
-

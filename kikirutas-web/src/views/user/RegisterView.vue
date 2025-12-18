@@ -1,191 +1,196 @@
 <!-- src/views/user/RegisterView.vue -->
 <template>
-  <section class="min-h-screen grid place-items-center px-4">
-    <div class="w-full max-w-xl rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-      <h2 class="text-2xl font-bold mb-1">Crear cuenta</h2>
-      <p class="text-sm text-gray-400 mb-6">
-        Crea tu cuenta con nosotros y únete a este lindo proyecto, Kikibá.
-      </p>
+  <section class="min-h-screen py-10 px-4 bg-gray-50 flex items-center justify-center">
+    <div class="w-full max-w-2xl bg-white rounded-3xl shadow-xl border border-gray-100 p-8 md:p-10">
+      
+      <div class="mb-8 text-center md:text-left">
+        <h2 class="text-3xl font-bold text-gray-900 mb-2">Crear cuenta</h2>
+        <p class="text-gray-500 text-sm">
+          Únete al ecosistema <span class="text-brand font-bold">KikiRutas</span>. Tu plataforma de gestión agrícola.
+        </p>
+      </div>
 
-      <!-- Mensaje de error general -->
-      <p v-if="formError" class="mb-3 text-sm text-rose-400">{{ formError }}</p>
+      <!-- Mensaje Global -->
+      <div v-if="formError" class="mb-6 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm font-medium flex gap-2 items-start">
+        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+        {{ formError }}
+      </div>
 
-      <form class="space-y-5" @submit.prevent="onSubmit">
+      <form class="grid gap-6" @submit.prevent="onSubmit">
         <!-- Nombres y Apellidos -->
-        <div class="grid md:grid-cols-2 gap-4">
-          <div class="grid gap-2">
-            <label class="text-sm text-gray-300">Nombres</label>
+        <div class="grid md:grid-cols-2 gap-5">
+          <label class="block">
+            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Nombres</span>
             <input
               v-model.trim="nombres"
               type="text"
-              :class="inputClass((!!nombres && nombres.trim().length === 0) || !!serverErrs.nombres)"
-              class="base-input"
+              :class="inputClass(!nombres && tried)"
+              class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
+              placeholder="Ej. Juan"
               autocomplete="given-name"
             />
-            <p v-if="serverErrs.nombres" class="hint-err">{{ serverErrs.nombres }}</p>
-          </div>
+            <p v-if="serverErrs.nombres" class="text-red-500 text-xs mt-1">{{ serverErrs.nombres }}</p>
+          </label>
 
-          <div class="grid gap-2">
-            <label class="text-sm text-gray-300">Apellidos</label>
+          <label class="block">
+            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Apellidos</span>
             <input
               v-model.trim="apellidos"
               type="text"
-              :class="inputClass((!!apellidos && apellidos.trim().length === 0) || !!serverErrs.apellidos)"
-              class="base-input"
+              :class="inputClass(!apellidos && tried)"
+              class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
+              placeholder="Ej. Pérez"
               autocomplete="family-name"
             />
-            <p v-if="serverErrs.apellidos" class="hint-err">{{ serverErrs.apellidos }}</p>
-          </div>
+            <p v-if="serverErrs.apellidos" class="text-red-500 text-xs mt-1">{{ serverErrs.apellidos }}</p>
+          </label>
         </div>
 
-        <!-- Municipio y Comunidad -->
-        <div class="grid md:grid-cols-2 gap-4">
-          <div class="grid gap-2">
-            <label class="text-sm text-gray-300">Municipio</label>
-            <select v-model="municipio" class="base-input">
-              <option value="" disabled>Selecciona un municipio</option>
-              <option v-for="mun in municipios" :key="mun" :value="mun">{{ mun }}</option>
-            </select>
-            <p v-if="serverErrs.municipio" class="hint-err">{{ serverErrs.municipio }}</p>
-          </div>
+        <!-- Ubicación -->
+        <div class="grid md:grid-cols-2 gap-5">
+          <label class="block">
+            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Municipio</span>
+            <div class="relative mt-1">
+              <select v-model="municipio" class="w-full appearance-none rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all">
+                <option value="" disabled>Selecciona...</option>
+                <option v-for="mun in municipios" :key="mun" :value="mun">{{ mun }}</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </div>
+            </div>
+            <p v-if="serverErrs.municipio" class="text-red-500 text-xs mt-1">{{ serverErrs.municipio }}</p>
+          </label>
 
-          <div class="grid gap-2">
-            <label class="text-sm text-gray-300">Comunidad</label>
-            <select v-model="comunidad" class="base-input">
-              <option value="" disabled>Selecciona una comunidad</option>
-              <option v-for="com in comunidadesFiltradas" :key="com" :value="com">{{ com }}</option>
-            </select>
-            <p v-if="serverErrs.comunidad" class="hint-err">{{ serverErrs.comunidad }}</p>
-          </div>
+          <label class="block">
+            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Comunidad</span>
+            <div class="relative mt-1">
+              <select v-model="comunidad" :disabled="!municipio" class="w-full appearance-none rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all disabled:opacity-50">
+                <option value="" disabled>Selecciona...</option>
+                <option v-for="com in comunidadesFiltradas" :key="com" :value="com">{{ com }}</option>
+              </select>
+               <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </div>
+            </div>
+             <p v-if="serverErrs.comunidad" class="text-red-500 text-xs mt-1">{{ serverErrs.comunidad }}</p>
+          </label>
         </div>
 
-        <!-- Teléfono y Correo -->
-        <div class="grid md:grid-cols-2 gap-4">
-          <div class="grid gap-2">
-            <label class="text-sm text-gray-300">Número de teléfono</label>
+        <!-- Contacto -->
+        <div class="grid md:grid-cols-2 gap-5">
+           <label class="block">
+            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Teléfono</span>
             <input
               v-model.trim="telefono"
               type="tel"
-              inputmode="numeric"
               maxlength="10"
-              :class="inputClass(((!!telefono && !telefonoValido)) || !!serverErrs.telefono)"
-              class="base-input"
+              class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
               placeholder="10 dígitos"
-              autocomplete="tel"
             />
-            <p v-if="!!telefono && !telefonoValido" class="hint-err">Debe tener 10 dígitos.</p>
-            <p v-if="serverErrs.telefono" class="hint-err">{{ serverErrs.telefono }}</p>
-          </div>
+             <p v-if="serverErrs.telefono" class="text-red-500 text-xs mt-1">{{ serverErrs.telefono }}</p>
+          </label>
 
-          <div class="grid gap-2">
-            <label class="text-sm text-gray-300">Correo</label>
+           <label class="block">
+            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Correo</span>
             <input
               v-model.trim="email"
               type="email"
-              :class="inputClass(((!!email && !emailValido)) || !!serverErrs.email)"
-              class="base-input"
-              placeholder="ejemplo@correo.com"
-              autocomplete="email"
+              class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
+              placeholder="ejemplo@kikirutas.com"
             />
-            <p v-if="!!email && !emailValido" class="hint-err">Ingresa un correo válido.</p>
-            <p v-if="serverErrs.email" class="hint-err">{{ serverErrs.email }}</p>
-          </div>
+             <p v-if="serverErrs.email" class="text-red-500 text-xs mt-1">{{ serverErrs.email }}</p>
+          </label>
         </div>
 
-        <!-- Sexo y Edad -->
-        <div class="grid md:grid-cols-2 gap-4">
-          <div class="grid gap-2">
-            <label class="text-sm text-gray-300">Sexo</label>
-            <select v-model="sexo" class="base-input">
-              <option value="" disabled>Selecciona sexo</option>
-              <option v-for="s in sexos" :key="s" :value="s">{{ s }}</option>
-            </select>
-            <p v-if="serverErrs.sexo" class="hint-err">{{ serverErrs.sexo }}</p>
-          </div>
+        <!-- Detalles personales -->
+        <div class="grid md:grid-cols-2 gap-5">
+           <label class="block">
+            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Sexo</span>
+             <div class="relative mt-1">
+              <select v-model="sexo" class="w-full appearance-none rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all">
+                <option value="" disabled>Selecciona...</option>
+                <option v-for="s in sexos" :key="s" :value="s">{{ s }}</option>
+              </select>
+               <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </div>
+             </div>
+          </label>
 
-          <div class="grid gap-2">
-            <label class="text-sm text-gray-300">Edad</label>
+          <label class="block">
+            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Edad</span>
             <input
               v-model.number="edad"
               type="number"
-              min="1" max="120"
-              :class="inputClass(((!!edad && !edadValida)) || !!serverErrs.edad)"
-              class="base-input"
+              min="18" max="100"
+              class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
+              placeholder="Años"
             />
-            <p v-if="!!edad && !edadValida" class="hint-err">La edad debe estar entre 1 y 120 años.</p>
-            <p v-if="serverErrs.edad" class="hint-err">{{ serverErrs.edad }}</p>
-          </div>
+          </label>
         </div>
 
-        <!-- Contraseñas -->
-        <div class="grid md:grid-cols-2 gap-4">
-          <div class="grid gap-2">
-            <label class="text-sm text-gray-300">Contraseña</label>
+        <!-- Seguridad -->
+         <div class="grid md:grid-cols-2 gap-5">
+           <label class="block">
+            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Contraseña</span>
             <input
               v-model="password"
               type="password"
-              :class="inputClass(((!!password && !passwordFuerte)) || !!serverErrs.password)"
-              class="base-input"
-              autocomplete="new-password"
+              class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
+              placeholder="••••••••"
             />
-            <p v-if="!!password && !passwordFuerte" class="hint-err">
-              Mínimo 8 caracteres, con una mayúscula y un número.
-            </p>
-            <p v-if="serverErrs.password" class="hint-err">{{ serverErrs.password }}</p>
-          </div>
+             <p v-if="!!password && !passwordFuerte" class="text-xs text-gray-500 mt-1">Mín. 8 caracteres, 1 mayúscula, 1 número.</p>
+          </label>
 
-          <div class="grid gap-2">
-            <label class="text-sm text-gray-300">Confirmar contraseña</label>
+          <label class="block">
+            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Confirmar</span>
             <input
               v-model="confirm"
               type="password"
-              :class="inputClass(((!!confirm && !passwordsMatch)) || !!serverErrs.confirm)"
-              class="base-input"
-              autocomplete="new-password"
+              class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
+              placeholder="••••••••"
             />
-            <p v-if="!!confirm && !passwordsMatch" class="hint-err">Las contraseñas no coinciden.</p>
-            <p v-if="serverErrs.confirm" class="hint-err">{{ serverErrs.confirm }}</p>
-          </div>
+          </label>
         </div>
 
-        <!-- Rol -->
-        <div class="grid gap-2">
-          <label class="text-sm text-gray-300">Rol</label>
-          <select v-model="role" class="base-input">
-            <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">
-              {{ opt.label }}
-            </option>
-          </select>
+         <div class="grid gap-2">
+            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Rol en la plataforma</span>
+             <div class="flex gap-4">
+               <label v-for="opt in roleOptions" :key="opt.value" 
+                class="flex-1 cursor-pointer relative"
+               >
+                 <input type="radio" v-model="role" :value="opt.value" class="peer sr-only">
+                 <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center transition-all peer-checked:border-brand peer-checked:bg-red-50 peer-checked:text-brand font-medium hover:bg-gray-100">
+                    {{ opt.label }}
+                 </div>
+               </label>
+             </div>
+         </div>
+
+        <!-- Submit -->
+        <div class="flex items-center gap-2 mt-4">
+           <input id="terms" type="checkbox" v-model="accept" class="w-5 h-5 text-brand rounded focus:ring-brand border-gray-300" />
+           <label for="terms" class="text-sm text-gray-600">Acepto los <a href="#" class="text-brand hover:underline">términos y condiciones</a>.</label>
         </div>
 
-        <!-- Términos -->
-        <div class="flex items-start gap-2">
-          <input id="terms" type="checkbox" v-model="accept" class="mt-1" />
-          <label for="terms" class="text-sm text-gray-300">Acepto los términos y condiciones.</label>
-        </div>
-
-        <!-- Acciones -->
-        <div class="flex items-center gap-3 pt-1">
-          <button
-            type="submit"
-            class="rounded bg-emerald-600 px-4 py-2 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        <div class="flex flex-col-reverse md:flex-row gap-4 pt-2">
+           <RouterLink :to="{ name: 'login' }" class="flex-1 text-center py-3.5 px-6 rounded-xl border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 hover:text-gray-900 transition-colors">
+             Ya tengo cuenta
+           </RouterLink>
+           <button 
+            type="submit" 
             :disabled="!isValid || loading"
-          >
-            {{ loading ? 'Registrando…' : 'Registrarme' }}
-          </button>
-
-          <RouterLink
-            :to="{ name: 'login' }"
-            class="rounded bg-slate-700 px-4 py-2 hover:bg-slate-600"
-          >
-            Ya tengo cuenta
-          </RouterLink>
+            class="flex-[2] py-3.5 px-6 rounded-xl bg-brand text-white font-bold shadow-lg shadow-brand/20 hover:bg-red-900 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+           >
+             {{ loading ? 'Creando cuenta...' : 'Completar registro' }}
+           </button>
         </div>
+
       </form>
     </div>
   </section>
 </template>
-
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
@@ -195,161 +200,96 @@ import { getErrorMessage, getFieldErrors } from '@/api'
 
 type ExplicitRole = 'user' | 'operator'
 
-/* ---------- State ---------- */
-const nombres    = ref<string>('')
-const apellidos  = ref<string>('')
+/* State */
+const nombres = ref('')
+const apellidos = ref('')
+const municipio = ref('')
+const comunidad = ref('')
+const telefono = ref('')
+const email = ref('')
+const sexo = ref('')
+const edad = ref<number | null>(null)
+const password = ref('')
+const confirm = ref('')
+const accept = ref(false)
+const role = ref<ExplicitRole>('user')
+const loading = ref(false)
+const tried = ref(false) // If user tried to submit
 
-const municipio  = ref<string>('')
-const comunidad  = ref<string>('')
-
-const telefono   = ref<string>('')
-const email      = ref<string>('')
-
-const sexo       = ref<string>('')
-const edad       = ref<number | null>(null)
-
-const password   = ref<string>('')
-const confirm    = ref<string>('')
-
-const accept     = ref<boolean>(false)
-const role       = ref<ExplicitRole>('user')
-
-/* ---------- Catálogos simples (por ahora hardcode) ---------- */
-const municipios = ref<string[]>(['José María Morelos', 'Felipe Carrillo Puerto'])
-const comunidades = ref<Record<string, string[]>>({
-  'José María Morelos': [
-    'José María Morelos',
-    'Candelaria', 'Dziuché', 'La Presumida', 'Santa Gertrudis', 'Kancabchén',
-    'Cafetalito', 'Cafetal Grande', 'Benito Juárez', 'Pozo Pirata', 'San Carlos',
-    'Chunhuhub', 'Polyuc', 'Dos Aguadas', 'El Naranjal', 'Othón P. Blanco', 'Puerto Arturo'
-  ],
+/* Data */
+const municipios = ['José María Morelos', 'Felipe Carrillo Puerto']
+const comunidades: Record<string, string[]> = {
+  'José María Morelos': ['José María Morelos', 'Candelaria', 'Dziuché', 'La Presumida', 'Santa Gertrudis', 'Kancabchén', 'Cafetalito', 'San Carlos', 'Chunhuhub', 'Polyuc', 'Puerto Arturo'],
   'Felipe Carrillo Puerto': ['Felipe Carrillo Puerto', 'Dzula', 'X-Yatil', 'El Señor', 'Tihosuco']
-})
+}
+const sexos = ['Femenino', 'Masculino']
+const roleOptions = [{ label: 'Usuaria', value: 'user' }, { label: 'Operador', value: 'operator' }]
 
-const sexos = ref<string[]>(['Femenino', 'Masculino'])
-const roleOptions: Array<{ label: string; value: ExplicitRole }> = [
-  { label: 'Usuaria',  value: 'user' },
-  { label: 'Operador', value: 'operator' },
-]
-
-
-/* ---------- Derivados ---------- */
-const comunidadesFiltradas = computed(() => comunidades.value[municipio.value] ?? [])
+const comunidadesFiltradas = computed(() => comunidades[municipio.value] ?? [])
 watch(municipio, () => { comunidad.value = '' })
 
-/* ---------- Validaciones ---------- */
-const telefonoValido   = computed(() => /^\d{10}$/.test(telefono.value))
-const emailValido      = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value))
-const passwordFuerte   = computed(() => /^(?=.*[A-Z])(?=.*\d).{8,}$/.test(password.value))
-const passwordsMatch   = computed(() => password.value === confirm.value)
-const edadValida       = computed(() => !!edad.value && edad.value >= 1 && edad.value <= 120)
+/* Validation */
+const telefonoValido = computed(() => /^\d{10}$/.test(telefono.value))
+const emailValido = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value))
+const passwordFuerte = computed(() => /^(?=.*[A-Z])(?=.*\d).{8,}$/.test(password.value))
+const passwordsMatch = computed(() => password.value === confirm.value)
+const edadValida = computed(() => !!edad.value && edad.value >= 18 && edad.value <= 100)
 
 const isValid = computed(() =>
-  nombres.value.trim().length > 0 &&
-  apellidos.value.trim().length > 0 &&
-  municipio.value.length > 0 &&
-  comunidad.value.length > 0 &&
-  telefonoValido.value &&
-  emailValido.value &&
-  sexo.value.length > 0 &&
-  edadValida.value &&
-  passwordFuerte.value &&
-  passwordsMatch.value &&
-  accept.value
+  nombres.value && apellidos.value && municipio.value && comunidad.value &&
+  telefonoValido.value && emailValido.value && sexo.value && edadValida.value &&
+  passwordFuerte.value && passwordsMatch.value && accept.value
 )
 
-/* ---------- UI helpers ---------- */
-const inputClass = (invalid: boolean) =>
-  `rounded bg-neutral-900 border px-3 py-2 outline-none ${
-    invalid ? 'border-rose-500/70 focus:border-rose-400'
-            : 'border-white/10 focus:border-emerald-500'
-  }`
+const inputClass = (err: boolean) => err ? 'border-red-300 ring-2 ring-red-100' : ''
 
-/* ---------- Errores del servidor ---------- */
+/* Errors */
 const serverErrs = ref<Record<string, string>>({})
-const formError  = ref<string>('')
+const formError = ref('')
 
-/* Traducción rápida de mensajes típicos de Laravel al español */
-function toSpanish(msg: string): string {
-  const m = (msg || '').toLowerCase()
-  if (m.includes('the name field is required'))   return 'Debes escribir tu nombre.'
-  if (m.includes('email has already been taken')) return 'El correo ya está registrado'
-  if (m.includes('already been taken'))           return 'Este dato ya está registrado'
-  if (m.includes('password confirmation'))        return 'Las contraseñas no coinciden'
-  if (m.includes('the password field is required')) return 'Debes escribir tu contraseña.'
-  if (m.includes('must be at least') && m.includes('characters'))
-    return 'La contraseña debe tener al menos 8 caracteres'
-  if (m.includes('invalid') && m.includes('email')) return 'Correo inválido'
-  return msg
-}
-
-function takeFirstErrors(errors: any): Record<string, string> {
-  const out: Record<string, string> = {}
-  if (!errors || typeof errors !== 'object') return out
-  for (const [k, v] of Object.entries(errors)) {
-    const first = Array.isArray(v) ? String(v[0]) : String(v)
-    out[k] = toSpanish(first)
-  }
-  // Normalizaciones comunes de Laravel
-  if (!out.email && (errors as any)?.correo) out.email = toSpanish((errors as any).correo?.[0] ?? (errors as any).correo)
-  if (!out.confirm && (errors as any)?.password_confirmation)
-    out.confirm = toSpanish((errors as any).password_confirmation?.[0] ?? (errors as any).password_confirmation)
-  return out
-}
-
-/* ---------- Submit ---------- */
+/* API */
 const auth = useAuthStore()
 const router = useRouter()
-const loading = ref(false)
-
-// Limpia mensaje general cuando el usuario edita campos críticos
-watch([email, telefono, password, confirm], () => { formError.value = '' })
 
 async function onSubmit() {
+  tried.value = true
   serverErrs.value = {}
   formError.value = ''
 
-  if (!isValid.value || loading.value) {
-    formError.value = 'Revisa los campos marcados en rojo.'
+  if (!isValid.value) {
+    formError.value = 'Por favor completa todos los campos requeridos.'
     return
   }
 
   loading.value = true
   try {
-    // El backend espera: name, email, password, password_confirmation y role/role_id
-    const fullName = `${nombres.value} ${apellidos.value}`.trim()
-
-    const returnedRole = await auth.register({
-    name: fullName,
-    email: email.value.trim(),
-    password: password.value,
-    password_confirmation: confirm.value,
-    role: role.value, // 'user' | 'operator'
-
-    // Datos extra para guardar en Laravel (si el back los acepta)
-    telefono: telefono.value || undefined,
-    sexo: sexo.value || undefined,
-    edad: edad.value ?? undefined,
-    comunidad: comunidad.value || undefined,
-    municipio: municipio.value || undefined,
-  })
-
-    // Redirige según el rol real que devolvió/normalizó el store
-    const r: ExplicitRole = returnedRole === 'operator' ? 'operator' : 'user'
-    router.push(r === 'operator' ? { name: 'op.hoy' } : { name: 'u.inicio' }).catch(() => {})
+     const fullName = `${nombres.value} ${apellidos.value}`.trim()
+     const returnedRole = await auth.register({
+       name: fullName,
+       email: email.value,
+       password: password.value,
+       password_confirmation: confirm.value,
+       role: role.value,
+       telefono: telefono.value,
+       sexo: sexo.value,
+       edad: edad.value || undefined,
+       comunidad: comunidad.value,
+       municipio: municipio.value
+     })
+      const r = returnedRole === 'operator' ? 'operator' : 'user'
+      router.push(r === 'operator' ? { name: 'op.hoy' } : { name: 'u.inicio' })
   } catch (e: any) {
-    formError.value  = toSpanish(getErrorMessage(e))
-    serverErrs.value = takeFirstErrors(getFieldErrors(e))
+    formError.value = getErrorMessage(e)
+    // Map Laravel errors
+    const errs = getFieldErrors(e)
+    if(errs) {
+       Object.keys(errs).forEach(k => {
+         const msg = Array.isArray(errs[k]) ? errs[k][0] : errs[k]
+         serverErrs.value[k] = msg
+       })
+    }
   } finally {
     loading.value = false
   }
 }
 </script>
-
-
-
-
-<style scoped>
-.base-input { @apply bg-neutral-900 border border-white/10 px-3 py-2 rounded outline-none; }
-.hint-err   { @apply text-xs text-rose-400; }
-</style>

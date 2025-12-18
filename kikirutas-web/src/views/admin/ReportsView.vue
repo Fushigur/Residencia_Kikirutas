@@ -202,148 +202,198 @@ function estadoEtiqueta(e: string) {
 </script>
 
 <template>
-  <section class="space-y-4">
-    <h1 class="text-2xl font-semibold">Reportes</h1>
+  <section class="space-y-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Reportes Financieros</h1>
+        <p class="text-gray-500 text-sm mt-1">Análisis de ventas, inventario y rendimiento.</p>
+      </div>
+    </div>
 
     <!-- Filtros -->
-    <div class="rounded-xl bg-white/5 border border-white/10 p-4">
-      <div class="flex flex-wrap items-end gap-3">
+    <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
+      <div class="flex flex-col md:flex-row md:items-end gap-4">
         <div>
-          <label class="block text-sm mb-1">Fecha inicio</label>
-          <input v-model="fechaIni" type="date" class="rounded bg-neutral-900 border border-white/10 px-3 py-2" />
+          <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Fecha inicio</label>
+          <input
+            v-model="fechaIni"
+            type="date"
+            class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
+          />
         </div>
         <div>
-          <label class="block text-sm mb-1">Fecha fin</label>
-          <input v-model="fechaFin" type="date" class="rounded bg-neutral-900 border border-white/10 px-3 py-2" />
+          <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Fecha fin</label>
+          <input
+            v-model="fechaFin"
+            type="date"
+            class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
+          />
         </div>
 
-        <div class="ml-auto flex gap-2">
-          <button class="rounded bg-white/10 px-3 py-2 hover:bg-white/20" @click="printReport">Imprimir</button>
-          <button class="rounded bg-emerald-600 px-3 py-2 hover:bg-emerald-500" @click="exportCsv">Exportar CSV</button>
+        <div class="md:ml-auto flex gap-3">
+          <button
+            class="inline-flex items-center gap-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-4 py-2.5 transition-colors"
+            @click="printReport"
+          >
+            <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+            Imprimir
+          </button>
+          <button
+            class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 shadow-lg shadow-emerald-200 transition-all hover:-translate-y-0.5"
+            @click="exportCsv"
+          >
+             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            Exportar CSV
+          </button>
         </div>
       </div>
     </div>
 
     <!-- KPIs -->
-    <div class="grid md:grid-cols-4 gap-3">
-      <div class="rounded-xl bg-white/5 border border-white/10 p-4">
-        <div class="text-sm text-white/70">Pedidos</div>
-        <div class="text-2xl font-semibold">{{ totalPedidos }}</div>
+    <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col">
+        <dt class="text-sm font-medium text-gray-500 mb-1">Pedidos Totales</dt>
+        <dd class="text-3xl font-bold text-gray-900">{{ totalPedidos }}</dd>
       </div>
-      <div class="rounded-xl bg-white/5 border border-white/10 p-4">
-        <div class="text-sm text-white/70">Sacos</div>
-        <div class="text-2xl font-semibold">{{ totalSacos }}</div>
+      <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col">
+        <dt class="text-sm font-medium text-gray-500 mb-1">Sacos Vendidos</dt>
+        <dd class="text-3xl font-bold text-blue-600">{{ totalSacos }}</dd>
       </div>
-      <div class="rounded-xl bg-white/5 border border-white/10 p-4">
-        <div class="text-sm text-white/70">Ingresos estimados</div>
-        <div class="text-2xl font-semibold">${{ ingresosTotales.toFixed(2) }}</div>
+      <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col">
+        <dt class="text-sm font-medium text-gray-500 mb-1">Ingresos Estimados</dt>
+        <dd class="text-3xl font-bold text-gray-900">${{ ingresosTotales.toFixed(2) }}</dd>
       </div>
-      <div class="rounded-xl bg-white/5 border border-white/10 p-4">
-        <div class="text-sm text-white/70">Ingresos (entregados)</div>
-        <div class="text-2xl font-semibold">${{ ingresosEntregados.toFixed(2) }}</div>
+      <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col">
+        <dt class="text-sm font-medium text-gray-500 mb-1">Ingresos Reales (Entregados)</dt>
+        <dd class="text-3xl font-bold text-emerald-600">${{ ingresosEntregados.toFixed(2) }}</dd>
       </div>
     </div>
 
-    <!-- Desglose por estado -->
-    <div class="rounded-xl bg-white/5 border border-white/10 p-4">
-      <h3 class="font-semibold mb-2">Pedidos por estado</h3>
-      <div v-if="estadoCount.length" class="flex flex-wrap gap-2">
-        <span
-          v-for="e in estadoCount" :key="e.estado"
-          class="px-3 py-1 rounded border text-sm"
-          :class="{
-            'bg-amber-500/15 text-amber-300 border-amber-500/30': e.estado === 'pendiente',
-            'bg-blue-500/15 text-blue-300 border-blue-500/30': e.estado === 'en_ruta',
-            'bg-emerald-500/15 text-emerald-300 border-emerald-500/30': e.estado === 'entregado',
-            'bg-rose-500/15 text-rose-300 border-rose-500/30': e.estado === 'cancelado'
-          }"
-        >
-          {{ estadoEtiqueta(e.estado) }}: <b>{{ e.count }}</b>
-        </span>
-      </div>
-      <p v-else class="text-white/70 text-sm">Sin datos en el rango seleccionado.</p>
+    <div class="grid lg:grid-cols-2 gap-6">
+        <!-- Desglose por estado -->
+        <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 h-full">
+          <h3 class="font-bold text-gray-900 mb-4">Pedidos por estado</h3>
+          <div v-if="estadoCount.length" class="space-y-3">
+             <div v-for="e in estadoCount" :key="e.estado" class="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
+                <div class="flex items-center gap-3">
+                   <span class="w-3 h-3 rounded-full"
+                    :class="{
+                        'bg-amber-400': e.estado === 'pendiente',
+                        'bg-blue-500': e.estado === 'en_ruta',
+                        'bg-emerald-500': e.estado === 'entregado',
+                        'bg-red-500': e.estado === 'cancelado'
+                    }"></span>
+                   <span class="font-medium text-gray-700 capitalize">{{ estadoEtiqueta(e.estado) }}</span>
+                </div>
+                <span class="font-bold text-gray-900 text-lg">{{ e.count }}</span>
+             </div>
+          </div>
+          <p v-else class="text-center py-10 text-gray-400 text-sm">Sin datos en el rango seleccionado.</p>
+        </div>
+
+        <!-- Desglose por producto -->
+        <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-0 overflow-hidden h-full flex flex-col">
+           <div class="p-5 border-b border-gray-100">
+              <h3 class="font-bold text-gray-900">Ventas por Producto</h3>
+           </div>
+          <div v-if="porProducto.length" class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+              <thead class="bg-gray-50 text-gray-500 font-semibold border-b border-gray-100">
+                <tr>
+                  <th class="pl-5 py-3 text-left">Producto</th>
+                  <th class="px-4 text-right">Sacos</th>
+                  <th class="px-4 text-right">Precio</th>
+                  <th class="pr-5 py-3 text-right">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="row in porProducto" :key="row.producto" class="hover:bg-gray-50">
+                  <td class="pl-5 py-3 font-medium text-gray-900">{{ row.producto }}</td>
+                  <td class="px-4 text-right text-gray-600">{{ row.sacos }}</td>
+                  <td class="px-4 text-right text-gray-600">${{ row.precio.toFixed(2) }}</td>
+                  <td class="pr-5 py-3 text-right font-bold text-gray-900">${{ row.subtotal.toFixed(2) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p v-else class="text-center py-10 text-gray-400 text-sm">Sin datos en el rango seleccionado.</p>
+        </div>
     </div>
 
-    <!-- Desglose por producto -->
-    <div class="rounded-xl bg-white/5 border border-white/10 p-4">
-      <h3 class="font-semibold mb-2">Desglose por producto</h3>
-      <div v-if="porProducto.length" class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="text-white/60">
-              <th class="text-left py-2">Producto</th>
-              <th class="text-left">Sacos</th>
-              <th class="text-left">Precio</th>
-              <th class="text-left">Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in porProducto" :key="row.producto" class="border-t border-white/10">
-              <td class="py-2">{{ row.producto }}</td>
-              <td>{{ row.sacos }}</td>
-              <td>${{ row.precio.toFixed(2) }}</td>
-              <td>${{ row.subtotal.toFixed(2) }}</td>
-            </tr>
-          </tbody>
-        </table>
+    <!-- Tabla de pedidos confirmados -->
+    <div class="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+      <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="font-bold text-gray-900">
+          Detalle de Pedidos <span class="text-gray-400 text-sm font-normal ml-1">({{ pedidosFiltrados.length }})</span>
+        </h3>
       </div>
-      <p v-else class="text-white/70 text-sm">Sin datos en el rango seleccionado.</p>
-    </div>
-
-    <!-- Tabla de pedidos -->
-    <div class="rounded-xl bg-white/5 border border-white/10 p-4">
-      <h3 class="font-semibold mb-2">Pedidos ({{ pedidosFiltrados.length }})</h3>
+      
       <div v-if="pedidosFiltrados.length" class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="text-white/60">
-              <th class="text-left py-2">Folio</th>
-              <th class="text-left">Producto</th>
-              <!-- NUEVO -->
-              <th class="text-left">Solicitante</th>
-              <th class="text-left">Comunidad</th>
-              <!-- /NUEVO -->
-              <th class="text-left">Cantidad</th>
-              <th class="text-left">Precio</th>
-              <th class="text-left">Subtotal</th>
-              <th class="text-left">Fecha</th>
-              <th class="text-left">Estado</th>
-              <th class="text-left">Ruta</th>
+        <table class="w-full text-sm text-left">
+          <thead class="bg-gray-50 text-gray-500 font-semibold border-b border-gray-100">
+            <tr>
+              <th class="pl-5 py-3 text-left">Folio</th>
+              <th class="px-4">Producto</th>
+              <th class="px-4">Solicitante</th>
+              <th class="px-4 text-right">Cant</th>
+              <th class="px-4 text-right">Subtotal</th>
+              <th class="px-4">Fecha</th>
+              <th class="px-4 text-center">Estado</th>
+              <th class="pr-5 py-3 text-left">Ruta</th>
             </tr>
           </thead>
-          <tbody>
-            <tr v-for="p in pedidosFiltrados" :key="p.id" class="border-t border-white/10">
-              <td class="py-2">{{ p.folio }}</td>
-              <td>{{ p.producto }}</td>
-              <!-- NUEVO -->
-              <td>{{ p.solicitanteNombre || '—' }}</td>
-              <td>{{ p.solicitanteComunidad || '—' }}</td>
-              <!-- /NUEVO -->
-              <td>{{ p.cantidad }}</td>
-              <td>${{ precio(p.producto).toFixed(2) }}</td>
-              <td>${{ (precio(p.producto) * p.cantidad).toFixed(2) }}</td>
-              <td>{{ p.fechaISO }}</td>
-              <td>{{ estadoEtiqueta(p.estado) }}</td>
-              <td>{{ p.routeId ? (rutas.byId(p.routeId)?.nombre ?? '') : '' }}</td>
+          <tbody class="divide-y divide-gray-100">
+            <tr v-for="p in pedidosFiltrados" :key="p.id" class="hover:bg-gray-50">
+              <td class="pl-5 py-3 font-bold text-gray-900 text-xs">{{ p.folio }}</td>
+              <td class="px-4 text-gray-600 truncate max-w-[150px]" :title="p.producto">{{ p.producto }}</td>
+              <td class="px-4">
+                 <div class="text-gray-900 font-medium text-xs">{{ p.solicitanteNombre || '—' }}</div>
+                 <div class="text-gray-400 text-[10px]">{{ p.solicitanteComunidad || '—' }}</div>
+              </td>
+              <td class="px-4 text-right font-medium text-gray-700">{{ p.cantidad }}</td>
+              <td class="px-4 text-right text-gray-600 font-medium text-xs">${{ (precio(p.producto) * p.cantidad).toFixed(2) }}</td>
+              <td class="px-4 text-gray-500 text-xs">{{ p.fechaISO }}</td>
+              <td class="px-4 text-center">
+                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase"
+                   :class="{
+                      'bg-amber-50 text-amber-700 border-amber-200': p.estado === 'pendiente',
+                      'bg-blue-50 text-blue-700 border-blue-200': p.estado === 'en_ruta',
+                      'bg-emerald-50 text-emerald-700 border-emerald-200': p.estado === 'entregado',
+                      'bg-red-50 text-red-700 border-red-200': p.estado === 'cancelado'
+                   }">
+                   {{ estadoEtiqueta(p.estado) }}
+                 </span>
+              </td>
+              <td class="pr-5 py-3 text-gray-500 text-xs truncate max-w-[120px]">
+                {{ p.routeId ? (rutas.byId(p.routeId)?.nombre ?? 'Ruta #' + p.routeId) : '—' }}
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
-      <p v-else class="text-white/70 text-sm">Sin pedidos en el rango.</p>
+      <p v-else class="text-center py-12 text-gray-400">Sin pedidos en el rango.</p>
     </div>
 
     <!-- Rutas en rango -->
-    <div class="rounded-xl bg-white/5 border border-white/10 p-4">
-      <h3 class="font-semibold mb-2">Rutas en el periodo ({{ rutasEnRango.length }})</h3>
-      <div v-if="rutasEnRango.length" class="grid md:grid-cols-3 gap-3">
-        <div v-for="r in rutasEnRango" :key="r.id" class="rounded border border-white/10 bg-white/5 p-3">
-          <div class="font-medium">{{ r.nombre }}</div>
-          <div class="text-sm text-white/70">{{ formatFechaLarga(r.fechaISO) }}</div>
-          <div class="text-sm mt-1">Pedidos: <b>{{ r.pedidos.length }}</b></div>
-          <div class="text-xs text-white/60">Estado: {{ r.estado }}</div>
+    <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5">
+      <h3 class="font-bold text-gray-900 mb-4">Rutas en el periodo ({{ rutasEnRango.length }})</h3>
+      <div v-if="rutasEnRango.length" class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div v-for="r in rutasEnRango" :key="r.id" class="rounded-xl border border-gray-100 bg-gray-50 p-4 hover:shadow-md transition-shadow">
+          <div class="font-bold text-gray-900 mb-1 truncate" :title="r.nombre">{{ r.nombre }}</div>
+          <div class="text-xs text-gray-500 mb-2 flex items-center gap-1">
+             <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+             {{ formatFechaLarga(r.fechaISO) }}
+          </div>
+          <div class="flex items-center justify-between mt-3">
+             <span class="text-xs font-medium bg-white border border-gray-200 px-2 py-1 rounded text-gray-600">{{ r.pedidos.length }} pedidos</span>
+             <span class="text-[10px] font-bold uppercase tracking-wide"
+                :class="r.estado === 'planificada' ? 'text-amber-600' : (r.estado === 'en_ruta' ? 'text-blue-600' : 'text-emerald-600')">
+                {{ r.estado }}
+             </span>
+          </div>
         </div>
       </div>
-      <p v-else class="text-white/70 text-sm">No hay rutas en el rango.</p>
+      <p v-else class="text-gray-400 text-sm italic">No hay rutas registradas en este rango de fechas.</p>
     </div>
   </section>
 </template>

@@ -1,63 +1,56 @@
 <template>
-  <section class="min-h-screen grid place-items-center px-4">
-    
-    <div class="w-full max-w-md bg-white/5 border border-white/10 rounded-xl p-8 shadow-2xl backdrop-blur-sm">
+  <section class="min-h-screen grid place-items-center px-4 bg-gray-50">
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-card border border-gray-100 p-8 md:p-10 transition-all hover:shadow-xl">
       
       <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-maiz/10 border border-maiz/20 mb-4">
-          <svg class="w-8 h-8 text-maiz" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand/10 text-brand mb-4">
+          <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11.536 9.464l-2.829 2.829a2 2 0 01-2.828 0 6 6 0 010-8.485l2.829-2.828-5.743-5.743A2.828 2.828 0 112 2h2m2 4h4m-4 4h4" />
           </svg>
         </div>
-        <h1 class="text-xl font-semibold text-crema">Recuperar contraseña</h1>
-        <p class="text-crema/70 text-sm mt-2">
-          Ingresa tu correo para recibir el enlace de recuperación.
+        <h1 class="text-2xl font-bold text-gray-900">Recuperar contraseña</h1>
+        <p class="text-gray-500 text-sm mt-2">
+          Te enviaremos un enlace a tu correo para que puedas crear una nueva contraseña.
         </p>
       </div>
 
       <form class="space-y-6" @submit.prevent="onSubmit">
         
-        <div class="space-y-2">
-          <label class="block text-xs font-medium text-crema/80 uppercase tracking-wide ml-1">Correo</label>
+        <label class="block space-y-1.5">
+          <span class="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Correo Electrónico</span>
           <div class="relative group">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg class="h-5 w-5 text-crema/40 group-focus-within:text-maiz transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-              </svg>
-            </div>
             <input 
               v-model.trim="email" 
               type="email" 
               required
-              class="w-full rounded-md bg-black/30 border border-white/20 px-3 py-3 pl-10 text-crema outline-none focus:border-maiz focus:ring-1 focus:ring-maiz transition-all placeholder-white/20"
-              placeholder="ejemplo@correo.com"
+              class="w-full rounded-xl bg-gray-50 border border-gray-200 px-4 py-3 text-gray-900 outline-none transition-all focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 placeholder-gray-400"
+              placeholder="nombre@ejemplo.com"
             >
           </div>
-        </div>
+        </label>
 
         <button 
           :disabled="loading" 
-          class="w-full rounded bg-maiz px-3 py-3 font-medium disabled:opacity-50 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity text-black/80"
+          class="w-full rounded-xl bg-brand font-bold text-white px-6 py-3.5 shadow-lg shadow-brand/20 hover:bg-red-900 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <span v-if="loading" class="w-4 h-4 border-2 border-black/30 border-t-black/80 rounded-full animate-spin"></span>
-          {{ loading ? 'Enviando…' : 'Enviar enlace' }}
+          <span v-if="loading" class="flex justify-center items-center gap-2">
+             <svg class="animate-spin h-5 w-5 text-white/50" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+             Enviando...
+          </span>
+          <span v-else>Enviar enlace de recuperación</span>
         </button>
 
-        <transition enter-active-class="animate-fade-in-down">
-          <div v-if="msg" class="p-3 rounded bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-2 justify-center">
-             <span class="text-sm text-emerald-300 text-center">{{ msg }}</span>
-          </div>
-        </transition>
+        <div v-if="msg" class="p-3 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm text-center">
+             {{ msg }}
+        </div>
 
-        <transition enter-active-class="animate-fade-in-down">
-          <div v-if="err" class="p-3 rounded bg-rose-500/10 border border-rose-500/20 flex items-start gap-2 justify-center">
-             <span class="text-sm text-rose-300 text-center">{{ err }}</span>
-          </div>
-        </transition>
+        <div v-if="err" class="p-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-sm text-center">
+             {{ err }}
+        </div>
 
         <div class="text-center pt-2">
-          <RouterLink :to="{ name: 'login' }" class="text-sm text-maiz underline hover:text-maiz/80 transition-colors">
-            Volver a ingresar
+          <RouterLink :to="{ name: 'login' }" class="text-sm font-semibold text-gray-500 hover:text-brand transition-colors">
+             &larr; Volver al inicio de sesión
           </RouterLink>
         </div>
 
@@ -79,9 +72,9 @@ async function onSubmit() {
   loading.value = true; msg.value=''; err.value=''
   try {
     await api.post('/auth/forgot-password', { email: email.value })
-    msg.value = 'Te enviamos un enlace para restablecer tu contraseña.'
+    msg.value = 'Correo enviado. Revisa tu bandeja de entrada.'
   } catch (e: any) {
-    err.value = e?.response?.data?.message || e?.message || 'No se pudo enviar el correo'
+    err.value = e?.response?.data?.message || 'No se pudo enviar el correo. Verifica que esté registrado.'
   } finally {
     loading.value = false
   }

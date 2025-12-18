@@ -157,196 +157,191 @@ function fmtFecha(ts: number) {
 </script>
 
 <template>
-  <section class="space-y-4">
-    <h1 class="text-2xl font-semibold">Usuarios</h1>
+  <section class="space-y-6">
+    <h1 class="text-2xl font-bold text-gray-900">Usuarios</h1>
 
     <!-- Filtros -->
-    <div class="rounded-xl bg-white/5 border border-white/10 p-4">
-      <div class="flex flex-wrap items-end gap-3">
+    <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
+      <div class="flex flex-wrap items-end gap-4">
         <div class="flex-1 min-w-[220px]">
-          <label class="block text-sm mb-1">Buscar</label>
-          <input v-model="q" type="text" class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2"
-            placeholder="Nombre, correo, comunidad..." />
+          <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Buscar</label>
+          <div class="relative">
+             <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+             </span>
+             <input v-model="q" type="text" class="w-full rounded-xl border-gray-200 bg-gray-50 pl-10 pr-4 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all"
+             placeholder="Nombre, correo, comunidad..." />
+          </div>
         </div>
         <div>
-          <label class="block text-sm mb-1">Rol</label>
-          <select v-model="filRol" class="rounded bg-neutral-900 border border-white/10 px-3 py-2">
+          <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Rol</label>
+          <select v-model="filRol" class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all">
             <option value="todos">Todos</option>
             <option value="user">Usuarias</option>
             <option value="operador">Operadores</option>
             <option value="admin">Administradores</option>
           </select>
-
         </div>
         <div>
-          <label class="block text-sm mb-1">Estado</label>
-          <select v-model="filEstado" class="rounded bg-neutral-900 border border-white/10 px-3 py-2">
+           <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Estado</label>
+          <select v-model="filEstado" class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all">
             <option value="todos">Todos</option>
             <option value="activos">Activos</option>
             <option value="inactivos">Inactivos</option>
           </select>
         </div>
-        <!--         <div v-if="resetMsg" class="ml-auto text-sm text-amber-300">
-          {{ resetMsg }}
-        </div> -->
       </div>
     </div>
 
     <!-- Alta -->
-    <div class="rounded-xl bg-white/5 border border-white/10 p-4">
-      <h3 class="font-semibold mb-3">Nueva cuenta</h3>
-      <div class="grid md:grid-cols-3 gap-3">
-        <div>
-          <label class="block text-sm mb-1">Nombre</label>
-          <input v-model.trim="nuevo.nombre" type="text"
-            class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2" />
-        </div>
-        <div>
-          <label class="block text-sm mb-1">Correo</label>
-          <input v-model.trim="nuevo.email" type="email"
-            class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2" />
-        </div>
-        <div>
-          <label class="block text-sm mb-1">Teléfono</label>
-          <input v-model.trim="nuevo.telefono" type="text"
-            class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2" />
-        </div>
-        <div>
-          <label class="block text-sm mb-1">Comunidad</label>
-          <input v-model.trim="nuevo.comunidad" type="text"
-            class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2" />
-        </div>
-        <div>
-          <label class="block text-sm mb-1">Rol</label>
-          <select v-model="nuevo.rol" class="w-full rounded bg-neutral-900 border border-white/10 px-3 py-2">
+    <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5">
+      <h3 class="font-bold text-gray-900 mb-4 flex items-center gap-2">
+         <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+         Nueva cuenta
+      </h3>
+      <div class="grid md:grid-cols-5 gap-4">
+        <label class="block">
+          <span class="text-xs font-bold text-gray-500 uppercase">Nombre</span>
+          <input v-model.trim="nuevo.nombre" type="text" class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5" />
+        </label>
+        <label class="block">
+          <span class="text-xs font-bold text-gray-500 uppercase">Correo</span>
+          <input v-model.trim="nuevo.email" type="email" class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5" />
+        </label>
+        <label class="block">
+          <span class="text-xs font-bold text-gray-500 uppercase">Teléfono</span>
+          <input v-model.trim="nuevo.telefono" type="text" class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5" />
+        </label>
+        <label class="block">
+          <span class="text-xs font-bold text-gray-500 uppercase">Comunidad</span>
+          <input v-model.trim="nuevo.comunidad" type="text" class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5" />
+        </label>
+        <label class="block">
+          <span class="text-xs font-bold text-gray-500 uppercase">Rol</span>
+          <select v-model="nuevo.rol" class="mt-1 w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5">
             <option value="user">Usuaria</option>
             <option value="operador">Operador</option>
             <option value="admin">Administrador</option>
           </select>
-        </div>
+        </label>
       </div>
-      <div class="flex items-center gap-3 mt-3">
-        <button class="rounded bg-emerald-600 px-4 py-2 hover:bg-emerald-500" @click="crear">Crear</button>
-        <span v-if="altaMsg" class="text-sm text-emerald-300">{{ altaMsg }}</span>
-        <span v-if="altaErr" class="text-sm text-rose-300">{{ altaErr }}</span>
+      <div class="flex items-center gap-3 mt-4">
+        <button class="rounded-xl bg-brand font-bold text-white px-5 py-2 hover:bg-red-800 shadow-md shadow-brand/20 transition-all" @click="crear">Crear Miembra</button>
+        <span v-if="altaMsg" class="text-sm font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded">{{ altaMsg }}</span>
+        <span v-if="altaErr" class="text-sm font-medium text-red-600 bg-red-50 px-2 py-1 rounded">{{ altaErr }}</span>
       </div>
     </div>
 
     <!-- Tabla -->
-    <div class="rounded-xl bg-white/5 border border-white/10 p-4">
-      <h3 class="font-semibold mb-3">Listado ({{ lista.length }})</h3>
-
+    <div class="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+      <div class="p-5 border-b border-gray-100">
+         <h3 class="font-bold text-gray-900">Listado ({{ lista.length }})</h3>
+      </div>
       <div v-if="lista.length" class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="text-white/60">
-              <th class="text-left py-2">Nombre</th>
-              <th class="text-left">Correo</th>
-              <th class="text-left">Comunidad</th>
-              <th class="text-left">Rol</th>
-              <th class="text-left">Estado</th>
-              <th class="text-left">Alta</th>
-              <th class="text-left">Acciones</th>
+        <table class="w-full text-sm text-left">
+          <thead class="bg-gray-50 text-gray-500 font-semibold border-b border-gray-100">
+            <tr>
+              <th class="py-3 px-4">Nombre / Tel</th>
+              <th class="px-4">Correo</th>
+              <th class="px-4">Comunidad</th>
+              <th class="px-4">Rol</th>
+              <th class="px-4">Estado</th>
+              <th class="px-4">Alta</th>
+              <th class="px-4">Acciones</th>
             </tr>
           </thead>
-          <tbody>
-            <tr v-for="u in lista" :key="u.id" class="border-t border-white/10 hover:bg-white/5 transition-colors"
-              :class="editId === u.id ? 'bg-white/5' : ''">
+          <tbody class="divide-y divide-gray-100">
+            <tr v-for="u in lista" :key="u.id" class="hover:bg-gray-50 transition-colors"
+              :class="editId === u.id ? 'bg-amber-50/50' : ''">
               <!-- Nombre / Teléfono -->
-              <td class="py-3 align-middle">
+              <td class="py-3 px-4 align-middle">
                 <template v-if="editId === u.id">
-                  <div class="flex flex-col gap-1">
+                  <div class="flex flex-col gap-1.5">
                     <input v-model.trim="form.nombre"
-                      class="w-full rounded-lg bg-neutral-900 border border-white/15 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                      class="w-full rounded bg-white border border-gray-200 px-2 py-1 text-sm focus:border-brand focus:ring-2 focus:ring-brand/10 outline-none" />
                     <input v-model.trim="form.telefono"
-                      class="w-full rounded-lg bg-neutral-900 border border-white/15 px-2 py-1.5 text-xs text-white/80 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      class="w-full rounded bg-white border border-gray-200 px-2 py-1 text-xs text-gray-600 focus:border-brand focus:ring-2 focus:ring-brand/10 outline-none"
                       placeholder="Teléfono" />
                   </div>
                 </template>
                 <template v-else>
-                  <div class="font-medium">{{ u.nombre }}</div>
-                  <div v-if="u.telefono" class="text-xs text-white/60">{{ u.telefono }}</div>
+                  <div class="font-bold text-gray-900">{{ u.nombre }}</div>
+                  <div v-if="u.telefono" class="text-xs text-gray-500">{{ u.telefono }}</div>
                 </template>
               </td>
 
               <!-- Email -->
-              <td class="py-3 align-middle">
+              <td class="px-4 align-middle">
                 <template v-if="editId === u.id">
                   <input v-model.trim="form.email" type="email"
-                    class="w-full rounded-lg bg-neutral-900 border border-white/15 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                    class="w-full rounded bg-white border border-gray-200 px-2 py-1 text-sm focus:border-brand focus:ring-2 focus:ring-brand/10 outline-none" />
                 </template>
                 <template v-else>
-                  <div class="truncate max-w-[220px]">{{ u.email }}</div>
+                  <div class="truncate max-w-[200px] text-gray-600">{{ u.email }}</div>
                 </template>
               </td>
 
               <!-- Comunidad -->
-              <td class="py-3 align-middle">
+              <td class="px-4 align-middle">
                 <template v-if="editId === u.id">
                   <input v-model.trim="form.comunidad"
-                    class="w-full rounded-lg bg-neutral-900 border border-white/15 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                    class="w-full rounded bg-white border border-gray-200 px-2 py-1 text-sm focus:border-brand focus:ring-2 focus:ring-brand/10 outline-none" />
                 </template>
                 <template v-else>
-                  {{ u.comunidad || '—' }}
+                  <span class="text-gray-700">{{ u.comunidad || '—' }}</span>
                 </template>
               </td>
 
               <!-- Rol -->
-              <td class="py-3 align-middle">
+              <td class="px-4 align-middle">
                 <template v-if="editId === u.id">
-                  <select v-model="form.rol" class="rounded bg-neutral-900 border border-white/10 px-2 py-1">
+                  <select v-model="form.rol" class="rounded bg-white border border-gray-200 px-2 py-1 text-sm">
                     <option value="user">Usuaria</option>
                     <option value="operador">Operador</option>
                     <option value="admin">Administrador</option>
                   </select>
                 </template>
                 <template v-else>
-                  <span class="px-2 py-1 rounded text-xs font-medium" :class="String(u.rol) === 'admin'
-                    ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
-                    : String(u.rol) === 'operador'
-                      ? 'bg-sky-500/15 text-sky-300 border border-sky-500/30'
-                      : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'">
-                    {{
-                      String(u.rol) === 'admin'
-                        ? 'Admin'
-                        : String(u.rol) === 'operador'
-                          ? 'Operador'
-                          : 'Usuaria'
-                    }}
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-bold border" :class="{
+                    'bg-purple-50 text-purple-700 border-purple-200': String(u.rol) === 'admin',
+                    'bg-sky-50 text-sky-700 border-sky-200': String(u.rol) === 'operador',
+                    'bg-gray-50 text-gray-600 border-gray-200': String(u.rol) !== 'admin' && String(u.rol) !== 'operador'
+                  }">
+                    {{ String(u.rol) === 'admin' ? 'Admin' : String(u.rol) === 'operador' ? 'Operador' : 'Usuaria' }}
                   </span>
                 </template>
               </td>
 
               <!-- Estado -->
-              <td class="py-3 align-middle">
-                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border" :class="u.activo
-                  ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/40'
-                  : 'bg-slate-500/15 text-slate-200 border-slate-500/40'">
+              <td class="px-4 align-middle">
+                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold border" :class="u.activo
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-gray-100 text-gray-500 border-gray-200'">
                   {{ u.activo ? 'Activo' : 'Inactivo' }}
                 </span>
               </td>
 
               <!-- Alta -->
-              <td class="py-3 align-middle text-sm text-white/70 whitespace-nowrap">
+              <td class="px-4 align-middle text-xs text-gray-500 whitespace-nowrap">
                 {{ fmtFecha(u.createdAt) }}
               </td>
-              <!-- Acciones (EN UsersView.vue) -->
-              <td class="py-3 align-middle">
+
+              <!-- Acciones -->
+              <td class="px-4 align-middle">
                 <!-- MODO EDICIÓN -->
                 <template v-if="editId === u.id">
                   <div class="flex flex-wrap gap-2">
                     <button
-                      class="inline-flex items-center rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500"
+                      class="inline-flex items-center rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 transition-colors"
                       @click="saveEdit">
                       Guardar
                     </button>
                     <button
-                      class="inline-flex items-center rounded-full bg-neutral-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-600"
+                      class="inline-flex items-center rounded-lg bg-gray-200 px-3 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-300 transition-colors"
                       @click="cancelEdit">
                       Cancelar
                     </button>
-
-                    <span v-if="editErr" class="block w-full text-[11px] text-rose-300 mt-1">
+                    <span v-if="editErr" class="block w-full text-[10px] text-red-500 mt-1">
                       {{ editErr }}
                     </span>
                   </div>
@@ -354,31 +349,23 @@ function fmtFecha(ts: number) {
 
                 <!-- MODO NORMAL -->
                 <template v-else>
-                  <div class="flex flex-wrap gap-2">
+                  <div class="flex flex-wrap gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
                     <button
-                      class="inline-flex items-center rounded-full bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
+                      class="inline-flex items-center rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
                       @click="startEdit(u.id)">
                       Editar
                     </button>
 
-                    <button class="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium text-white"
-                      :class="u.activo
-                        ? 'bg-red-600 hover:bg-red-500'
-                        : 'bg-emerald-600 hover:bg-emerald-500'" @click="toggleActivo(u.id)">
+                    <button class="inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors"
+                      :class="u.activo ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'" 
+                      @click="toggleActivo(u.id)">
                       {{ u.activo ? 'Desactivar' : 'Activar' }}
                     </button>
 
-                    <button
-                      class="inline-flex items-center rounded-full bg-violet-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-600"
-                      @click="setRol(u.id, u.rol === 'admin' ? 'user' : 'admin')">
-                      Hacer {{ u.rol === 'admin' ? 'Usuaria' : 'Admin' }}
-                    </button>
-
-                    <button
-                      class="inline-flex items-center rounded-full bg-rose-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-600"
+                    <!-- <button class="inline-flex items-center rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-200 transition-colors"
                       @click="eliminar(u.id)">
                       Eliminar
-                    </button>
+                    </button> -->
                   </div>
                 </template>
               </td>
@@ -386,30 +373,29 @@ function fmtFecha(ts: number) {
           </tbody>
         </table>
       </div>
-      <p v-else class="text-white/70 text-sm">No hay usuarios con esos filtros.</p>
+      <div v-else class="p-8 text-center text-gray-400 font-medium">No hay usuarios con esos filtros.</div>
     </div>
 
     <!-- Modal de Confirmación -->
     <div v-if="showDeleteModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div class="w-full max-w-md rounded-2xl bg-neutral-900 border border-white/10 p-6 shadow-2xl">
-        <h3 class="text-xl font-semibold text-white mb-2">Confirmar eliminación</h3>
-        <p class="text-white/70 mb-6">
-          ¿Estás seguro de que deseas eliminar este usuario? Esta acción es irreversible y se perderán todos los datos
-          asociados.
+      class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm p-4">
+      <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-gray-100">
+        <h3 class="text-xl font-bold text-gray-900 mb-2">Confirmar eliminación</h3>
+        <p class="text-gray-500 mb-6 font-medium">
+          ¿Estás seguro de que deseas eliminar este usuario? Esta acción es irreversible.
         </p>
 
-        <div v-if="deleteErr" class="mb-4 p-3 rounded bg-rose-500/20 border border-rose-500/50 text-rose-200 text-sm">
+        <div v-if="deleteErr" class="mb-4 p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm">
           {{ deleteErr }}
         </div>
 
         <div class="flex justify-end gap-3">
-          <button class="rounded-xl px-4 py-2 text-sm font-medium text-white hover:bg-white/10 transition-colors"
+          <button class="rounded-xl px-4 py-2 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors"
             @click="showDeleteModal = false">
             Cancelar
           </button>
           <button
-            class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-500 transition-colors shadow-lg shadow-rose-900/20"
+            class="rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-500 transition-colors shadow-lg shadow-red-200"
             @click="confirmDelete">
             Sí, eliminar
           </button>
@@ -420,14 +406,5 @@ function fmtFecha(ts: number) {
 </template>
 
 <style scoped>
-td,
-th {
-  font-size: 0.85rem;
-}
-
-@media (max-width: 768px) {
-  table {
-    font-size: 0.8rem;
-  }
-}
+td, th { font-size: 0.85rem; }
 </style>

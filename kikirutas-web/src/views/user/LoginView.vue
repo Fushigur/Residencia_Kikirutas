@@ -1,72 +1,81 @@
 <!-- src/views/user/LoginView.vue -->
 <template>
-  <section class="min-h-screen flex items-center justify-center px-4">
-    <div class="w-full max-w-xl rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-6 shadow-lg">
-      <h1 class="text-2xl font-bold text-crema">Ingresar</h1>
-      <p class="text-sm text-crema/70 mt-1">
-        Acceso para navegar por las vistas de KikiRutas.
-      </p>
+  <section class="min-h-screen flex items-center justify-center px-4 bg-crema">
+    <!-- Premium Card -->
+    <div class="w-full max-w-lg bg-surface rounded-3xl shadow-card border border-gray-100 p-8 md:p-12 transition-all duration-500 hover:shadow-2xl">
+      
+      <div class="mb-8 text-center md:text-left">
+        <h1 class="text-3xl font-bold text-gray-900 tracking-tight mb-2">Bienvenido</h1>
+        <p class="text-humo text-sm font-medium">
+          Ingresa tus credenciales para continuar en <span class="text-brand font-bold">KikiRutas</span>.
+        </p>
+      </div>
 
-      <form class="mt-6 grid gap-4" @submit.prevent="onSubmit">
+      <form class="grid gap-6" @submit.prevent="onSubmit">
         <!-- Correo -->
-        <label class="grid gap-1">
-          <span class="text-sm text-crema/80">Correo</span>
-          <input
-            v-model.trim="email"
-            class="rounded-md bg-black/30 border px-3 py-2 text-crema outline-none focus:border-maiz"
-            :class="emailErr ? 'border-rose-400' : 'border-brand/40'"
-            type="email"
-            autocomplete="email"
-            @blur="touched.email = true"
-            required
-          />
-          <small v-if="emailErr" class="text-rose-300">{{ emailErr }}</small>
+        <label class="grid gap-1.5">
+          <span class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Correo Electrónico</span>
+          <div class="relative group">
+            <input
+              v-model.trim="email"
+              class="w-full rounded-xl bg-gray-50 border border-gray-200 px-4 py-3.5 text-gray-900 outline-none transition-all focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 placeholder-gray-400"
+              :class="emailErr ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''"
+              type="email"
+              placeholder="nombre@ejemplo.com"
+              autocomplete="email"
+              @blur="touched.email = true"
+              required
+            />
+          </div>
+          <small v-if="emailErr" class="text-red-500 text-xs font-medium ml-1 transition-all">{{ emailErr }}</small>
         </label>
 
         <!-- Password -->
-        <label class="grid gap-1">
-          <span class="text-sm text-crema/80">Contraseña</span>
+        <label class="grid gap-1.5">
+          <div class="flex justify-between items-center ml-1">
+            <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Contraseña</span>
+            <RouterLink
+              :to="{ name: 'forgot', query: { email: email || undefined } }"
+              class="text-xs font-semibold text-brand hover:text-red-900 transition-colors"
+            >
+              ¿Olvidaste tu contraseña?
+            </RouterLink>
+          </div>
           <input
             v-model="password"
-            class="rounded-md bg-black/30 border px-3 py-2 text-crema outline-none focus:border-maiz"
-            :class="passwordErr ? 'border-rose-400' : 'border-brand/40'"
+            class="w-full rounded-xl bg-gray-50 border border-gray-200 px-4 py-3.5 text-gray-900 outline-none transition-all focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 placeholder-gray-400"
+            :class="passwordErr ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''"
             type="password"
+            placeholder="••••••••"
             autocomplete="current-password"
             @blur="touched.password = true"
             required
           />
-          <small v-if="passwordErr" class="text-rose-300">{{ passwordErr }}</small>
+          <small v-if="passwordErr" class="text-red-500 text-xs font-medium ml-1 transition-all">{{ passwordErr }}</small>
         </label>
 
-        <!-- Botón único -->
+        <!-- Botón -->
         <button
           type="submit"
-          class="rounded bg-blue-600 text-sm px-5 py-2 w-fit self-start disabled:opacity-50"
+          class="mt-2 w-full rounded-xl bg-brand text-white font-bold text-sm px-6 py-4 shadow-lg shadow-brand/20 transition-all hover:bg-red-900 hover:shadow-xl hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
           :disabled="loading || hasErrors"
         >
-          {{ loading ? 'Entrando…' : 'Entrar' }}
+          <span v-if="loading" class="flex items-center justify-center gap-2">
+            <svg class="animate-spin h-5 w-5 text-white/50" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            Iniciando sesión...
+          </span>
+          <span v-else>Entrar a mi cuenta</span>
         </button>
 
-        <!-- Link: Olvidé mi contraseña -->
-        <div class="text-right -mt-1">
-          <RouterLink
-            :to="{ name: 'forgot', query: { email: email || undefined } }"
-            class="text-sm text-maiz hover:underline"
-          >
-            ¿Olvidaste tu contraseña?
-          </RouterLink>
+        <!-- Errores del backend -->
+        <div v-if="serverErr" class="rounded-lg bg-red-50 border border-red-100 p-3 text-red-600 text-sm flex items-center gap-2">
+          <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+          {{ serverErr }}
         </div>
 
-
-        <!-- Errores del backend / validación -->
-        <p v-if="serverErr" class="text-rose-300 text-sm mt-2">{{ serverErr }}</p>
-        <ul v-if="Object.keys(fieldErrs).length" class="text-rose-300 text-xs space-y-1">
-          <li v-for="(arr, k) in fieldErrs" :key="k">{{ k }}: {{ arr[0] }}</li>
-        </ul>
-
-        <p class="text-sm text-crema/70 mt-2">
+        <p class="text-center text-sm text-gray-500 mt-2">
           ¿No tienes cuenta?
-          <RouterLink :to="{ name: 'register' }" class="text-maiz underline">Crear cuenta</RouterLink>
+          <RouterLink :to="{ name: 'register' }" class="text-brand font-bold hover:underline">Registrate aquí mismo</RouterLink>
         </p>
       </form>
     </div>
