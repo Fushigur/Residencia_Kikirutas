@@ -118,6 +118,7 @@ const originOptions = ['José María Morelos, Quintana Roo', 'Felipe Carrillo Pu
 
 /** catálogo base de localidades (separadas por base) */
 const jmmCommunities = [
+  'José María Morelos', // Cabecera
   'Candelaria', 'Dziuché', 'La Presumida', 'Santa Gertrudis', 'Kancabchén',
   'Cafetalito', 'Cafetal Grande', 'Benito Juárez', 'Pozo Pirata', 'San Carlos',
   'Chunhuhub', 'Polyuc', 'Dos Aguadas', 'El Naranjal', 'Othón P. Blanco',
@@ -125,6 +126,7 @@ const jmmCommunities = [
 ].map(c => `${c}, Quintana Roo`)
 
 const fcpCommunities = [
+  'Felipe Carrillo Puerto', // Cabecera
   'Dzulá', 'X-Yatil', 'El Señor', 'Tihosuco',
 ].map(c => `${c}, Quintana Roo`)
 
@@ -732,15 +734,18 @@ watch(
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-bold text-gray-900">Mapa de ruta</h1>
       <div class="flex gap-2">
-        <button class="rounded-xl bg-gray-100 px-3 py-2 text-sm font-bold text-gray-700 hover:bg-gray-200 transition-colors"
+        <button
+          class="rounded-xl bg-gray-100 px-3 py-2 text-sm font-bold text-gray-700 hover:bg-gray-200 transition-colors"
           @click="router.push({ name: 'op.ruta', params: { id: route.params.id } })">
           Volver a la ruta
         </button>
-        <button class="rounded-xl bg-gray-100 px-3 py-2 text-sm font-bold text-gray-700 hover:bg-gray-200 transition-colors"
+        <button
+          class="rounded-xl bg-gray-100 px-3 py-2 text-sm font-bold text-gray-700 hover:bg-gray-200 transition-colors"
           @click="resetView">
           Reiniciar vista
         </button>
-        <button class="rounded-xl bg-gray-100 px-3 py-2 text-sm font-bold text-gray-700 hover:bg-gray-200 transition-colors"
+        <button
+          class="rounded-xl bg-gray-100 px-3 py-2 text-sm font-bold text-gray-700 hover:bg-gray-200 transition-colors"
           @click="limpiarRuta">
           Limpiar todo
         </button>
@@ -764,7 +769,8 @@ watch(
 
           <div class="mb-4">
             <div class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Destino</div>
-            <select v-model="uiDest" class="w-full rounded-xl bg-gray-50 border border-gray-200 text-gray-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all cursor-pointer">
+            <select v-model="uiDest"
+              class="w-full rounded-xl bg-gray-50 border border-gray-200 text-gray-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all cursor-pointer">
               <option v-for="c in filteredCommunities" :key="c" :value="c">
                 {{ c }}
               </option>
@@ -779,16 +785,21 @@ watch(
             </div>
 
             <div class="flex gap-2 mb-3">
-              <button class="rounded-lg bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-colors"
+              <button
+                class="rounded-lg bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-colors"
                 @click="selectAllStops">Todas</button>
-              <button class="rounded-lg bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-colors"
+              <button
+                class="rounded-lg bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-colors"
                 @click="clearStops">Ninguna</button>
             </div>
 
             <!-- Indicador de paradas automáticas -->
             <div v-if="autoDetectedStops.length > 0"
               class="mb-3 p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-2">
-              <svg class="w-4 h-4 text-blue-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <svg class="w-4 h-4 text-blue-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               <div class="text-xs text-blue-700">
                 <span class="font-bold">Detección automática:</span><br>
                 Se agregaron {{ autoDetectedStops.length }} comunidades de paso.
@@ -808,7 +819,8 @@ watch(
                   <span class="font-medium">{{ c }}</span>
                 </div>
                 <div class="flex items-center gap-1">
-                  <span v-if="autoDetectedStops.includes(c)" class="text-[10px] font-bold uppercase tracking-wider text-blue-600">
+                  <span v-if="autoDetectedStops.includes(c)"
+                    class="text-[10px] font-bold uppercase tracking-wider text-blue-600">
                     Auto
                   </span>
                 </div>
@@ -816,20 +828,24 @@ watch(
             </div>
 
             <p class="text-xs text-gray-500 mt-3 leading-relaxed">
-              <span class="font-bold">Nota:</span> Marca solo las paradas que visitarás. El orden de la ruta se optimiza automáticamente.
+              <span class="font-bold">Nota:</span> Marca solo las paradas que visitarás. El orden de la ruta se optimiza
+              automáticamente.
             </p>
 
             <div class="mt-4 grid grid-cols-2 gap-2">
-              <button class="rounded-xl bg-brand text-white font-bold px-3 py-2.5 hover:bg-red-800 shadow-md shadow-brand/20 transition-all hover:-translate-y-0.5 text-sm"
+              <button
+                class="rounded-xl bg-brand text-white font-bold px-3 py-2.5 hover:bg-red-800 shadow-md shadow-brand/20 transition-all hover:-translate-y-0.5 text-sm"
                 @click="trazadoOptimizado">
                 Optimizar Ruta
               </button>
-              <button class="rounded-xl bg-gray-100 text-gray-700 font-bold px-3 py-2.5 hover:bg-gray-200 transition-colors text-sm"
-               @click="limpiarRuta">
+              <button
+                class="rounded-xl bg-gray-100 text-gray-700 font-bold px-3 py-2.5 hover:bg-gray-200 transition-colors text-sm"
+                @click="limpiarRuta">
                 Limpiar
               </button>
             </div>
-            <button class="mt-2 w-full rounded-xl bg-indigo-600 text-white font-bold px-3 py-2.5 hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all text-sm"
+            <button
+              class="mt-2 w-full rounded-xl bg-indigo-600 text-white font-bold px-3 py-2.5 hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all text-sm"
               @click="trazadoRegreso">
               Trazar ruta de regreso
             </button>
@@ -843,13 +859,15 @@ watch(
             <h3 class="font-bold text-gray-900">Cercanas con pedido</h3>
             <span class="text-xs font-medium bg-gray-100 px-2 py-0.5 rounded text-gray-600">Radio: 1 km</span>
           </div>
-          <div v-if="!nearby.length" class="text-sm text-gray-400 italic mt-2">No hay comunidades cercanas dentro del radio.</div>
+          <div v-if="!nearby.length" class="text-sm text-gray-400 italic mt-2">No hay comunidades cercanas dentro del
+            radio.</div>
           <div v-else class="mt-3 space-y-2">
             <div v-for="n in nearby" :key="n.comunidad"
               class="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5 flex items-center justify-between hover:bg-white hover:shadow-sm transition-all">
               <div>
                 <div class="font-bold text-gray-900 text-sm">{{ n.comunidad }}</div>
-                <div class="text-gray-500 text-xs">{{ n.km.toFixed(2) }} km · <span class="font-medium text-gray-700">{{ n.total }} pedido(s)</span></div>
+                <div class="text-gray-500 text-xs">{{ n.km.toFixed(2) }} km · <span class="font-medium text-gray-700">{{
+                    n.total }} pedido(s)</span></div>
               </div>
               <a class="text-xs font-bold text-brand hover:underline"
                 :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(n.comunidad + ', Quintana Roo')}`"
@@ -866,142 +884,159 @@ watch(
           <div class="relative rounded-xl overflow-hidden shadow-inner">
             <div ref="mapEl" class="w-full h-[500px] bg-gray-100"></div>
 
-            <div v-if="!hasAssigned && !legs.length" class="absolute inset-0 grid place-items-center text-gray-500 text-sm font-medium bg-white/80 backdrop-blur-sm p-6 text-center">
+            <div v-if="!hasAssigned && !legs.length"
+              class="absolute inset-0 grid place-items-center text-gray-500 text-sm font-medium bg-white/80 backdrop-blur-sm p-6 text-center">
               Asigna pedidos a la ruta o usa el planificador para generar el mapa.
             </div>
           </div>
         </div>
-          
-          <!-- Resumen -->
-          <div v-if="legs.length" class="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
-             <div class="p-4 border-b border-gray-100 bg-gray-50 flex flex-wrap items-center justify-between gap-3">
-                <h3 class="font-bold text-gray-900">Resumen del recorrido</h3>
-                <div class="flex flex-wrap gap-2">
-                  <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white border border-gray-200 text-gray-700 flex items-center gap-1">
-                    <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                    {{ totalKm.toFixed(1) }} km
-                  </span>
-                  <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white border border-gray-200 text-gray-700 flex items-center gap-1">
-                    <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    {{ totalMin }} min
-                  </span>
-                  <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white border border-gray-200 text-gray-700 truncate max-w-[200px]" :title="originText + ' → ' + destinationText">
-                    {{ originText || uiOrigin }} → {{ destinationText || uiDest }}
-                  </span>
-                </div>
-            </div>
 
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm text-left">
-                <thead class="bg-gray-50 text-gray-500 font-semibold border-b border-gray-100">
-                  <tr>
-                    <th class="py-2 px-4 w-10">#</th>
-                    <th class="py-2 px-4">De</th>
-                    <th class="py-2 px-4">Hacia</th>
-                    <th class="py-2 px-4">Distancia</th>
-                    <th class="py-2 px-4">Tiempo</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                  <tr v-for="(l, i) in legs" :key="i" class="hover:bg-gray-50 text-gray-700">
-                    <td class="py-2 px-4 font-bold text-gray-400">{{ i + 1 }}</td>
-                    <td class="py-2 px-4 font-medium text-gray-900">{{ l.from }}</td>
-                    <td class="py-2 px-4 font-medium text-gray-900">{{ l.to }}</td>
-                    <td class="py-2 px-4 text-gray-500">{{ l.km.toFixed(1) }} km</td>
-                    <td class="py-2 px-4 text-gray-500">{{ l.min }} min</td>
-                  </tr>
-                </tbody>
-              </table>
+        <!-- Resumen -->
+        <div v-if="legs.length" class="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-gray-100 bg-gray-50 flex flex-wrap items-center justify-between gap-3">
+            <h3 class="font-bold text-gray-900">Resumen del recorrido</h3>
+            <div class="flex flex-wrap gap-2">
+              <span
+                class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white border border-gray-200 text-gray-700 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                {{ totalKm.toFixed(1) }} km
+              </span>
+              <span
+                class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white border border-gray-200 text-gray-700 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {{ totalMin }} min
+              </span>
+              <span
+                class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white border border-gray-200 text-gray-700 truncate max-w-[200px]"
+                :title="originText + ' → ' + destinationText">
+                {{ originText || uiOrigin }} → {{ destinationText || uiDest }}
+              </span>
             </div>
           </div>
 
-          <!-- Pedidos seleccionados (nombre, comunidad, producto, cantidad) -->
-          <div v-if="pedidosRuta.length" class="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
-            <div class="p-4 border-b border-gray-100 bg-gray-50">
-               <h3 class="font-bold text-gray-900">Pedidos seleccionados <span class="font-normal text-gray-500 text-sm">({{ pedidosRuta.length }})</span></h3>
-            </div>
-            
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm text-left">
-                <thead class="bg-white text-gray-500 font-semibold border-b border-gray-100">
-                  <tr>
-                    <th class="py-2 px-4">Nombre</th>
-                    <th class="py-2 px-4">Localidad</th>
-                    <th class="py-2 px-4">Producto</th>
-                    <th class="py-2 px-4 text-right">Cant</th>
-                    <th class="py-2 px-4 text-center">Estado</th>
-                    <th class="py-2 px-4 text-right">Acción</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                  <tr v-for="p in pedidosRuta" :key="p.id" class="hover:bg-gray-50 text-gray-700">
-                    <td class="py-2 px-4 font-medium text-gray-900">{{ p.solicitanteNombre || 'Usuaria' }}</td>
-                    <td class="py-2 px-4 text-gray-600">{{ cleanCommunity(p.solicitanteComunidad) || '—' }}</td>
-                    <td class="py-2 px-4 text-gray-600">{{ p.producto }}</td>
-                    <td class="py-2 px-4 text-right font-medium">{{ p.cantidad }}</td>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+              <thead class="bg-gray-50 text-gray-500 font-semibold border-b border-gray-100">
+                <tr>
+                  <th class="py-2 px-4 w-10">#</th>
+                  <th class="py-2 px-4">De</th>
+                  <th class="py-2 px-4">Hacia</th>
+                  <th class="py-2 px-4">Distancia</th>
+                  <th class="py-2 px-4">Tiempo</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="(l, i) in legs" :key="i" class="hover:bg-gray-50 text-gray-700">
+                  <td class="py-2 px-4 font-bold text-gray-400">{{ i + 1 }}</td>
+                  <td class="py-2 px-4 font-medium text-gray-900">{{ l.from }}</td>
+                  <td class="py-2 px-4 font-medium text-gray-900">{{ l.to }}</td>
+                  <td class="py-2 px-4 text-gray-500">{{ l.km.toFixed(1) }} km</td>
+                  <td class="py-2 px-4 text-gray-500">{{ l.min }} min</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-                    <!-- Estado visual -->
-                    <td class="py-2 px-4 text-center">
-                      <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase border" :class="{
+        <!-- Pedidos seleccionados (nombre, comunidad, producto, cantidad) -->
+        <div v-if="pedidosRuta.length" class="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-gray-100 bg-gray-50">
+            <h3 class="font-bold text-gray-900">Pedidos seleccionados <span
+                class="font-normal text-gray-500 text-sm">({{ pedidosRuta.length }})</span></h3>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+              <thead class="bg-white text-gray-500 font-semibold border-b border-gray-100">
+                <tr>
+                  <th class="py-2 px-4">Nombre</th>
+                  <th class="py-2 px-4">Localidad</th>
+                  <th class="py-2 px-4">Producto</th>
+                  <th class="py-2 px-4 text-right">Cant</th>
+                  <th class="py-2 px-4 text-center">Estado</th>
+                  <th class="py-2 px-4 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="p in pedidosRuta" :key="p.id" class="hover:bg-gray-50 text-gray-700">
+                  <td class="py-2 px-4 font-medium text-gray-900">{{ p.solicitanteNombre || 'Usuaria' }}</td>
+                  <td class="py-2 px-4 text-gray-600">{{ cleanCommunity(p.solicitanteComunidad) || '—' }}</td>
+                  <td class="py-2 px-4 text-gray-600">{{ p.producto }}</td>
+                  <td class="py-2 px-4 text-right font-medium">{{ p.cantidad }}</td>
+
+                  <!-- Estado visual -->
+                  <td class="py-2 px-4 text-center">
+                    <span
+                      class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase border"
+                      :class="{
                         'bg-amber-50 text-amber-700 border-amber-200': p.estado === 'pendiente',
                         'bg-blue-50 text-blue-700 border-blue-200': p.estado === 'en_ruta',
                         'bg-emerald-50 text-emerald-700 border-emerald-200': p.estado === 'entregado',
                         'bg-red-50 text-red-700 border-red-200': p.estado === 'cancelado',
                       }">
-                        {{ formatEstado(p.estado) }}
-                      </span>
-                    </td>
+                      {{ formatEstado(p.estado) }}
+                    </span>
+                  </td>
 
-                    <!-- Acción Entregada -->
-                    <td class="py-2 px-4 text-right">
-                      <button v-if="p.estado !== 'entregado'" type="button"
-                        class="text-xs rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-500 px-3 py-1.5 transition-colors shadow-sm shadow-emerald-200"
-                        @click="marcarEntregado(p.id)">
-                        Entregar
-                      </button>
-                      <span v-else class="text-xs font-bold text-emerald-600 flex items-center justify-end gap-1">
-                         <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                         Listo
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
+                  <!-- Acción Entregada -->
+                  <td class="py-2 px-4 text-right">
+                    <button v-if="p.estado !== 'entregado'" type="button"
+                      class="text-xs rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-500 px-3 py-1.5 transition-colors shadow-sm shadow-emerald-200"
+                      @click="marcarEntregado(p.id)">
+                      Entregar
+                    </button>
+                    <span v-else class="text-xs font-bold text-emerald-600 flex items-center justify-end gap-1">
+                      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Listo
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
 
-              </table>
-            </div>
+            </table>
+          </div>
+        </div>
+
+        <!-- Emprendedoras -->
+        <div v-if="emprPorLocalidad.length"
+          class="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-gray-100 bg-gray-50">
+            <h3 class="font-bold text-gray-900">Emprendedoras por localidad</h3>
           </div>
 
-          <!-- Emprendedoras -->
-          <div v-if="emprPorLocalidad.length" class="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
-            <div class="p-4 border-b border-gray-100 bg-gray-50">
-               <h3 class="font-bold text-gray-900">Emprendedoras por localidad</h3>
-            </div>
-            
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm text-left">
-                <thead class="bg-white text-gray-500 font-semibold border-b border-gray-100">
-                  <tr>
-                    <th class="py-2 px-4 w-10 text-gray-400">#</th>
-                    <th class="py-2 px-4">Localidad</th>
-                    <th class="py-2 px-4">Nombres</th>
-                    <th class="py-2 px-4 text-center">Total</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                  <tr v-for="(row, i) in emprPorLocalidad" :key="i" class="hover:bg-gray-50 text-gray-700 align-top">
-                    <td class="py-3 px-4 font-bold text-gray-400">{{ i + 1 }}</td>
-                    <td class="py-3 px-4 font-bold text-gray-900">{{ row.localidad }}</td>
-                    <td class="py-3 px-4">
-                      <ul class="list-disc pl-4 text-gray-600 space-y-0.5">
-                        <li v-for="(n, idx) in row.nombres" :key="idx">{{ n }}</li>
-                      </ul>
-                    </td>
-                    <td class="py-3 px-4 text-center font-bold text-gray-900">{{ row.total }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+              <thead class="bg-white text-gray-500 font-semibold border-b border-gray-100">
+                <tr>
+                  <th class="py-2 px-4 w-10 text-gray-400">#</th>
+                  <th class="py-2 px-4">Localidad</th>
+                  <th class="py-2 px-4">Nombres</th>
+                  <th class="py-2 px-4 text-center">Total</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="(row, i) in emprPorLocalidad" :key="i" class="hover:bg-gray-50 text-gray-700 align-top">
+                  <td class="py-3 px-4 font-bold text-gray-400">{{ i + 1 }}</td>
+                  <td class="py-3 px-4 font-bold text-gray-900">{{ row.localidad }}</td>
+                  <td class="py-3 px-4">
+                    <ul class="list-disc pl-4 text-gray-600 space-y-0.5">
+                      <li v-for="(n, idx) in row.nombres" :key="idx">{{ n }}</li>
+                    </ul>
+                  </td>
+                  <td class="py-3 px-4 text-center font-bold text-gray-900">{{ row.total }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+        </div>
 
       </div>
 
@@ -1014,14 +1049,19 @@ watch(
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #cbd5e1; /* slate-300 */
+  background: #cbd5e1;
+  /* slate-300 */
   border-radius: 99px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8; /* slate-400 */
+  background: #94a3b8;
+  /* slate-400 */
 }
 </style>

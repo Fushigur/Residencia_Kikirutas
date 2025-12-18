@@ -133,7 +133,7 @@ const mesPorProducto = computed(() => {
             <tbody class="divide-y divide-gray-100">
               <tr v-for="p in pendientesTop" :key="p.id" class="hover:bg-gray-50 transition-colors">
                 <td class="py-3 px-4 text-gray-900 font-medium max-w-[140px] truncate" :title="p.producto">{{ p.producto
-                  }}</td>
+                }}</td>
                 <td class="px-4 text-gray-600 max-w-[120px] truncate">{{ p.solicitanteNombre || '—' }}</td>
                 <td class="px-4 text-gray-500 max-w-[120px] truncate">{{ p.solicitanteComunidad || '—' }}</td>
                 <td class="px-4 text-center font-semibold text-gray-900">{{ p.cantidad }}</td>
