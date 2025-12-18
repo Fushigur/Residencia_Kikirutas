@@ -5,6 +5,7 @@ import { useProductosStore } from '@/stores/productos';
 import { useRutasStore } from '@/stores/rutas';
 import { formatFechaLarga, formatFechaCorta } from '@/utils/dateFormat'
 import logoUrl from '@/assets/img/Logo.png'
+import * as XLSX from 'xlsx'
 
 
 const pedidos = usePedidosStore();
@@ -109,40 +110,44 @@ const rutasEnRango = computed(() =>
 /* -----------------------
    Exportar/Imprimir
 ------------------------*/
-function exportCsv() {
-  const header = ['Folio', 'Producto', 'Cantidad', 'Precio', 'Subtotal', 'Fecha', 'Estado', 'Ruta', 'Solicitante', 'Comunidad', 'Municipio'];
-  const rows = pedidosFiltrados.value.map(p => {
+function exportExcel() {
+  const data = pedidosFiltrados.value
+  if (!data || data.length === 0) {
+    alert('No hay datos para exportar')
+    return
+  }
+
+  const rows = data.map(p => {
     const prc = precio(p.producto);
     const sub = prc * p.cantidad;
     const ruta = p.routeId ? (rutas.byId(p.routeId)?.nombre ?? '') : '';
-    return [
-      p.folio,
-      p.producto,
-      String(p.cantidad),
-      prc.toFixed(2),
-      sub.toFixed(2),
-      formatFechaCorta(p.fechaISO),
-      p.estado,
-      ruta,
-      p.solicitanteNombre || '',
-      p.solicitanteComunidad || '',
-      p.solicitanteMunicipio || ''
-    ];
+
+    return {
+      'Folio': p.folio,
+      'Producto': p.producto,
+      'Cantidad': p.cantidad,
+      'Precio': prc.toFixed(2),
+      'Subtotal': sub.toFixed(2),
+      'Fecha': formatFechaCorta(p.fechaISO),
+      'Estado': p.estado,
+      'Ruta': ruta,
+      'Solicitante': p.solicitanteNombre || '',
+      'Comunidad': p.solicitanteComunidad || '',
+      'Municipio': p.solicitanteMunicipio || ''
+    }
   });
 
-  const csv = '\uFEFF' + [header, ...rows]
-    .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
-    .join('\n');
+  const ws = XLSX.utils.json_to_sheet(rows)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Reporte')
 
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `reporte_${fechaIni.value}_${fechaFin.value}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const wscols = [
+    { wch: 10 }, { wch: 25 }, { wch: 8 }, { wch: 10 }, { wch: 10 },
+    { wch: 12 }, { wch: 12 }, { wch: 20 }, { wch: 25 }, { wch: 20 }, { wch: 20 }
+  ]
+  ws['!cols'] = wscols
+
+  XLSX.writeFile(wb, `reporte_${fechaIni.value}_${fechaFin.value}.xlsx`)
 }
 
 function printReport() {
@@ -333,12 +338,12 @@ function estadoEtiqueta(e: string) {
           </button>
           <button
             class="inline-flex items-center gap-2 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2.5 shadow-lg shadow-green-200 transition-all hover:-translate-y-0.5"
-            @click="exportCsv">
+            @click="exportExcel">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Exportar CSV
+            Exportar Excel
           </button>
         </div>
       </div>

@@ -218,37 +218,48 @@ function handleConfirm() {
   showConfirm.value = false
 }
 
+import * as XLSX from 'xlsx'
+
 /* ---------- Export ---------- */
-function exportCsv() {
+function exportExcel() {
   if (!rutaSel.value) return
-  const header = ['Folio', 'Producto', 'Cantidad', 'Precio unitario', 'Subtotal', 'Fecha', 'Estado', 'Solicitante', 'Comunidad', 'Municipio']
-  const rows = pedidosRuta.value.map(p => {
+
+  const data = pedidosRuta.value.map(p => {
     const precio = precioDe(p.producto)
     const subtotal = precio * p.cantidad
-    return [
-      p.folio,
-      p.producto,
-      String(p.cantidad),
-      precio.toFixed(2),
-      subtotal.toFixed(2),
-      formatFechaCorta(p.fechaISO),
-      p.estado,
-      p.solicitanteNombre || '',
-      p.solicitanteComunidad || '',
-      p.solicitanteMunicipio || ''
-    ]
+    return {
+      'Folio': p.folio,
+      'Producto': p.producto,
+      'Cantidad': p.cantidad,
+      'Precio Unitario': precio.toFixed(2),
+      'Subtotal': subtotal.toFixed(2),
+      'Fecha': formatFechaCorta(p.fechaISO),
+      'Estado': p.estado,
+      'Solicitante': p.solicitanteNombre || '',
+      'Comunidad': p.solicitanteComunidad || '',
+      'Municipio': p.solicitanteMunicipio || ''
+    }
   })
-  const lines = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
-  const csv = '\uFEFF' + lines.join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `manifiesto_${rutaSel.value.nombre.replace(/\s+/g, '_')}_${rutaSel.value.fechaISO}.csv`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+
+  const ws = XLSX.utils.json_to_sheet(data)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Manifiesto')
+
+  const wscols = [
+    { wch: 10 },
+    { wch: 25 },
+    { wch: 8 },
+    { wch: 10 },
+    { wch: 10 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 25 },
+    { wch: 20 },
+    { wch: 20 }
+  ]
+  ws['!cols'] = wscols
+
+  XLSX.writeFile(wb, `manifiesto_${rutaSel.value.nombre.replace(/\s+/g, '_')}_${rutaSel.value.fechaISO}.xlsx`)
 }
 
 function printManifest() {
@@ -552,6 +563,20 @@ async function eliminarRutaForzada() {
               </div>
             </div>
 
+            <!-- Botón Exportar RUTA -->
+            <div class="md:hidden mt-2" v-if="rutaSel">
+              <button
+                class="w-full inline-flex justify-center items-center gap-2 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2.5 shadow-lg shadow-green-200 transition-all hover:-translate-y-0.5"
+                @click="exportExcel">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Exportar Excel
+              </button>
+            </div>
+
+
             <div class="overflow-x-auto flex-1">
               <table class="w-full text-sm text-left">
                 <thead class="bg-gray-50 text-gray-500 font-semibold border-b border-gray-100 sticky top-0 z-10">
@@ -622,13 +647,13 @@ async function eliminarRutaForzada() {
                   </svg>
                   Imprimir
                 </button>
-                <button @click="exportCsv"
-                  class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
+                <button @click="exportExcel"
+                  class="inline-flex items-center gap-1.5 px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-xs font-bold text-green-700 hover:bg-green-100 transition-colors">
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  CSV
+                  Excel
                 </button>
                 <button :disabled="!hayEnRuta" @click="marcarTodosEntregados"
                   class="ml-2 inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 rounded-lg text-xs font-bold text-white hover:bg-emerald-500 shadow-md shadow-emerald-200 disabled:opacity-50 disabled:shadow-none">
