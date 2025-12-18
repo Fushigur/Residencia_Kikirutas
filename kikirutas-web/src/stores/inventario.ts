@@ -9,7 +9,7 @@ type InventarioState = {
   diasSeguridad: number;            // colchón de seguridad (días)
 };
 
-const STORAGE_KEY = 'inventario_agroconecta';
+export const STORAGE_KEY = 'inventario_agroconecta';
 
 export const useInventarioStore = defineStore('inventario', {
   state: (): InventarioState => ({

@@ -8,13 +8,14 @@ import api, {
   USER_STORAGE_KEY,
   ROLE_STORAGE_KEY,
 } from '@/api'
+import { STORAGE_KEY as INVENTARIO_STORAGE_KEY } from '@/stores/inventario'
 
 export type ExplicitRole = 'admin' | 'operator' | 'user'
 
 export const ROLE_OPTIONS = [
-  { label: 'Usuaria',  value: 'user' as ExplicitRole },
+  { label: 'Usuaria', value: 'user' as ExplicitRole },
   { label: 'Operador', value: 'operator' as ExplicitRole },
-  { label: 'Admin',    value: 'admin' as ExplicitRole },
+  { label: 'Admin', value: 'admin' as ExplicitRole },
 ]
 
 // Etiquetas bonitas para mensajes
@@ -164,32 +165,33 @@ export const useAuthStore = defineStore('auth', {
 
   getters: {
     isAuth: (s) => !!s.token,
-    role:   (s) => s.user?.role ?? null,
+    role: (s) => s.user?.role ?? null,
   },
 
   actions: {
-      persist() {
-    // Token lo gestiona setApiToken; aquí guardamos user/role
-    try {
-      sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(this.user))
-      if (this.user?.role) {
-        sessionStorage.setItem(ROLE_STORAGE_KEY, this.user.role)
-      } else {
-        sessionStorage.removeItem(ROLE_STORAGE_KEY)
+    persist() {
+      // Token lo gestiona setApiToken; aquí guardamos user/role
+      try {
+        sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(this.user))
+        if (this.user?.role) {
+          sessionStorage.setItem(ROLE_STORAGE_KEY, this.user.role)
+        } else {
+          sessionStorage.removeItem(ROLE_STORAGE_KEY)
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
-  },
+    },
 
     /** Limpia sesión y Authorization header */
     clearSession() {
       this.token = null
-      this.user  = null
+      this.user = null
       this.meLoaded = false
       this.error = null
       setApiToken(null)   // quita Authorization de Axios y borra token
       clearAuthStorage()  // borra claves estándar del storage (token/user/role)
+      try { sessionStorage.removeItem(INVENTARIO_STORAGE_KEY) } catch { } // borra datos de granja
     },
 
     loadFromStorage() {
@@ -275,45 +277,45 @@ export const useAuthStore = defineStore('auth', {
       municipio?: string
     }): Promise<ExplicitRole> {
 
-        this.error = null
-        try {
-          const { data } = await api.post('/auth/register', payload)
-          const token = data?.token || data?.access_token
+      this.error = null
+      try {
+        const { data } = await api.post('/auth/register', payload)
+        const token = data?.token || data?.access_token
 
-          if (token) {
-            this.token = token
-            setApiToken(token)
-            const role = await this.fetchMe()
-            return role
-          }
-
-          // Fallback si backend devolviera user directamente
-          const maybe = buildUserFromMe(data)
-          if (maybe) {
-            this.user = maybe
-            this.meLoaded = true
-            this.persist()
-            return maybe.role
-          }
-
-          throw new Error('Registro completado, pero no se recibió token.')
-        } catch (err: any) {
-          this.error = getErrorMessage(err)
-          throw new Error(this.error)
+        if (token) {
+          this.token = token
+          setApiToken(token)
+          const role = await this.fetchMe()
+          return role
         }
-      },
 
-      async fetchMe(): Promise<ExplicitRole> {
-        const { data } = await api.get('/auth/me')
-        const user = buildUserFromMe(data)
-        if (!user) throw new Error('No fue posible determinar el rol del usuario')
+        // Fallback si backend devolviera user directamente
+        const maybe = buildUserFromMe(data)
+        if (maybe) {
+          this.user = maybe
+          this.meLoaded = true
+          this.persist()
+          return maybe.role
+        }
 
-        this.user = user
-        this.meLoaded = true
-        this.persist()
-        return user.role
-      },
-        async updateProfile(payload: UpdateProfilePayload) {
+        throw new Error('Registro completado, pero no se recibió token.')
+      } catch (err: any) {
+        this.error = getErrorMessage(err)
+        throw new Error(this.error)
+      }
+    },
+
+    async fetchMe(): Promise<ExplicitRole> {
+      const { data } = await api.get('/auth/me')
+      const user = buildUserFromMe(data)
+      if (!user) throw new Error('No fue posible determinar el rol del usuario')
+
+      this.user = user
+      this.meLoaded = true
+      this.persist()
+      return user.role
+    },
+    async updateProfile(payload: UpdateProfilePayload) {
       if (!this.token) {
         throw new Error('No hay sesión activa')
       }
@@ -339,7 +341,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async logout() {
-      try { await api.post('/auth/logout') } catch {}
+      try { await api.post('/auth/logout') } catch { }
       this.clearSession()
     },
   },
