@@ -66,7 +66,7 @@ class UsersTableSeeder extends Seeder
                 'id' => 4,
                 'name' => 'Manuel Canto',
                 'email' => 'manuel.canto@heifer.org',
-                'password' => Hash::make('Cumulonimbus_Arcus'),
+                'password' => Hash::make('Cumulonimbus_Arcus7'),
                 'role_id' => 1, // Admin
                 'telefono' => '9992278159', // Ejemplo
                 'sexo' => 'Hombre',
